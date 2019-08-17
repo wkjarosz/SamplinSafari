@@ -12,9 +12,9 @@ It was initially developed as part of the publication:
 
 and now released under the 3-clause BSD license. For details, see the [LICENSE](LICENSE) file.
 
-## Screenshot
+## Screenshots
 
-![Screenshot](resources/screenshot1.png "Screenshot1")
+![Screenshot](resources/screenshot1.png "Screenshot1") ![Screenshot](resources/screenshot2.png "Screenshot2") ![Screenshot](resources/screenshot3.png "Screenshot3")
 
 ## Features
 
