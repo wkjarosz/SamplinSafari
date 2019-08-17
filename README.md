@@ -1,6 +1,6 @@
 # Samplin' Safari
 
-Samplin' Safari is a research tool to visualize and interactively inspect various high-dimensional (quasi) Monte Carlo sampling techniques.
+Samplin' Safari is a research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo sampling techniques.
 
 It was initially developed as part of the publication:
 
