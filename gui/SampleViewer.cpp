@@ -517,7 +517,7 @@ void SampleViewer::initializeGUI()
             m_pointRadiusSlider->setFixedWidth(115);
             m_pointRadiusSlider->setCallback([&](float v){drawContents();});
 
-            m_scaleRadiusWithPoints = new Button(panel, "", ENTYPO_ICON_RESIZE_FULL);
+            m_scaleRadiusWithPoints = new Button(panel, "", ENTYPO_ICON_RESIZE_FULL_SCREEN);
             m_scaleRadiusWithPoints->setFlags(Button::ToggleButton);
             m_scaleRadiusWithPoints->setPushed(true);
             m_scaleRadiusWithPoints->setFixedSize(Vector2i(19, 19));
