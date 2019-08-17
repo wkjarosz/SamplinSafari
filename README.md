@@ -10,7 +10,7 @@ It was initially developed as part of the publication:
 > [Project page](https://cs.dartmouth.edu/~wjarosz/publications/jarosz19orthogonal.html)
 > [PDF](https://cs.dartmouth.edu/~wjarosz/publications/jarosz19orthogonal.pdf)
 
-and now released under the 3-clause BSD license. For details, see the ``LICENSE`` file.
+and now released under the 3-clause BSD license. For details, see the [LICENSE](LICENSE) file.
 
 ## Features
 
