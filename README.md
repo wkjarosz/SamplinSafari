@@ -1,35 +1,73 @@
-# SampleView
+# Samplin' Safari
 
-SampleView is a research tool to visualize various random and quasi-random sampling approaches. It currently has support for:
+Samplin' Safari is a research tool to visualize and interactively inspect various high-dimensional (quasi) Monte Carlo sampling approaches.
 
-* Random
-* Grid
+## Features
+
+### Supported samplers
+
+* Independent random
+* Regular grid
 * Jittered
-* N-Rooks
-* N-Rooks with in-place computation
-* Multi-jittered
-* Correlated Multi-jittered
-* Correlated Multi-jittered with in-place computation
-* Correlated Multi-jittered (3D)
-* Correlated Multi-jittered in-place (3D)
+* (Correlated) Multi-jittered
 * Orthogonal Arrays
-    * Bush construction
-    * Bush construction in-place
     * Bose construction
-    * Bose construction in-place
+    * Bush construction
+    * Addelman-Kempthorne construction
+    * Bose-Bush construction
+* N-Rooks (Latin hypercubes)
+* Sobol'
+* XORed/shuffled (0,2) sequence
 * Halton
 * Halton-Zaremba
 * Hammersley
 * Hammersley-Zaremba
-* Sobol
 * Larcher-Pillischammer (with Gruenschloss-Keller extension to 3D)
+
+## Additional features
+* interactively switching samplers, setting number of samples, dimensions, and various sampler parameters
+* 3D and 2D orthographic views for X, Y and Z dimensions
+* view of all 2D projections (useful for high-dimensional samples)
+* custom mapping of any (higher) dimensions to X, Y or Z
+* save all of these views as vector EPS files
+* show point index and point coordinates
+* show stratification grids
+* displaying only a subset of points, either by subsetting on sample index, or sample coordinates.
 
 ## Compiling
 
-Compiling from scratch requires CMake and a recent version of XCode on Mac, Visual Studio 2015 on Windows, and GCC on Linux.
+Compiling requires CMake and a C++11 toolchain. Primary development in on macOS, but the code should also successfully compile on Linux and Windows.
 
-## License
+### macOS and Linux
 
-Copyright (c) Wojciech Jarosz
+On macOS and Linux, compiling should be as simple as
 
-This is private research code. Not for use or redistribution without author's permission.
+    git clone --recursive https://github.com/wkjarosz/SamplingSarafi.git
+    cd SamplinSafari
+    mkdir build
+    cd build
+    cmake-gui ../
+    make -j 4
+
+## License & Acknowledgements
+
+Samplin' Safari was primarily developed by Wojciech Jarosz with additions from Afnan Enayet.
+
+It was initially developed as part of the publication:
+
+> **Orthogonal Array Sampling for Monte Carlo Rendering**<br/>
+> Wojciech Jarosz, Afnan Enayet, Andrew Kensler, Charlie Kilpatrick, Per Christensen<br/>
+> In *Computer Graphics Forum (Proceedings of EGSR), 38(4), July 2019*<br/>
+> [Project page](https://cs.dartmouth.edu/~wjarosz/publications/jarosz19orthogonal.html)
+> [PDF](https://cs.dartmouth.edu/~wjarosz/publications/jarosz19orthogonal.pdf)
+
+and now release under the 3-clause BSD license. For details, see the ``LICENSE`` file.
+
+Samplin' Safari depends on the following libraries (which are included as git submodules in the `ext` subdirectory):
+
+* [NanoGUI](https://github.com/wjakob/nanogui), which is available under a BSD-style license.
+* [galois++](https://github.com/wkjarosz/galois), which is available under a BSD-style license.
+* [pcg32](https://github.com/wjakob/pcg32), which is available under the Apache License.
+* [tinyformat](https://github.com/mitsuba-renderer/tinyformat), which is available under the Boost Software License.
+
+Several of the orthogonal array constructions are adapted from [Art Owen's code in Statlib](http://ftp.uni-bayreuth.de/math/statlib/designs/).
