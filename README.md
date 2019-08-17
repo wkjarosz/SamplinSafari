@@ -12,6 +12,10 @@ It was initially developed as part of the publication:
 
 and now released under the 3-clause BSD license. For details, see the [LICENSE](LICENSE) file.
 
+## Screenshot
+
+![Screenshot](resources/screenshot1.png "Screenshot1")
+
 ## Features
 
 ### Supported samplers
