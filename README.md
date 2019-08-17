@@ -1,6 +1,16 @@
 # Samplin' Safari
 
-Samplin' Safari is a research tool to visualize and interactively inspect various high-dimensional (quasi) Monte Carlo sampling approaches.
+Samplin' Safari is a research tool to visualize and interactively inspect various high-dimensional (quasi) Monte Carlo sampling techniques.
+
+It was initially developed as part of the publication:
+
+> **Orthogonal Array Sampling for Monte Carlo Rendering**<br/>
+> Wojciech Jarosz, Afnan Enayet, Andrew Kensler, Charlie Kilpatrick, Per Christensen<br/>
+> In *Computer Graphics Forum (Proceedings of EGSR), 38(4), July 2019*<br/>
+> [Project page](https://cs.dartmouth.edu/~wjarosz/publications/jarosz19orthogonal.html)
+> [PDF](https://cs.dartmouth.edu/~wjarosz/publications/jarosz19orthogonal.pdf)
+
+and now released under the 3-clause BSD license. For details, see the ``LICENSE`` file.
 
 ## Features
 
@@ -49,21 +59,11 @@ On macOS and Linux, compiling should be as simple as
     cmake-gui ../
     make -j 4
 
-## License & Acknowledgements
+## Acknowledgements
 
 Samplin' Safari was primarily developed by Wojciech Jarosz with additions from Afnan Enayet.
 
-It was initially developed as part of the publication:
-
-> **Orthogonal Array Sampling for Monte Carlo Rendering**<br/>
-> Wojciech Jarosz, Afnan Enayet, Andrew Kensler, Charlie Kilpatrick, Per Christensen<br/>
-> In *Computer Graphics Forum (Proceedings of EGSR), 38(4), July 2019*<br/>
-> [Project page](https://cs.dartmouth.edu/~wjarosz/publications/jarosz19orthogonal.html)
-> [PDF](https://cs.dartmouth.edu/~wjarosz/publications/jarosz19orthogonal.pdf)
-
-and now release under the 3-clause BSD license. For details, see the ``LICENSE`` file.
-
-Samplin' Safari depends on the following libraries (which are included as git submodules in the `ext` subdirectory):
+The code depends on the following libraries (which are included as git submodules in the `ext` subdirectory):
 
 * [NanoGUI](https://github.com/wjakob/nanogui), which is available under a BSD-style license.
 * [galois++](https://github.com/wkjarosz/galois), which is available under a BSD-style license.
