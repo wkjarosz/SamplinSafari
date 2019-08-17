@@ -16,10 +16,9 @@ and now released under the 3-clause BSD license. For details, see the [LICENSE](
 
 ### Supported samplers
 
-* Independent random
-* Regular grid
-* Jittered
-* (Correlated) Multi-jittered
+* [Independent random](include/sampler/Random.h)
+* [Regular grid and Jittered](include/sampler/Jittered.h)
+* [(Correlated) Multi-jittered](include/sampler/MultiJittered.h)
 * Orthogonal Arrays
     * Bose construction
     * Bush construction
