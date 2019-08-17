@@ -19,19 +19,17 @@ and now released under the 3-clause BSD license. For details, see the [LICENSE](
 * [Independent random](include/sampler/Random.h)
 * [Regular grid and Jittered](include/sampler/Jittered.h)
 * [(Correlated) Multi-jittered](include/sampler/MultiJittered.h)
-* Orthogonal Arrays
-    * Bose construction
-    * Bush construction
-    * Addelman-Kempthorne construction
-    * Bose-Bush construction
-* N-Rooks (Latin hypercubes)
-* Sobol'
-* XORed/shuffled (0,2) sequence
-* Halton
-* Halton-Zaremba
-* Hammersley
-* Hammersley-Zaremba
-* Larcher-Pillischammer (with Gruenschloss-Keller extension to 3D)
+* [Orthogonal Arrays](include/sampler/OA.h)
+    * [Bose construction](include/sampler/OABose.h)
+    * [Bush construction](include/sampler/OABush.h)
+    * [Addelman-Kempthorne construction]((include/sampler/OAAddelmanKempthorne.h))
+    * [Bose-Bush construction](include/sampler/OABoseBush.h)
+* [N-Rooks (Latin hypercubes)](include/sampler/NRooks.h)
+* [Sobol'](include/sampler/Sobol.h)
+* [XORed/shuffled (0,2) sequence](include/sampler/Sobol.h#L40)
+* [Halton (Zaremba)](include/sampler/Halton.h)
+* [Hammersley (Zaremba)](include/sampler/Hammersley.h)
+* [Larcher-Pillischammer (with Gruenschloss-Keller extension to 3D)](include/sampler/LP.h)
 
 ## Additional features
 * interactively switching samplers, setting number of samples, dimensions, and various sampler parameters
