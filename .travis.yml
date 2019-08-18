@@ -48,7 +48,6 @@ matrix:
         - cmake --version
         - cmake .
         - make -j 2
-        compiler: clang
     - os: osx
       compiler: clang
       script:
