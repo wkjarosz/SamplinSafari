@@ -27,11 +27,11 @@ matrix:
             - cmake
       script:
         - cmake --version
-        - cmake
+        - cmake -DCMAKE_CXX_COMPILER=g++-4.8 -DCMAKE_C_COMPILER=gcc-4.8 .
         - make -j 2
     - os: osx
       compiler: clang
       script:
         - cmake --version
-        - cmake
+        - cmake .
         - make -j 2
