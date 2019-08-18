@@ -1,6 +1,7 @@
 /** \file SampleViewer.cpp
     \author Wojciech Jarosz
 */
+#define _USE_MATH_DEFINES
 #include "SampleViewer.h"
 
 #include <nanogui/screen.h>

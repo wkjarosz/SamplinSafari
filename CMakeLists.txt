@@ -26,7 +26,7 @@ if (${FORCE_COLORED_OUTPUT})
 endif ()
 
 if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ext/nanogui/ext/glfw")
-  message(FATAL_ERROR "The SampleView dependency repositories (NanoGUI, GLFW, etc.) are missing! "
+  message(FATAL_ERROR "The SamplinSafari dependency repositories (NanoGUI, GLFW, etc.) are missing! "
     "You probably did not clone the project with --recursive. It is possible to recover "
     "by calling \"git submodule update --init --recursive\"")
 endif()
@@ -162,7 +162,7 @@ endif()
 
 # The following lines build the main executable. If you add a source
 # code file to Nori, be sure to include it in this list.
-add_executable(SampleView MACOSX_BUNDLE
+add_executable(SamplinSafari MACOSX_BUNDLE
     gui/SampleViewer.cpp
     gui/SampleViewer.h
     gui/main.cpp
@@ -172,24 +172,24 @@ add_executable(SampleView MACOSX_BUNDLE
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})
-target_link_libraries(SampleView nanogui ${NANOGUI_EXTRA_LIBS} galois++ samplerlib)
+target_link_libraries(SamplinSafari nanogui ${NANOGUI_EXTRA_LIBS} galois++ samplerlib)
 
-set_target_properties(SampleView PROPERTIES OUTPUT_NAME "SampleView")
+set_target_properties(SamplinSafari PROPERTIES OUTPUT_NAME "SamplinSafari")
 
 if (APPLE)
   # Build an application bundle on OSX
-  set_target_properties(SampleView PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "SampleView")
-  set_target_properties(SampleView PROPERTIES MACOSX_BUNDLE_BUNDLE_GUI_IDENTIFIER "com.im.SampleView")
-  set_target_properties(SampleView PROPERTIES MACOSX_BUNDLE_ICON_FILE icon.icns)
-  set_target_properties(SampleView PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/resources/MacOSXBundleInfo.plist.in)
+  set_target_properties(SamplinSafari PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "SamplinSafari")
+  set_target_properties(SamplinSafari PROPERTIES MACOSX_BUNDLE_BUNDLE_GUI_IDENTIFIER "com.im.SamplinSafari")
+  set_target_properties(SamplinSafari PROPERTIES MACOSX_BUNDLE_ICON_FILE icon.icns)
+  set_target_properties(SamplinSafari PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/resources/MacOSXBundleInfo.plist.in)
   set_source_files_properties(resources/icon.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 else()
   # Insulate from a few types of ABI changes by statically linking against libgcc and libstdc++
-  set_target_properties(SampleView PROPERTIES LINK_FLAGS "-static-libgcc")
+  set_target_properties(SamplinSafari PROPERTIES LINK_FLAGS "-static-libgcc")
 endif()
 
 if (UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
-  add_custom_command(TARGET SampleView POST_BUILD COMMAND strip $<TARGET_FILE:SampleView>)
+  add_custom_command(TARGET SamplinSafari POST_BUILD COMMAND strip $<TARGET_FILE:SamplinSafari>)
 endif()
 
 
