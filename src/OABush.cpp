@@ -1,4 +1,4 @@
-/*! \file OABush.cpp
+/** \file OABush.cpp
     \brief Implementation of orthogonal array constructions due to Bush (1952).
     \author Wojciech Jarosz
 */

@@ -1,5 +1,4 @@
-/*! \file MultiJittered.h
-    \brief
+/** \file MultiJittered.h
     \author Wojciech Jarosz
 */
 #pragma once
@@ -9,8 +8,8 @@
 #include <pcg32.h>
 #include <vector>
 
-//! A multi-jittered point set with both jittered and n-rooks stratification.
-/*!
+/// A multi-jittered point set with both jittered and n-rooks stratification.
+/**
     Based on method described in the article:
 
     K. Chiu, P. Shirley, C. Wang.
@@ -66,8 +65,8 @@ protected:
 
 
 
-//! An in-place version of multi-jittered point set with both jittered and n-rooks stratification.
-/*!
+/// An in-place version of multi-jittered point set with both jittered and n-rooks stratification.
+/**
     Produces standard multi-jittered points, but uses 2*sqrt(numSamples) permutation arrays
     (one for each major row and major column), instead of storing all numSamples points.
 */
@@ -119,8 +118,8 @@ protected:
 };
 
 
-//! Correlated multi-jittered point sets
-/*!
+/// Correlated multi-jittered point sets
+/**
     Based on method described in the tech report:
 
     Andrew Kensler. "Correlated Multi-Jittered Sampling",
@@ -139,12 +138,12 @@ public:
 };
 
 
-//! An in-place version of correlated multi-jittered point sets.
-/*!
+/// An in-place version of correlated multi-jittered point sets.
+/**
     Based on method described in the tech report:
 
-    Andrew Kensler. "Correlated Multi-Jittered Sampling",
-    Pixar Technical Memo 13-01.
+    > Andrew Kensler. "Correlated Multi-Jittered Sampling",
+    > Pixar Technical Memo 13-01.
 */
 class CorrelatedMultiJitteredInPlace : public TSamplerMinMaxDim<1,1024>
 {

@@ -1,5 +1,4 @@
-/*! \file SampleViewer.cpp
-    \brief
+/** \file SampleViewer.cpp
     \author Wojciech Jarosz
 */
 #include "SampleViewer.h"

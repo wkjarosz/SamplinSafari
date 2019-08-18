@@ -1,4 +1,4 @@
-/*!
+/**
    \file OACommon.cpp
    \author Wojciech Jarosz
  */

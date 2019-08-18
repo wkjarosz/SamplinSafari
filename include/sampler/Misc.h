@@ -1,5 +1,4 @@
-/*! \file Misc.h
-    \brief
+/** \file Misc.h
     \author Wojciech Jarosz
 */
 #pragma once
@@ -8,57 +7,68 @@
 #include <cmath>
 #include <galois++/fwd.h>
 
-/*!
-   Evaluate a polynomial in the form \f$x^0, x^1, ..., x^m\f$, given the list of
-   coefficients for the polynomial.
-  
-   \param coeffs A vector of the coefficient values
-   \param arg The position to evaluate the integral
-   \returns The value of the polynomial at a given position
+/**
+    Evaluate a polynomial.
+
+    Evaluate a polynomial of the form \f$f(x) = c_m x^m + \cdots + c_0 x^0\f$,
+    with the given coefficient vector `c` at the specified position `x`.
+
+    \param c     A vector of the coefficient values
+    \param x     The position to evaluate the polynomial
+    \returns     The value of the polynomial at the given position
  */
-unsigned polyEval(const std::vector<int> & coeffs, unsigned arg);
+unsigned polyEval(const std::vector<int> & f, unsigned x);
 
 
 /**
-   Find value = poly(arg) where poly is a polynomial and all the arithmetic
-   takes place in the given Galois field gf.
- */
-unsigned polyEval(const Galois::Field * gf, std::vector<int> & coeffs, int arg);
+    Evaluate a polynomial.
 
-/*!
-    \brief Evaluate a vector of a number with an arbitrary base representation,
+    Evaluate a polynomial of the form \f$f(x) = c_m x^m + \cdots + c_0 x^0\f$,
+    with the given coefficient vector `c` at the specified position `x`, where 
+    all arithmetic takes place in the given Galois field `gf`.
+  
+    \param gf    The Galois field over which to perform arithmetic
+    \param c     A vector of the coefficient values
+    \param x     The position to evaluate the polynomial
+    \returns     The value of the polynomial at the given position
+ */
+unsigned polyEval(const Galois::Field * gf, std::vector<int> & c, int x);
+
+/**
+    Evaluate a vector of a number with an arbitrary base representation,
     save for one index
    
-    Given a vector that is a representation of some number in an arbitrary base,
-    this method will evaluate the number in base 10, while ignoring the number
-    passed into the location `ignoreIdx`.
+    Given a vector of digits representating some number in an arbitrary base,
+    this method will evaluate the number in base 10, while ignoring the digit
+    at index `ignoreIdx`.
    
-    \param coeffs A number in some arbitrary base representation
-    \param base The base of `coeffs`
-    \param `ignoreIdx` The part of the `coeffs` vector to ignore
-    \returns `coeffs` in base 10 format (excluding the number at `ignoreIdx`)
+    \param coeffs       Digits of a number in some arbitrary base representation
+    \param base         The base of `coeffs`
+    \param ignoreIdx    The digit of the `coeffs` vector to ignore
+    \returns            `coeffs` represented in base 10 format (excluding the
+                        digit at `ignoreIdx`)
  */
 unsigned polyEvalExceptOne(const std::vector<int> &coeffs, int base, size_t
                            ignoreIdx);
 
-/*!
+/**
     Given some value \f$i\f$, determine the coefficient values for a polynomial
-    of the form \f$b^0, b^1, \cdots b^d\f$ where \f$b\f$ is `base` and \f$d\f$
+    of the form \f$b^d + \cdots + b^0\f$ where \f$b\f$ is `base` and \f$d\f$
     is `degree`.
    
-    \param i      The value to convert into base `base`
-    \param base   The base to use for the polynomial
-    \param degree The limit on how high the exponents can be in the polynomial
-    \returns A vector of coefficient values
+    \param i        The value to convert into base `base`
+    \param base     The base to use for the polynomial
+    \param degree   The limit on how high the exponents can be in the polynomial
+    \returns        A vector of coefficient values
  */
 std::vector<int> iToPolyCoeffs(unsigned i, unsigned base, unsigned degree);
 
-//! Clamps a double between two bounds.
-/*!
-    \param a The value to test.
-    \param l The lower bound.
-    \param h The upper bound.
-    \return The value \a a clamped to the lower and upper bounds.
+/// Clamps a double between two bounds.
+/**
+    \param a    The value to test.
+    \param l    The lower bound.
+    \param h    The upper bound.
+    \return     The value `a` clamped to the lower and upper bounds.
 
     This function has been specially crafted to prevent NaNs from propagating.
 */
@@ -69,7 +79,7 @@ inline T clamp(T a, T l, T h)
 }
 
 
-//! Returns a modulus b.
+/// Returns a modulus b.
 template <typename T>
 inline T mod(T a, T b)
 {
@@ -80,14 +90,13 @@ inline T mod(T a, T b)
     return a;
 }
 
-//! Linear interpolation.
-/*!
-    Linearly interpolates between \a a and \a b, using parameter t.
-    \param a A value.
-    \param b Another value.
-    \param t A blending factor of \a a and \a b.
-    \return Linear interpolation of \a a and \b -
-            a value between a and b if \a t is between 0 and 1.
+/// Linearly interpolates between `a` and `b`, using parameter `t`.
+/**
+    \param a    A value.
+    \param b    Another value.
+    \param t    A blending factor of `a` and `b`.
+    \return     Linear interpolation of `a` and `b`:
+                a value between `a` and `b` if `t` is between `0` and `1`.
 */
 template <typename T, typename S>
 inline T lerp(T a, T b, S t)
@@ -95,13 +104,15 @@ inline T lerp(T a, T b, S t)
     return T((S(1)-t) * a + t * b);
 }
 
-//! Smoothly interpolates between a and b.
-/*!
-    Does a smooth s-curve (Hermite) interpolation between two values.
-    \param a A value.
-    \param b Another value.
-    \param x A number between \a a and \a b.
-    \return A value between 0.0 and 1.0.
+/// Smoothly interpolates between a and b.
+/**
+    Performs a smooth s-curve (Hermite) interpolation between two values.
+
+    \tparam T       A floating-point type
+    \param a        A value.
+    \param b        Another value.
+    \param x        A number between `a` and `b`.
+    \return         A value between `0.0` and `1.0`.
 */
 template <typename T>
 inline T smoothStep(T a, T b, T x)
@@ -110,13 +121,13 @@ inline T smoothStep(T a, T b, T x)
     return t*t*(T(3) - T(2)*t);
 }
 
-//! Test if an integer is a power of 2
+/// Test if an integer is a power of 2
 inline bool isPowerOf2(int v)
 {
     return (v & (v - 1)) == 0;
 }
 
-//! Round up to the next smallest power of two
+/// Round up to the next smallest power of two
 inline unsigned roundUpPow2(unsigned v)
 {
     v--;
@@ -128,7 +139,7 @@ inline unsigned roundUpPow2(unsigned v)
     return v+1;
 }
 
-//! Round down to the previous largest power of two
+/// Round down to the previous largest power of two
 inline unsigned roundDownPow2(unsigned v)
 {
 	v |= v >> 1;
@@ -139,7 +150,7 @@ inline unsigned roundDownPow2(unsigned v)
     return v - (v >> 1);
 }
 
-//! Interpret the bits of a float as an int
+/// Interpret the bits of a float as an int
 inline int floatAsInt(float f)
 {
     union {
@@ -150,7 +161,7 @@ inline int floatAsInt(float f)
     return u.i;
 }
 
-//! Interpret the bits of an int as a float
+/// Interpret the bits of an int as a float
 inline float intAsFloat(int i)
 {
     union {
@@ -161,12 +172,13 @@ inline float intAsFloat(int i)
     return u.f;
 }
 
+/// Fast base-2 logarithm of a float
 inline int iLog2(float f)
 {
     return ((floatAsInt(f) & 0x7f800000) >> 23) - 0x7f;
 }
 
-//! Fast base-2 logarithm of an integer
+/// Fast base-2 logarithm of an integer
 template <typename T>
 inline int iLog2(T f)
 {
@@ -174,12 +186,12 @@ inline int iLog2(T f)
 }
 
 
-//! In-place pseudo-random number in [0,1)
-/*!
+/// In-place pseudo-random number in [0,1)
+/**
     Based on method described in the tech report:
 
-    Andrew Kensler. "Correlated Multi-Jittered Sampling",
-    Pixar Technical Memo 13-01.
+    > Andrew Kensler. "Correlated Multi-Jittered Sampling",
+    > Pixar Technical Memo 13-01.
 
     Modified to return 0.5f if p==0.
 */
@@ -197,17 +209,17 @@ inline float randf(unsigned i, unsigned p)
 }
 
 
-//! In-place enumeration of random permutations
-/*!
-    Returns the i-th element of the p-th pseudo-random permutation of the
-    numbers 0..(l-1).
+/// In-place enumeration of random permutations
+/**
+    Returns the `i`-th element of the `p`-th pseudo-random permutation of the
+    numbers `0..(l-1)`.
 
     Based on method described in the tech report:
 
-    Andrew Kensler. "Correlated Multi-Jittered Sampling",
-    Pixar Technical Memo 13-01.
+    > Andrew Kensler. "Correlated Multi-Jittered Sampling",
+    > Pixar Technical Memo 13-01.
 
-    Modified to return the identity permutation if p==0.
+    Modified to return the identity permutation if `p==0`.
 */
 inline unsigned permute(unsigned i, unsigned l, unsigned p)
 {

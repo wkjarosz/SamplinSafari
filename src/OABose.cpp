@@ -1,4 +1,4 @@
-/*! \file OABose.cpp
+/** \file OABose.cpp
     \brief Implementation of orthogonal array constructions due to Bose (1939).
     \author Wojciech Jarosz
 */

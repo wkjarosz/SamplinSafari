@@ -1,5 +1,4 @@
-/*! \file Sobol.h
-    \brief
+/** \file Sobol.h
     \author Wojciech Jarosz
 */
 #pragma once
@@ -9,8 +8,8 @@
 #include <vector>
 
 
-//! A Sobol quasi-random number sequence.
-/*!
+/// A Sobol quasi-random number sequence.
+/**
     A wrapper for L. Gruenschloss's fast Sobol sampler.
 */
 class Sobol : public TSamplerMinMaxDim<1,1024>
@@ -36,7 +35,7 @@ protected:
 
 
 
-//! A (0,2) sequence created by padding the first two dimensions of Sobol
+/// A (0,2) sequence created by padding the first two dimensions of Sobol
 class ZeroTwo : public TSamplerMinMaxDim<1,1024>
 {
 public:

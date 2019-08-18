@@ -1,12 +1,11 @@
-/*! \file OABoseBush.h
-    \brief
+/** \file OABoseBush.h
     \author Wojciech Jarosz
 */
 #pragma once
 
 #include <sampler/OABose.h>
 
-//! Produces OA samples based on the construction by Bose and Bush (1952).
+/// Produces OA samples based on the construction by Bose and Bush (1952).
 /**
     The OAs are of the form: \f$ OA(2q^2, k, q, 2) \f$,
     where \f$ k \le 2q+1 \f$, for powers of 2, \f$ q=2^r \f$.

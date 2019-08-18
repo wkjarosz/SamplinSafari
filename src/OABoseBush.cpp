@@ -1,4 +1,4 @@
-/*! \file OABoseBush.cpp
+/** \file OABoseBush.cpp
     \brief Implementation of orthogonal array constructions due to
            Bose and Bush (1952).
     \author Wojciech Jarosz

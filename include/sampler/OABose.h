@@ -1,5 +1,4 @@
-/*! \file OABose.h
-    \brief
+/** \file OABose.h
     \author Wojciech Jarosz
 */
 #pragma once

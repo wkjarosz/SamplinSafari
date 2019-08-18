@@ -1,5 +1,4 @@
-/*! \file OA.cpp
-    \brief
+/** \file OA.cpp
     \author Wojciech Jarosz
 */
 

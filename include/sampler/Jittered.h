@@ -1,5 +1,4 @@
-/*! \file Jittered.h
-    \brief
+/** \file Jittered.h
     \author Wojciech Jarosz
 */
 #pragma once
@@ -8,7 +7,7 @@
 #include <pcg32.h>
 #include <iostream>
 
-//! Encapsulate a 2D stratified or "jittered" point set.
+/// Encapsulate a 2D stratified or "jittered" point set.
 class Jittered : public TSamplerDim<2>
 {
 public:
@@ -42,7 +41,7 @@ public:
             m_seed++;
     }
 
-    //! Gets/sets how much the points are jittered
+    /// Gets/sets how much the points are jittered
     float jitter() const override {return m_maxJit;}
     float setJitter(float j = 1.0f) override {return m_maxJit = j;}
 

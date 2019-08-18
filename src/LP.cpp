@@ -1,5 +1,4 @@
-/*! \file LP.cpp
-    \brief
+/** \file LP.cpp
     \author Wojciech Jarosz
 */
 

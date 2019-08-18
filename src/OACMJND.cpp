@@ -1,5 +1,4 @@
-/*! \file OACMJND.cpp
-    \brief 
+/** \file OACMJND.cpp
     \author Wojciech Jarosz
 */
 

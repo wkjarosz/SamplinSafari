@@ -1,4 +1,4 @@
-/*! \file OAAddelmanKempthorne.cpp
+/** \file OAAddelmanKempthorne.cpp
     \brief Implementation of orthogonal array constructions due to Addelman and
         Kempthorne (1961).
     \author Wojciech Jarosz

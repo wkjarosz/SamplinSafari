@@ -1,5 +1,4 @@
-/*! \file Hammersley.h
-    \brief
+/** \file Hammersley.h
     \author Wojciech Jarosz
 */
 #pragma once
@@ -8,8 +7,8 @@
 #include <sampler/Misc.h>
 #include <pcg32.h>
 
-//! A Hammersley sequence quasi-random number generator.
-/*!
+/// A Hammersley sequence quasi-random number generator.
+/**
     The Hammersley class extends another Sampler by prepending i/N as the first
     dimension. Hammersley inherits from the template parameter BaseHalton,
     which should be either the Halton or HaltonZaremba class.

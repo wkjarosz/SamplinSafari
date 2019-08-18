@@ -1,4 +1,4 @@
-/*! \file SampleViewer.h
+/** \file SampleViewer.h
     \author Wojciech Jarosz
 */
 
@@ -140,7 +140,7 @@ private:
     Button *m_scaleRadiusWithPoints;
     std::vector<std::string> m_timeStrings;
 
-    //! X, Y, Z, and user-defined cameras
+    /// X, Y, Z, and user-defined cameras
     CameraParameters m_camera[NUM_CAMERA_TYPES];
 
     float m_animateStartTime = 0.0f;

@@ -1,5 +1,4 @@
-/*! \file OACMJND.h
-    \brief
+/** \file OACMJND.h
     \author Wojciech Jarosz
 */
 #pragma once

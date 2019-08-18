@@ -1,5 +1,4 @@
-/*! \file Halton.h
-    \brief
+/** \file Halton.h
     \author Wojciech Jarosz
 */
 #pragma once
@@ -10,8 +9,8 @@
 #include <vector>
 
 
-//! A Halton quasi-random number sequence.
-/*!
+/// A Halton quasi-random number sequence.
+/**
     A wrapper for L. Gruenschloss's fast Halton sampler.
 */
 class Halton : public TSamplerMinMaxDim<1,256>
@@ -31,7 +30,7 @@ public:
     // Init the permutation arrays using randomized permutations.
     void initRandom();
 
-    //! Gets/sets whether the point set is randomized
+    /// Gets/sets whether the point set is randomized
     bool randomized() const override {return m_randomized;}
     void setRandomized(bool r = true) override;
 
@@ -45,7 +44,7 @@ protected:
 };
 
 
-//! Encapsulate a Halton-Zaremba sequence quasi-random number generator.
+/// Encapsulate a Halton-Zaremba sequence quasi-random number generator.
 class HaltonZaremba : public TSamplerMinMaxDim<1,(unsigned)(-1)-1>
 {
 public:

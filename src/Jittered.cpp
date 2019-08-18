@@ -1,5 +1,4 @@
-/*! \file Jittered.cpp
-    \brief
+/** \file Jittered.cpp
     \author Wojciech Jarosz
 */
 

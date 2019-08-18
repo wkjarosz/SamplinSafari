@@ -1,5 +1,4 @@
-/*! \file NRooks.h
-    \brief
+/** \file NRooks.h
     \author Wojciech Jarosz
 */
 #pragma once
@@ -9,7 +8,7 @@
 #include <pcg32.h>
 #include <vector>
 
-//! Encapsulate an N-rooks (Latin-Hypercube) sampling set.
+/// Encapsulate an N-rooks (Latin-Hypercube) sampling set.
 class NRooks : public TSamplerMinMaxDim<1,(unsigned)-1>
 {
 public:
@@ -50,8 +49,8 @@ protected:
 };
 
 
-//! An in-place version of correlated multi-jittered point sets.
-/*!
+/// An in-place version of correlated multi-jittered point sets.
+/**
     Based on method described in the tech report:
 
     Andrew Kensler. "Correlated Multi-Jittered Sampling",
@@ -89,7 +88,7 @@ public:
         reset();
     }
 
-    //! Gets/sets how much the points are jittered
+    /// Gets/sets how much the points are jittered
     float jitter() const override {return m_maxJit;}
     float setJitter(float j = 1.0f) override {return m_maxJit = j;}
 

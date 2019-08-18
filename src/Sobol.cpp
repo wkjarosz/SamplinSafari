@@ -1,5 +1,4 @@
-/*! \file Sobol.cpp
-    \brief
+/** \file Sobol.cpp
     \author Wojciech Jarosz
 */
 

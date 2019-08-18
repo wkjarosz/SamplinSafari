@@ -1,5 +1,4 @@
-/*! \file LP.h
-    \brief
+/** \file LP.h
     \author Wojciech Jarosz
 */
 #pragma once
@@ -7,8 +6,8 @@
 #include <sampler/Sampler.h>
 #include <pcg32.h>
 
-//! The Larcher-Pillichshammer Gruenschloss-Keller (0,3) sequence
-/*!
+/// The Larcher-Pillichshammer Gruenschloss-Keller (0,3) sequence
+/**
     This is a (0,3) sequence in base 2. The first two dimensions are
     the Larcher-Pillichshammer (0,2) sequence:
 

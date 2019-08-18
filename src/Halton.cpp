@@ -1,5 +1,4 @@
-/*! \file Halton.cpp
-    \brief
+/** \file Halton.cpp
     \author Wojciech Jarosz
 */
 

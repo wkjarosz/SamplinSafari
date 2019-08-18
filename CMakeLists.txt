@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.8.3)
-project(sampleview)
+project(SamplinSafari)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # prevent glfw from changing the directory on macOS bundles

@@ -1,5 +1,4 @@
-/*! \file NRooks.cpp
-    \brief
+/** \file NRooks.cpp
     \author Wojciech Jarosz
 */
 

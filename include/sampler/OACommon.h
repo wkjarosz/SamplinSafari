@@ -1,4 +1,4 @@
-/*!
+/**
    \file OACommon.h
    \author Wojciech Jarosz
    \date 2019-08-15   

@@ -1,5 +1,4 @@
-/*! \file MultiJittered.cpp
-    \brief
+/** \file MultiJittered.cpp
     \author Wojciech Jarosz
 */
 
