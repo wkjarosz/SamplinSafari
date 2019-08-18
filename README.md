@@ -55,7 +55,7 @@ Compiling requires CMake and a C++11 toolchain. Primary development in on macOS,
 
 On macOS and Linux, compiling should be as simple as
 
-    git clone --recursive https://github.com/wkjarosz/SamplingSafari.git
+    git clone --recursive https://github.com/wkjarosz/SamplinSafari.git
     cd SamplinSafari
     mkdir build
     cd build
@@ -74,3 +74,5 @@ The code depends on the following libraries (which are included as git submodule
 * [tinyformat](https://github.com/mitsuba-renderer/tinyformat), which is available under the Boost Software License.
 
 Several of the orthogonal array constructions are adapted from [Art Owen's code in Statlib](http://ftp.uni-bayreuth.de/math/statlib/designs/).
+
+The Halton and Sobol samplers use code from [Leonhard Grünschloß](http://gruenschloss.org/).
