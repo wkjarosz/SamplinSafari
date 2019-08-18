@@ -1,4 +1,4 @@
-/*! \file SamplerOA.h
+/*! \file OA.h
     \brief
     \author Wojciech Jarosz
 */

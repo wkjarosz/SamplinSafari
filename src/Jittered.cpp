@@ -1,4 +1,4 @@
-/*! \file rBRandSamplerJittered.cpp
+/*! \file Jittered.cpp
     \brief
     \author Wojciech Jarosz
 */

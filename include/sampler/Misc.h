@@ -9,12 +9,12 @@
 #include <galois++/fwd.h>
 
 /*!
- * Evaluate a polynomial in the form $x^0, x^1, ..., x^m$, given the list of
- * coefficients for the polynomial.
- *
- * \param coeffs A vector of the coefficient values
- * \param arg The position to evaluate the integral
- * \returns The value of the polynomial at a given position
+   Evaluate a polynomial in the form \f$x^0, x^1, ..., x^m\f$, given the list of
+   coefficients for the polynomial.
+  
+   \param coeffs A vector of the coefficient values
+   \param arg The position to evaluate the integral
+   \returns The value of the polynomial at a given position
  */
 unsigned polyEval(const std::vector<int> & coeffs, unsigned arg);
 
@@ -26,29 +26,30 @@ unsigned polyEval(const std::vector<int> & coeffs, unsigned arg);
 unsigned polyEval(const Galois::Field * gf, std::vector<int> & coeffs, int arg);
 
 /*!
- * \brief Evaluate a vector of a number with an arbitrary base representation,
- * save for one index
- *
- * Given a vector that is a representation of some number in an arbitrary base,
- * this method will evaluate the number in base 10, while ignoring the number
- * passed into the location `ignoreIdx`.
- *
- * \param coeffs A number in some arbitrary base representation
- * \param base The base of `coeffs`
- * \param `ignoreIdx` The part of the `coeffs` vector to ignore
- * \returns `coeffs` in base 10 format (excluding the number at `ignoreIdx`)
+    \brief Evaluate a vector of a number with an arbitrary base representation,
+    save for one index
+   
+    Given a vector that is a representation of some number in an arbitrary base,
+    this method will evaluate the number in base 10, while ignoring the number
+    passed into the location `ignoreIdx`.
+   
+    \param coeffs A number in some arbitrary base representation
+    \param base The base of `coeffs`
+    \param `ignoreIdx` The part of the `coeffs` vector to ignore
+    \returns `coeffs` in base 10 format (excluding the number at `ignoreIdx`)
  */
 unsigned polyEvalExceptOne(const std::vector<int> &coeffs, int base, size_t
                            ignoreIdx);
 
 /*!
- * Given some value $i$, determine the coefficient values for a polynomial of
- * the form $b^0, b^1, \cdots b^d $ where $ b $ is `base` and $d$ is `degree`
- *
- * \param i      The value to convert into base `base`
- * \param base   The base to use for the polynomial
- * \param degree The limit on how high the exponents can be in the polynomial
- * \returns A vector of coefficient values
+    Given some value \f$i\f$, determine the coefficient values for a polynomial
+    of the form \f$b^0, b^1, \cdots b^d\f$ where \f$b\f$ is `base` and \f$d\f$
+    is `degree`.
+   
+    \param i      The value to convert into base `base`
+    \param base   The base to use for the polynomial
+    \param degree The limit on how high the exponents can be in the polynomial
+    \returns A vector of coefficient values
  */
 std::vector<int> iToPolyCoeffs(unsigned i, unsigned base, unsigned degree);
 

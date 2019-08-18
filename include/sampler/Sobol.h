@@ -1,4 +1,4 @@
-/*! \file SamplerSobol.h
+/*! \file Sobol.h
     \brief
     \author Wojciech Jarosz
 */

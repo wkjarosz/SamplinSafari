@@ -1,4 +1,4 @@
-/*! \file SamplerNRooks.cpp
+/*! \file NRooks.cpp
     \brief
     \author Wojciech Jarosz
 */

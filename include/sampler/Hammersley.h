@@ -1,4 +1,4 @@
-/*! \file SamplerHammersley.h
+/*! \file Hammersley.h
     \brief
     \author Wojciech Jarosz
 */

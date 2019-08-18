@@ -1,4 +1,4 @@
-/*! \file SamplerOA.cpp
+/*! \file OA.cpp
     \brief
     \author Wojciech Jarosz
 */

@@ -1,4 +1,4 @@
-/*! \file SamplerRandom.cpp
+/*! \file Random.cpp
     \brief
     \author Wojciech Jarosz
 */

@@ -1,4 +1,4 @@
-/*! \file CMJND.h
+/*! \file OACMJND.h
     \brief
     \author Wojciech Jarosz
 */

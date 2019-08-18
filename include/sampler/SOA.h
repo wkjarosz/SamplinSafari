@@ -1,10 +1,9 @@
-/*!
- * \file SamplerSOA.h
- * \author Afnan Enayet
- * \brief Strong orthogonal array point sets
- *
- * This module generates strong orthogonal arrays from regular orthogonal
- * arrays.
+/*! \file SOA.h
+    \author Afnan Enayet
+    \brief Strong orthogonal array point sets
+   
+    This module generates strong orthogonal arrays from regular orthogonal
+    arrays.
  */
 
 #pragma once

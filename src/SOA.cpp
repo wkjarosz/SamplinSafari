@@ -1,6 +1,6 @@
 /*!
- * \file SamplerSOA.cpp
- * \author Afnan Enayet
+   \file SOA.cpp
+   \author Afnan Enayet
  */
 
 #include <sampler/SOA.h>

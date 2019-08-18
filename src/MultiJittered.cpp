@@ -1,4 +1,4 @@
-/*! \file SamplerMultiJittered.cpp
+/*! \file MultiJittered.cpp
     \brief
     \author Wojciech Jarosz
 */

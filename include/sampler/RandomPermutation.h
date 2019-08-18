@@ -1,4 +1,4 @@
-/*! \file Permutation.h
+/*! \file RandomPermutation.h
     \brief
     \author Wojciech Jarosz
 */

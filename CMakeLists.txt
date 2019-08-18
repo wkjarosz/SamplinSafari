@@ -192,3 +192,32 @@ endif()
 if (UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
   add_custom_command(TARGET SampleView POST_BUILD COMMAND strip $<TARGET_FILE:SampleView>)
 endif()
+
+
+
+#============================================================================
+# Check for doxygen and provide a make target to build the documentation
+#============================================================================
+
+# first we can indicate the documentation build as an option and set it to ON by default
+option(BUILD_DOC "Build documentation" ON)
+
+# check if Doxygen is installed
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+    # set input and output files
+    set(DOXYGEN_IN ${CMAKE_SOURCE_DIR}/Doxyfile.in)
+    set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/doc/Doxyfile)
+
+    # request to configure the file
+    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+    message("Configuring doxygen and adding \"doc\" make target")
+
+    add_custom_target(doc
+        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/doc/
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM )
+else (DOXYGEN_FOUND)
+    message("Unable to find Doxygen, so doxygen documentation won't be built")
+endif (DOXYGEN_FOUND)

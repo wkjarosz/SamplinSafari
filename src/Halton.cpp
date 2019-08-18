@@ -1,4 +1,4 @@
-/*! \file rBRandSamplerHalton.cpp
+/*! \file Halton.cpp
     \brief
     \author Wojciech Jarosz
 */
