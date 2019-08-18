@@ -1,5 +1,7 @@
 # Samplin' Safari
 
+Status: [![Build Status](https://travis-ci.org/wkjarosz/SamplinSafari.svg?branch=master)](https://travis-ci.org/wkjarosz/SamplinSafari)
+
 Samplin' Safari is a research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers.
 
 It was initially developed as part of the publication:

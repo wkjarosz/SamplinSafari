@@ -29,9 +29,37 @@ matrix:
         - cmake --version
         - cmake -DCMAKE_CXX_COMPILER=g++-4.8 -DCMAKE_C_COMPILER=gcc-4.8 .
         - make -j 2
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - libglu1-mesa-dev
+            - libxxf86vm-dev
+            - libxrandr-dev
+            - libxinerama-dev
+            - libxcursor-dev
+            - libxi-dev
+            - libx11-dev
+            - cmake
+      script:
+        - cmake --version
+        - cmake .
+        - make -j 2
     - os: osx
       compiler: clang
       script:
         - cmake --version
         - cmake .
         - make -j 2
+    - os: windows
+      env:
+        - CMAKE_PATH="/c/Program Files/CMake/bin"
+      script:
+        - export PATH=$CMAKE_PATH:$PATH
+        - mkdir build && cd build
+        - cmake --version
+        - cmake .. 
+        - cmake --build . 
