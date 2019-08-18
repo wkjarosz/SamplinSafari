@@ -26,27 +26,27 @@
 #include <algorithm>
 #include <vector>
 
-// Compute points of the Halton sequence with with digit-permutations for different bases.
+/// Compute points of the Halton sequence with with digit-permutations for different bases.
 class Halton_sampler
 {
 public:
-    // Init the permutation arrays using Faure-permutations. Alternatively, init_random can be
-    // called before the sampling functionality can be used.
+    /// Init the permutation arrays using Faure-permutations. Alternatively, init_random can be
+    /// called before the sampling functionality can be used.
     void init_faure();
 
-    // Init the permutation arrays using randomized permutations. Alternatively, init_faure can be
-    // called before the sampling functionality can be used. The client needs to specify a random
-    // number generator function object that contains a function
-    // shuffle(first, last).
+    /// Init the permutation arrays using randomized permutations. Alternatively, init_faure can be
+    /// called before the sampling functionality can be used. The client needs to specify a random
+    /// number generator function object that contains a function
+    /// shuffle(first, last).
     template <typename Random_number_generator>
     void init_random(Random_number_generator& rand);
 
-    // Return the number of supported dimensions.
+    /// Return the number of supported dimensions.
     static unsigned get_num_dimensions() { return 256u; }
 
-    // Return the Halton sample for the given dimension (component) and index.
-    // The client must have called init_random or init_faure at least once before.
-    // dimension must be smaller than the value returned by get_num_dimensions().
+    /// Return the Halton sample for the given dimension (component) and index.
+    /// The client must have called init_random or init_faure at least once before.
+    /// dimension must be smaller than the value returned by get_num_dimensions().
     float sample(unsigned dimension, unsigned index) const;
 
 private:
