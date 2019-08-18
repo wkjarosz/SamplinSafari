@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <cmath>
+#include <cstddef>
 #include <galois++/fwd.h>
 
 /**
