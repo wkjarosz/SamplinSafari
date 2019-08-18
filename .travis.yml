@@ -1,0 +1,15 @@
+language: cpp
+
+dist: trusty
+sudo: false
+
+addons:
+  apt:
+    packages:
+      - cmake
+
+script:
+  - mkdir build
+  - cd build
+  - cmake ../ -DCMAKE_BUILD_TYPE=Release # Test release build options
+  - make -j 4
