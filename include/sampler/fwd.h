@@ -1,6 +1,6 @@
 /**
    \file fwd.h
-   \author Wojciech Jarosz (wjarosz@gmail.com)
+   \author Wojciech Jarosz
    \brief Forward declarations
    \date 2019-08-12
    

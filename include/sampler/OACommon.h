@@ -1,6 +1,6 @@
 /*!
    \file OACommon.h
-   \author Wojciech Jarosz (wjarosz@gmail.com)
+   \author Wojciech Jarosz
    \date 2019-08-15   
 
    Self-contained versions of Bose, Bush and CMJ constructions. Slightly

@@ -1,6 +1,6 @@
 /**
    \file OAAddelmanKempthorne.h
-   \author Wojciech Jarosz (wjarosz@gmail.com)
+   \author Wojciech Jarosz
    \date 2019-08-12
    
    @copyright Copyright (c) 2019

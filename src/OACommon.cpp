@@ -1,6 +1,6 @@
 /*!
    \file OACommon.cpp
-   \author Wojciech Jarosz (wjarosz@dartmouth.edu)
+   \author Wojciech Jarosz
  */
 
 #include <vector>
