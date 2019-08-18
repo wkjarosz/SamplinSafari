@@ -146,7 +146,6 @@ add_library(samplerlib OBJECT STATIC
   src/OABoseBush.cpp
   src/OABush.cpp
   src/OACMJND.cpp
-  src/OACommon.cpp
   src/SOA.cpp
   src/Random.cpp
   src/Sobol.cpp
