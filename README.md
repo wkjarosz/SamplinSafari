@@ -55,7 +55,7 @@ Compiling requires CMake and a C++11 toolchain. Primary development in on macOS,
 
 On macOS and Linux, compiling should be as simple as
 
-    git clone --recursive https://github.com/wkjarosz/SamplingSafari.git
+    git clone --recursive https://github.com/wkjarosz/SamplinSafari.git
     cd SamplinSafari
     mkdir build
     cd build
