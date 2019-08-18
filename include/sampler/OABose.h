@@ -8,18 +8,14 @@
 #include <pcg32.h>
 #include <galois++/field.h>
 
+/// Produces OA samples based on the construction by Bose (1938).
 /**
-   Produces OA samples based on construction by:
-   
-      R.C. Bose (1938) Sankhya Vol 3, pp 323-338.
-   
-   The OAs are of the form:
-   
-      OA(p^2, k, p, 2),
-   
-   where k <= p+1, and p is a prime.
-   
-   This version constructs and stores the entire OA in memory.
+    The OAs are of the form: \f$ OA(p^2, k, p, 2), \f$
+    where \f$ k \le p+1 \f$, and \f$ p \f$ is a prime.
+
+    This version constructs and stores the entire OA in memory.
+
+    > R.C. Bose (1938) Sankhya Vol 3, pp 323-338.
  */
 class BoseOA : public OrthogonalArray
 {
@@ -60,18 +56,14 @@ protected:
 };
 
 
+/// Produces OA samples based on the construction by Bose (1938).
 /**
-   Produces OA samples based on construction by:
-   
-      R.C. Bose (1938) Sankhya Vol 3, pp 323-338.
-   
-   The OAs are of the form:
-   
-      OA(p^2, k, p, 2),
-   
-   where k <= p+1, and p is a prime.
-   
-   This version constructs the samples "in-place", one sample at a time.
+    The OAs are of the form: \f$ OA(p^2, k, p, 2), \f$
+    where \f$ k \le p+1 \f$, and \f$ p \f$ is a prime.
+
+    This version constructs the samples "in-place", one sample at a time.
+
+    > R.C. Bose (1938) Sankhya Vol 3, pp 323-338.
  */
 class BoseOAInPlace : public OrthogonalArray
 {
@@ -104,19 +96,16 @@ protected:
 };
 
 
+/// Produces OA samples based on the construction by Bose (1938).
 /**
-   Produces OA samples based on construction by:
-   
-      R.C. Bose (1938) Sankhya Vol 3, pp 323-338.
-   
-   The OAs are of the form:
-   
-      OA(q^2, k, q, 2),
-   
-   where k <= q+1, and q is a prime power: q = p^r where
-   p is a prime and r is a positive integer.
-   
-   This version constructs the samples "in-place", one sample at a time.
+    The OAs are of the form: \f$ OA(q^2, k, q, 2), \f$
+    where \f$ k \le q+1 \f$, and \f$ q \f$ is a prime power:
+    \f$ q = p^r \f$ where \f$ p \f$ is a prime and \f$ r \f$ is a positive
+    integer.
+
+    This version constructs the samples "in-place", one sample at a time.
+
+    > R.C. Bose (1938) Sankhya Vol 3, pp 323-338.
  */
 class BoseGaloisOAInPlace : public BoseOAInPlace
 {

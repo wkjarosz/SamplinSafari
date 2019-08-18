@@ -8,18 +8,14 @@
 #include <pcg32.h>
 
 
+/// Produces full factorial OA samples based on the construction by Jarosz et al. (2019)
 /**
-   Produces full factorial OA samples based on the construction by
+    The OAs are of the form: \f$ OA(s^t, t, s, t) \f$, where \f$ t \ge 2 \f$, and
+    \f$ s \f$ is any positive integer.
   
-        Jarosz et al. 2019. Orthogonal Array Sampling for Monte Carlo Rendering.
-  
-   The OAs are of the form:
-  
-        OA(s^t, t, s, t),
-  
-   where t >= 2, and s is any positive integer.
-  
-   This version constructs the samples "in-place", one sample at a time.
+    This version constructs the samples "in-place", one sample at a time.
+
+    > Jarosz et al. 2019. Orthogonal Array Sampling for Monte Carlo Rendering.
  */
 class CMJNDInPlace : public OrthogonalArray
 {

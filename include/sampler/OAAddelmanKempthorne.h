@@ -9,19 +9,17 @@
 
 #include <sampler/OABose.h>
 
+
+/// Produces OA samples based on the construction by Addelman and Kempthorne (1961)
 /**
-   Produces OA samples based on the construction by
-   
-     S. Addelman and O. Kempthorne (1961). Annals of Mathematical Statistics,
-     Vol 32 pp 1167-1176.
-   
-   The OAs are of the form:
-   
-        OA(2q^2, k, q, 2),
-   
-   where k <= 2q+1, and q is an odd prime power.
-   
-   This version constructs the samples "in-place", one sample at a time.
+    This version uses Galois field arithmetic, so the OAs are of the form:
+    \f$ OA(2q^2, k, q, 2), \f$ where \f$ k \le 2q+1 \f$, and \f$ q \f$ is an
+    odd prime power.
+
+    This version constructs the samples "in-place", one sample at a time.
+
+    > S. Addelman and O. Kempthorne (1961). Annals of Mathematical Statistics,
+    > Vol 32 pp 1167-1176.
  */
 class AddelmanKempthorneOAInPlace : public BoseGaloisOAInPlace
 {

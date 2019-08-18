@@ -6,17 +6,15 @@
 
 #include <sampler/OABose.h>
 
+//! Produces OA samples based on the construction by Bose and Bush (1952).
 /**
-   Produces OA samples based on the construction by
-   
-     R.C. Bose and K.A. Bush (1952) Annals of Mathematical Statistics,
-     Vol 23 pp 508-524.
-   
-   The OAs are of the form:
-   
-        OA(2q^2, k, q, 2),  
-   
-   where k <= 2q+1, for powers of 2, q=2^r.
+    The OAs are of the form: \f$ OA(2q^2, k, q, 2) \f$,
+    where \f$ k \le 2q+1 \f$, for powers of 2, \f$ q=2^r \f$.
+
+    This version precomputes and stores all the samples.
+
+    > R.C. Bose and K.A. Bush (1952) Annals of Mathematical Statistics,
+    > Vol 23 pp 508-524.
  */
 class BoseBushOA : public BoseGaloisOAInPlace
 {
@@ -45,19 +43,15 @@ protected:
 };
 
 
+/// Produces OA samples based on the construction by Bose and Bush (1952).
 /**
-   Produces OA samples based on the construction by
-   
-     R.C. Bose and K.A. Bush (1952) Annals of Mathematical Statistics,
-     Vol 23 pp 508-524.
-   
-   The OAs are of the form:
-   
-        OA(2q^2, k, q, 2),  
-   
-   where k <= 2q+1, for powers of 2, q=2^r.
-   
-   This version constructs the samples "in-place", one sample at a time.
+    The OAs are of the form: \f$ OA(2q^2, k, q, 2) \f$,
+    where \f$ k \le 2q+1 \f$, for powers of 2, \f$ q=2^r \f$.
+
+    This version constructs the samples "in-place", one sample at a time.
+
+    > R.C. Bose and K.A. Bush (1952) Annals of Mathematical Statistics,
+    > Vol 23 pp 508-524.
  */
 class BoseBushOAInPlace : public BoseGaloisOAInPlace
 {

@@ -8,7 +8,7 @@
 #include <nanogui/glutil.h>
 #include <fstream>
 
-#include <sampler/Sampler.h>
+#include <sampler/fwd.h>
 
 using namespace nanogui;
 using namespace std;

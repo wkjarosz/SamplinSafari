@@ -6,7 +6,6 @@
 
 #include <sampler/Sampler.h>
 #include <vector>
-#include <sampler/OACommon.h>
 
 enum OffsetType : unsigned
 {
@@ -18,9 +17,10 @@ enum OffsetType : unsigned
 };
 
 /**
-   \brief Base class for all Orthogonal Array-based samplers, providing member
-   variables and functions for strength, randomization, sub-strata jitter, and
-   style of substrata offsets.
+   Base class for all Orthogonal Array-based samplers.
+
+   Provides member variables and functions for strength, randomization,
+   sub-strata jitter, and style of substrata offsets.
  */
 class OrthogonalArray : public TSamplerMinMaxDim<2, (unsigned)-1>
 {

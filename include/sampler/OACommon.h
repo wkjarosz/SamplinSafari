@@ -21,7 +21,8 @@ float boseOA(unsigned i,   ///< sample index
              unsigned j,   ///< dimension (< s+1)
              unsigned s,   ///< number of levels/strata
              unsigned p,   ///< pseudo-random permutation seed
-             unsigned ot); ///< CENTERED = 0, J_STYLE = 1, MJ_STYLE = 2, or CMJ_STYLE = 3
+             unsigned ot   ///< CENTERED = 0, J_STYLE = 1, MJ_STYLE = 2, or CMJ_STYLE = 3
+             );
 
 /**
     Strength-t orthogonal arrays using the Bush construction.
@@ -34,7 +35,8 @@ void boseOA(float Xi[],   ///< pointer to float array for output
             unsigned s,   ///< number of levels/strata
             float maxJit, ///< amount to jitter within substrata
             unsigned p,   ///< pseudo-random permutation seed
-            unsigned ot); ///< CENTERED = 0, J_STYLE = 1, MJ_STYLE = 2, or CMJ_STYLE = 3
+            unsigned ot   ///< CENTERED = 0, J_STYLE = 1, MJ_STYLE = 2, or CMJ_STYLE = 3
+            );
 
 /**
     Strength-t orthogonal arrays using the Bush construction.
@@ -47,7 +49,8 @@ float bushOA(unsigned i,   ///< sample index
              unsigned t,   ///< strength of OA (0 < t <= d)
              float maxJit, ///< amount to jitter within substrata
              unsigned p,   ///< pseudo-random permutation seed
-             unsigned ot); ///< J = 1 or MJ = 2
+             unsigned ot   ///< J = 1 or MJ = 2
+             );
 
 /**
     Strength-t orthogonal arrays using the Bush construction.
@@ -61,7 +64,8 @@ void bushOA(float Xi[],   ///< pointer to float array for output
             unsigned t,   ///< strength of OA (0 < t <= d)
             float maxJit, ///< amount to jitter within substrata
             unsigned p,   ///< pseudo-random permutation seed
-            unsigned ot); ///< J = 1 or MJ = 2
+            unsigned ot   ///< J = 1 or MJ = 2
+            );
 
 /// Generalization of Kensler's CMJ pattern to higher dimensions.
 float cmjdD(unsigned i,   ///< sample index

@@ -7,25 +7,24 @@
 #include <sampler/OABose.h>
 #include <galois++/field.h>
 
+
+/// Produces OA samples based on the construction by Bush (1952).
 /**
-   Produces OA samples based on the construction by
-  
-        K.A. Bush (1952) Annals of Mathematical Statistics, Vol 23 pp 426-434.
-  
-   The OAs are of the form:
-  
-        OA(p^t, k, p, t),
-  
-   where k <= p, t >= 3, and p is a prime.
-  
-   Bush's original designs allowed for one more dimension (p+1), but we
-   sacrifice this dimension so that OffsetType == CMJ_STYLE and MJ_STYLE produce
-   "sliced" a.k.a "nested" designs where each of the p consecutive sets
-   of p^(t-1) points forms an OA(p^(t-1), k-1, p, t-1). When OffsetType ==
-   CMJ_STYLE, we sacrifice yet another dimension to achieve this, so the designs
-   then have k <= p-1. CMJ_STYLE currently only works properly for t=3.
-  
-   This version constructs the samples "in-place", one sample at a time.
+    This version uses modulo arithmetic, so the OAs are of the form:
+    \f$ OA(p^t, k, p, t), \f$ where \f$ k \le p \f$, \f$ t \ge 3 \f$, and
+    \f$ p \f$ is a prime.
+
+    Bush's original designs allowed for one more dimension \f$( p+1 )\f$, but we
+    sacrifice this dimension so that OffsetType == CMJ_STYLE and MJ_STYLE produce
+    "sliced" a.k.a "nested" designs where each of the \f$ p \f$ consecutive sets
+    of \f$ p^{t-1} \f$ points forms an \f$ OA(p^{t-1}, k-1, p, t-1) \f$. When
+    OffsetType == CMJ_STYLE, we sacrifice yet another dimension to achieve this,
+    so the designs then have \f$ k \le p-1 \f$. CMJ_STYLE currently only works
+    properly for \f$ t=3 \f$.
+
+    This version constructs the samples "in-place", one sample at a time.
+
+    > K.A. Bush (1952) Annals of Mathematical Statistics, Vol 23 pp 426-434.
  */
 class BushOAInPlace : public BoseOAInPlace
 {
@@ -54,25 +53,23 @@ public:
 };
 
 
+/// Produces OA samples based on the construction by Bush (1952).
 /**
-   Produces OA samples based on the construction by
-  
-        K.A. Bush (1952) Annals of Mathematical Statistics, Vol 23 pp 426-434.
-  
-   The OAs are of the form:
-  
-        OA(q^t, k, q, t),
-  
-   where k <= q, t >= 3, and prime power q.
-  
-   Bush's original designs allowed for one more dimension (q+1), but we
-   sacrifice this dimension so that OffsetType == CMJ_STYLE and MJ_STYLE produce
-   "sliced" a.k.a "nested" designs where each of the q consecutive sets
-   of q^(t-1) points forms an OA(q^(t-1), k-1, q, t-1). When OffsetType ==
-   CMJ_STYLE, we sacrifice yet another dimension to achieve this, so the designs
-   then have k <= q-1. CMJ_STYLE currently only works properly for t=3.
+    This version uses Galois Field arithmetic, so the OAs are of the form:
+    \f$ OA(q^t, k, q, t), \f$ where \f$ k \le q \f$, \f$ t \ge 3 \f$, and
+    prime power \f$ q \f$.
 
-   This version constructs the samples "in-place", one sample at a time.
+    Bush's original designs allowed for one more dimension \f$( q+1 )\f$, but we
+    sacrifice this dimension so that OffsetType == CMJ_STYLE and MJ_STYLE produce
+    "sliced" a.k.a "nested" designs where each of the \f$ q \f$ consecutive sets
+    of \f$ q^{t-1} \f$ points forms an \f$ OA(q^{t-1}, k-1, q, t-1) \f$. When
+    OffsetType == CMJ_STYLE, we sacrifice yet another dimension to achieve this,
+    so the designs then have \f$ k \le q-1 \f$. CMJ_STYLE currently only works
+    properly for \f$ t=3 \f$.
+
+    This version constructs the samples "in-place", one sample at a time.
+
+    > K.A. Bush (1952) Annals of Mathematical Statistics, Vol 23 pp 426-434.
  */
 class BushGaloisOAInPlace : public BushOAInPlace
 {
