@@ -61,7 +61,7 @@ On macOS and Linux, compiling should be as simple as
     cd SamplinSafari
     mkdir build
     cd build
-    cmake-gui ../
+    cmake ../
     make -j 4
 
 ## Acknowledgements
