@@ -117,9 +117,11 @@ include_directories(
 
 # Compile samplers library
 add_library(samplerlib OBJECT STATIC
+  include/sampler/fwd.h
   include/sampler/Misc.h
   include/sampler/Sampler.h
   include/sampler/Halton.h
+  include/sampler/halton_sampler.h
   include/sampler/Hammersley.h
   include/sampler/Jittered.h
   include/sampler/LP.h
@@ -133,6 +135,7 @@ add_library(samplerlib OBJECT STATIC
   include/sampler/OACMJND.h
   include/sampler/SOA.h
   include/sampler/Random.h
+  include/sampler/RandomPermutation.h
   include/sampler/Sobol.h
   src/Misc.cpp
   src/Halton.cpp
