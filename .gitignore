@@ -37,3 +37,4 @@ build*/
 .ccls-cache/
 .idea/
 cmake-build-*/
+.DS_Store

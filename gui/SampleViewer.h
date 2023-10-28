@@ -2,13 +2,16 @@
     \author Wojciech Jarosz
 */
 
-#include <nanogui/screen.h>
-#include <nanogui/common.h>
-#include <nanogui/textbox.h>
-#include <nanogui/glutil.h>
 #include <fstream>
+#include <nanogui/common.h>
+#include <nanogui/opengl.h>
+#include <nanogui/screen.h>
+#include <nanogui/textbox.h>
+#include <thread>
 
 #include <sampler/fwd.h>
+
+#include "utils.h"
 
 using namespace nanogui;
 using namespace std;
@@ -56,14 +59,14 @@ enum CameraType
 
 struct CameraParameters
 {
-    Arcball arcball;
-    float perspFactor = 0.0f;
-    float zoom = 1.0f, viewAngle = 35.0f;
-    float dnear = 0.05f, dfar = 1000.0f;
-    Vector3f eye = Vector3f(0.0f, 0.0f, 2.0f);
-    Vector3f center = Vector3f(0.0f, 0.0f, 0.0f);
-    Vector3f up = Vector3f(0.0f, 1.0f, 0.0f);
-    CameraType cameraType = CAMERA_CURRENT;
+    Arcball    arcball;
+    float      persp_factor = 0.0f;
+    float      zoom = 1.0f, view_angle = 35.0f;
+    float      dnear = 0.05f, dfar = 1000.0f;
+    Vector3f   eye         = Vector3f(0.0f, 0.0f, 2.0f);
+    Vector3f   center      = Vector3f(0.0f, 0.0f, 0.0f);
+    Vector3f   up          = Vector3f(0.0f, 1.0f, 0.0f);
+    CameraType camera_type = CAMERA_CURRENT;
 };
 
 class SampleViewer : public Screen
@@ -72,86 +75,69 @@ public:
     SampleViewer();
     ~SampleViewer();
 
-    bool resizeEvent(const Vector2i &);
-    bool mouseMotionEvent(const Vector2i &p, const Vector2i &rel, int button, int modifiers);
-    bool mouseButtonEvent(const Vector2i &p, int button, bool down, int modifiers);
-    bool scrollEvent(const Vector2i &p, const Vector2f &rel);
-    void drawContents();
-    bool keyboardEvent(int key, int scancode, int action, int modifiers);
+    bool mouse_motion_event(const Vector2i &p, const Vector2i &rel, int button, int modifiers);
+    bool mouse_button_event(const Vector2i &p, int button, bool down, int modifiers);
+    bool scroll_event(const Vector2i &p, const Vector2f &rel);
+    void draw_contents();
+    bool keyboard_event(int key, int scancode, int action, int modifiers);
 
 private:
-    void drawContentsEPS(ofstream & file, CameraType camera, int dimX, int dimY, int dimZ);
-    void drawContents2DEPS(ofstream & file);
-    void updateGPUPoints(bool regenerate = true);
-    void updateGPUGrids();
-    void setView(CameraType view);
-    void updateCurrentCamera();
-    void initializeGUI();
-    void generatePoints();
-    void populatePointSubset();
-    void generateGrid(MatrixXf & positions, int gridRes);
-    void drawText(const Vector2i & pos,
-                  const std::string & text,
-                  const Color & col = Color(1.0f, 1.0f, 1.0f, 1.0f),
-                  int fontSize = 10,
-                  int fixedWidth = 0,
-                  int align = NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM) const;
-    void drawPoints(const Matrix4f & mvp, const Vector3f & color,
-                    bool showPointNums = false, bool showPointCoords = false) const;
-    void drawGrid(const Matrix4f & mvp, float alpha, uint32_t offset, uint32_t count) const;
-    void draw2DPointsAndGrid(const Matrix4f & mvp, int dimX, int dimY, int plotIndex) const;
+    void draw_contents_EPS(ofstream &file, CameraType camera, int dimX, int dimY, int dimZ);
+    void draw_contents_2D_EPS(ofstream &file);
+    void update_GPU_points(bool regenerate = true);
+    void update_GPU_grids();
+    void set_view(CameraType view);
+    void update_current_camera();
+    void initialize_GUI();
+    void generate_points();
+    void populate_point_subset();
+    void generate_grid(vector<Vector3f> &positions, int gridRes);
+    void draw_text(const Vector2i &pos, const std::string &text, const Color &col = Color(1.0f, 1.0f, 1.0f, 1.0f),
+                   int fontSize = 10, int fixedWidth = 0, int align = NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM) const;
+    void draw_points(const Matrix4f &mvp, const Vector3f &color, bool showPointNums = false,
+                     bool showPointCoords = false);
+    void draw_grid(const Matrix4f &mvp, float alpha, uint32_t offset, uint32_t count);
+    void draw_2D_points_and_grid(const Matrix4f &mvp, int dimX, int dimY, int plotIndex);
 
     // GUI elements
-    Window * m_parametersDialog = nullptr;
-    Window * m_helpDialog = nullptr;
-    Button * m_helpButton = nullptr;
-    Slider *m_pointCountSlider,
-           *m_pointRadiusSlider,
-           *m_pointDrawCountSlider,
-           *m_jitterSlider;
-    IntBox<int> *m_dimensionBox,
-                *m_xDimension,
-                *m_yDimension,
-                *m_zDimension,
-                *m_pointCountBox,
-                *m_firstDrawPointBox,
-                *m_pointDrawCountBox,
-                *m_subsetAxis,
-                *m_numSubsetLevels,
-                *m_subsetLevel;
-    ComboBox *m_pointTypeBox;
+    Window      *m_parameters_dialog = nullptr;
+    Window      *m_help_dialog       = nullptr;
+    Button      *m_help_button       = nullptr;
+    Slider      *m_point_count_slider, *m_point_radius_slider, *m_point_draw_count_slider, *m_jitter_slider;
+    IntBox<int> *m_dimension_box, *m_x_dimension, *m_y_dimension, *m_z_dimension, *m_point_count_box,
+        *m_first_draw_point_box, *m_point_draw_count_box, *m_subset_axis, *m_num_subset_levels, *m_subset_level;
+    ComboBox *m_point_type_box;
 
     // Extra OA parameters
-    Label * m_strengthLabel;
-    IntBox<int> *m_strengthBox;
-    Label * m_offsetTypeLabel;
-    ComboBox *m_offsetTypeBox;
+    Label       *m_strength_label;
+    IntBox<int> *m_strength_box;
+    Label       *m_offset_type_label;
+    ComboBox    *m_offset_type_box;
 
-    CheckBox *m_coarseGridCheckBox,
-             *m_fineGridCheckBox,
-             *m_bboxGridCheckBox,
-             *m_randomizeCheckBox,
-             *m_subsetByIndex,
-             *m_subsetByCoord,
-             *m_show1DProjections,
-             *m_showPointNums,
-             *m_showPointCoords;
-    Button * m_viewButtons[CAMERA_CURRENT+1];
-    Button *m_scaleRadiusWithPoints;
-    std::vector<std::string> m_timeStrings;
+    CheckBox *m_coarse_grid_checkbox, *m_fine_grid_checkbox, *m_bbox_grid_checkbox, *m_randomize_checkbox,
+        *m_subset_by_index, *m_subset_by_coord, *m_show_1d_projections, *m_show_point_nums, *m_show_point_coords;
+    Button             *m_view_btns[CAMERA_CURRENT + 1];
+    Button             *m_scale_radius_with_points;
+    vector<std::string> m_time_strings;
 
     /// X, Y, Z, and user-defined cameras
     CameraParameters m_camera[NUM_CAMERA_TYPES];
 
-    float m_animateStartTime = 0.0f;
-    bool m_mouseDown = false;
-    int m_numDimensions = 3;
+    float m_animate_start_time = 0.0f;
+    bool  m_mouse_down         = false;
+    int   m_num_dimensions     = 3;
 
-    GLShader *m_pointShader = nullptr;
-    GLShader *m_gridShader = nullptr;
-    GLShader *m_point2DShader = nullptr;
-    MatrixXf m_points, m_subsetPoints, m_3DPoints;
-    int m_targetPointCount, m_pointCount, m_subsetCount = 0, m_coarseLineCount, m_fineLineCount;
+    nanogui::ref<RenderPass> m_render_pass;
+    nanogui::ref<Shader>     m_point_shader;
+    nanogui::ref<Shader>     m_grid_shader;
+    nanogui::ref<Shader>     m_point_2d_shader;
+    Array2D<float>           m_points, m_subset_points;
+    vector<Vector3f>         m_3d_points;
+    int m_target_point_count, m_point_count, m_subset_count = 0, m_coarse_line_count, m_fine_line_count;
 
-    vector<Sampler*> m_samplers;
+    vector<Sampler *> m_samplers;
+
+    std::thread       m_gui_refresh_thread;
+    std::atomic<bool> m_gui_refresh    = false;
+    std::atomic<bool> m_join_requested = false;
 };

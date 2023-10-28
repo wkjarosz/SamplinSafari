@@ -1,119 +1,206 @@
-cmake_minimum_required (VERSION 2.8.3)
-project(SamplinSafari)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+cmake_minimum_required(VERSION 3.13)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/" "${CMAKE_SOURCE_DIR}/resources")
+
+string(TIMESTAMP BUILD_TIME "%Y-%m-%d %H:%M")
+message(STATUS "Saving build timestamp: ${BUILD_TIME}")
+
+project(
+  SamplinSafari
+  DESCRIPTION
+    "A research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers."
+  # VERSION ${VERSION}
+  LANGUAGES C CXX)
+
+set(SAMPLINSAFARI_VERSION "${GIT_DESCRIBE}")
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(SAMPLINSAFARI_VERSION "${SAMPLINSAFARI_VERSION} (64 bit)")
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  set(SAMPLINSAFARI_VERSION "${SAMPLINSAFARI_VERSION} (32 bit)")
+endif()
+
+include(sanitizers)
+
+# Set ourselves as the startup project in visual studio. Not available until cmake 3.6, but doesn't break older
+# versions.
+set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT SamplinSafari)
+
+set(USE_IWYU OFF CACHE BOOL "INCLUDE WHAT YOU USE")
+
+include(CheckCXXCompilerFlag)
 
 # prevent glfw from changing the directory on macOS bundles
-SET(GLFW_USE_CHDIR OFF CACHE BOOL "Prevent glfwInit from chdir to Contents/Resources" FORCE)
+# SET(GLFW_USE_CHDIR OFF CACHE BOOL "Prevent glfwInit from chdir to Contents/Resources" FORCE)
 
+# ============================================================================
 # Set a default build configuration (Release)
+# ============================================================================
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to 'Release' as none was specified.")
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
-    "MinSizeRel" "RelWithDebInfo")
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 string(TOUPPER "${CMAKE_BUILD_TYPE}" U_CMAKE_BUILD_TYPE)
 
-# This is useful when compiling with Ninja. When compiling with clang or gcc,
-# this will force it to output well-formatted/colored output.
-option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." FALSE)
-if (${FORCE_COLORED_OUTPUT})
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-       add_compile_options (-fdiagnostics-color=always)
-    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-       add_compile_options (-fcolor-diagnostics)
-    endif ()
-endif ()
-
-if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ext/nanogui/ext/glfw")
-  message(FATAL_ERROR "The SamplinSafari dependency repositories (NanoGUI, GLFW, etc.) are missing! "
-    "You probably did not clone the project with --recursive. It is possible to recover "
-    "by calling \"git submodule update --init --recursive\"")
-endif()
-
+# ============================================================================
 # Enable folders for projects in Visual Studio
-if (CMAKE_GENERATOR MATCHES "Visual Studio")
+# ============================================================================
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
 
-# Sanitize build environment for static build with C++11
-if (MSVC)
+if(APPLE)
+  set(CMAKE_MACOSX_RPATH ON)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  if("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    message(STATUS "Using C++17 standard")
+    set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
+  elseif("cxx_std_14" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    message(STATUS "Using C++14 standard")
+    set(CMAKE_CXX_STANDARD 14 CACHE STRING "The C++ standard to use")
+  elseif("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    message(STATUS "Using C++11 standard")
+    set(CMAKE_CXX_STANDARD 11 CACHE STRING "The C++ standard to use")
+  else()
+    message(FATAL_ERROR "Unsupported compiler -- HDRView requires at least C++11!")
+  endif()
+
+  # Prefer libc++ in conjunction with Clang
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    check_cxx_compiler_flag("-stdlib=libc++" HAS_LIBCPP)
+    if(HAS_LIBCPP)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -D_LIBCPP_VERSION")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -stdlib=libc++")
+      message(STATUS "HDRView: using libc++.")
+    else()
+      message(
+        WARNING
+          "libc++ is recommended in conjunction with clang. Please insteall the libc++ development headers, provided e.g. by the packages 'libc++-dev' and 'libc++abi-dev' on Debian/Ubuntu."
+      )
+    endif()
+  endif()
+
+  # Enable link time optimization and set the default symbol visibility to hidden (very important to obtain small
+  # binaries)
+  if(NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
+    # Default symbol visibility
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+    # set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+  endif()
+
+  # Disable specific GCC 7 warnings
+  if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
+    set(CMAKE_CXX_FLAGS
+        "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -Wno-misleading-indentation -Wformat-truncation=0 -Wno-int-in-bool-context -Wimplicit-fallthrough=0"
+    )
+  endif()
+endif()
+
+# ============================================================================
+# Sanitize build environment for static build with C++11/17
+# ============================================================================
+if(MSVC)
   # Disable annoying secure CRT warnings
-  add_definitions (/D "_CRT_SECURE_NO_WARNINGS")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_CRT_SECURE_NO_WARNINGS")
 
   # Parallel build on MSVC (all targets)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
-  if (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+  if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
-
-    # Disable Eigen vectorization for Windows 32 bit builds (issues with unaligned access segfaults)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DEIGEN_DONT_ALIGN")
   endif()
 
   # Static build
   set(CompilerFlags
-        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-        CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO
-        CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-        CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
+      CMAKE_CXX_FLAGS
+      CMAKE_CXX_FLAGS_DEBUG
+      CMAKE_CXX_FLAGS_RELEASE
+      CMAKE_CXX_FLAGS_MINSIZEREL
+      CMAKE_CXX_FLAGS_RELWITHDEBINFO
+      CMAKE_C_FLAGS
+      CMAKE_C_FLAGS_DEBUG
+      CMAKE_C_FLAGS_RELEASE
+      CMAKE_C_FLAGS_MINSIZEREL
+      CMAKE_C_FLAGS_RELWITHDEBINFO)
   foreach(CompilerFlag ${CompilerFlags})
     string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
   endforeach()
-elseif(APPLE)
-    # Try to auto-detect a suitable SDK
-    # Commented out for now -- causes a too new SDK to be selected on AppVeyor
-    #execute_process(COMMAND bash -c "xcodebuild -version -sdk | grep MacOSX | grep Path | head -n 1 | cut -f 2 -d ' '" OUTPUT_VARIABLE CMAKE_OSX_SYSROOT)
-    #string(REGEX REPLACE "(\r?\n)+$" "" CMAKE_OSX_SYSROOT "${CMAKE_OSX_SYSROOT}")
-    #string(REGEX REPLACE "^.*X([0-9.]*).sdk$" "\\1" CMAKE_OSX_DEPLOYMENT_TARGET "${CMAKE_OSX_SYSROOT}")
-    add_definitions(-DGL_SILENCE_DEPRECATION)
 endif()
 
-# Enable C++11 mode on GCC / Clang
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+# ============================================================================
+# Add dependencies via CPM (cmake/tools.cmake includes cmake/CPM.cmake)
+#
+# see https://github.com/TheLartians/CPM.cmake for more info
+# ============================================================================
+include(cmake/CPM.cmake)
+
+cpmaddpackage("gh:mitsuba-renderer/tinyformat#43816c694297a27909da0982f91315fb33d60676")
+if(tinyformat_ADDED)
+  add_library(tinyformat INTERFACE IMPORTED)
+  target_include_directories(tinyformat INTERFACE "${tinyformat_SOURCE_DIR}")
 endif()
 
-# Build Galois++ library
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ext/galois++ ext_build/galois++)
+cpmaddpackage("gh:wjakob/pcg32#70099eadb86d3999c38cf69d2c55f8adc1f7fe34")
+if(pcg32_ADDED)
+  add_library(pcg32 INTERFACE IMPORTED)
+  target_include_directories(pcg32 INTERFACE "${pcg32_SOURCE_DIR}")
+endif()
 
-# Build NanoGUI
-set(NANOGUI_BUILD_EXAMPLE OFF CACHE BOOL " " FORCE)
-set(NANOGUI_BUILD_SHARED  OFF CACHE BOOL " " FORCE)
-set(NANOGUI_BUILD_PYTHON  OFF CACHE BOOL " " FORCE)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ext/nanogui ext_build/nanogui)
-set_property(TARGET glfw glfw_objects nanogui galois++ PROPERTY FOLDER "dependencies")
+cpmaddpackage("gh:wkjarosz/galois#4cd153fd7b9fcec55de85e13fbae4af1d51aedfd")
+if(galois_ADDED)
+  target_include_directories(galois++ INTERFACE "${galois_SOURCE_DIR}/include")
+endif()
 
+set(NANOGUI_BACKEND "OpenGL" CACHE BOOL " " FORCE)
+cpmaddpackage(
+  NAME
+  nanogui
+  GITHUB_REPOSITORY
+  Tom94/nanogui-1
+  GIT_TAG
+  cf8baf7c2a02a0e8443379a6b80f6709139f84a0
+  OPTIONS
+  "NANOGUI_BACKEND OpenGL"
+  "NANOGUI_BUILD_EXAMPLES OFF"
+  "NANOGUI_BUILD_SHARED OFF"
+  "NANOGUI_BUILD_PYTHON OFF"
+  "NANOGUI_INSTALL OFF"
+  "EXCLUDE_FROM_ALL YES")
+if(nanogui_ADDED)
+  add_library(nanogui::nanogui INTERFACE IMPORTED)
+  target_include_directories(
+    nanogui::nanogui SYSTEM INTERFACE ${nanogui_SOURCE_DIR}/ext/glfw/include ${nanogui_SOURCE_DIR}/ext/nanovg/src
+                                      ${nanogui_SOURCE_DIR}/include ${NANOGUI_EXTRA_INCS})
+  target_link_libraries(nanogui::nanogui INTERFACE "nanogui")
+  target_compile_definitions(nanogui::nanogui INTERFACE "${NANOGUI_BACKEND_DEFS}")
+endif()
+
+
+# ============================================================================
 # Compile remainder of the codebase with compiler warnings turned on
+# ============================================================================
 if(MSVC)
   if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
     string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
   endif()
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-gnu-anonymous-struct -Wno-c99-extensions -Wno-nested-anon-types -Wno-deprecated-register")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS
+        "${CMAKE_CXX_FLAGS} -Wno-gnu-anonymous-struct -Wno-c99-extensions -Wno-nested-anon-types -Wno-deprecated-register"
+    )
   endif()
 endif()
 
-include_directories(
-    # NanoGUI
-    ${CMAKE_CURRENT_SOURCE_DIR}/ext/nanogui/include
-    # NanoGUI dependencies (Eigen, GLFW, NanoVG, GLAD?)
-    ${NANOGUI_EXTRA_INCS}
-    # tinyformat
-    ${CMAKE_CURRENT_SOURCE_DIR}/ext/tinyformat
-    # pcg32
-    ${CMAKE_CURRENT_SOURCE_DIR}/ext/pcg32
-    # galois++
-    ${CMAKE_CURRENT_SOURCE_DIR}/ext/galois++/include
-    # sampler
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Compile samplers library
 add_library(samplerlib OBJECT STATIC
@@ -153,7 +240,12 @@ add_library(samplerlib OBJECT STATIC
   src/Random.cpp
   src/Sobol.cpp
   src/SobolMatrices.cpp)
-target_link_libraries(samplerlib galois++)
+  
+# Link dependencies
+target_link_libraries(
+  samplerlib
+  PUBLIC galois++ pcg32 tinyformat
+)
 
 # Resource file (icons etc.)
 set(EXTRA_SOURCE "")
@@ -163,8 +255,7 @@ elseif(WIN32)
   #set(EXTRA_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.rc")
 endif()
 
-# The following lines build the main executable. If you add a source
-# code file to Nori, be sure to include it in this list.
+# The following lines build the main executable.
 add_executable(SamplinSafari MACOSX_BUNDLE
     gui/SampleViewer.cpp
     gui/SampleViewer.h
@@ -175,7 +266,11 @@ add_executable(SamplinSafari MACOSX_BUNDLE
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})
-target_link_libraries(SamplinSafari nanogui ${NANOGUI_EXTRA_LIBS} galois++ samplerlib)
+target_link_libraries(
+  SamplinSafari
+  PRIVATE nanogui::nanogui
+          tinyformat
+          samplerlib)
 
 set_target_properties(SamplinSafari PROPERTIES OUTPUT_NAME "SamplinSafari")
 
@@ -195,31 +290,15 @@ if (UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
   add_custom_command(TARGET SamplinSafari POST_BUILD COMMAND strip $<TARGET_FILE:SamplinSafari>)
 endif()
 
+# Force colored output for the ninja generator
+if(CMAKE_GENERATOR STREQUAL "Ninja")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdiagnostics-color=always")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+  endif()
+endif()
 
-
-#============================================================================
-# Check for doxygen and provide a make target to build the documentation
-#============================================================================
-
-# first we can indicate the documentation build as an option and set it to ON by default
-option(BUILD_DOC "Build documentation" ON)
-
-# check if Doxygen is installed
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
-    # set input and output files
-    set(DOXYGEN_IN ${CMAKE_SOURCE_DIR}/Doxyfile.in)
-    set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/doc/Doxyfile)
-
-    # request to configure the file
-    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-    message("Configuring doxygen and adding \"doc\" make target")
-
-    add_custom_target(doc
-        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/doc/
-        COMMENT "Generating API documentation with Doxygen"
-        VERBATIM )
-else (DOXYGEN_FOUND)
-    message("Unable to find Doxygen, so doxygen documentation won't be built")
-endif (DOXYGEN_FOUND)
+target_compile_features(samplerlib PRIVATE cxx_std_17)

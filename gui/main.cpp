@@ -15,10 +15,10 @@ NANOGUI_FORCE_DISCRETE_GPU();
 
 int nprocs = -1;
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     vector<string> args;
-    bool help = false;
+    bool           help = false;
 
 #if defined(__APPLE__)
     bool launched_from_finder = false;
@@ -49,7 +49,7 @@ int main(int argc, char** argv)
             }
         }
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         cout << "Error: " << e.what() << endl;
         help = true;
@@ -74,13 +74,13 @@ int main(int argc, char** argv)
 
         {
             nanogui::ref<SampleViewer> viewer = new SampleViewer();
-            viewer->setVisible(true);
+            viewer->set_visible(true);
             nanogui::mainloop();
         }
 
         nanogui::shutdown();
     }
-    catch (const std::runtime_error& e)
+    catch (const std::runtime_error &e)
     {
         std::cerr << "Caught a fatal error: " << e.what() << endl;
         return -1;
