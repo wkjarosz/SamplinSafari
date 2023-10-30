@@ -55,19 +55,6 @@ if(APPLE)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  if("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    message(STATUS "Using C++17 standard")
-    set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
-  elseif("cxx_std_14" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    message(STATUS "Using C++14 standard")
-    set(CMAKE_CXX_STANDARD 14 CACHE STRING "The C++ standard to use")
-  elseif("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    message(STATUS "Using C++11 standard")
-    set(CMAKE_CXX_STANDARD 11 CACHE STRING "The C++ standard to use")
-  else()
-    message(FATAL_ERROR "Unsupported compiler -- HDRView requires at least C++11!")
-  endif()
-
   # Prefer libc++ in conjunction with Clang
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     check_cxx_compiler_flag("-stdlib=libc++" HAS_LIBCPP)
@@ -75,7 +62,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -D_LIBCPP_VERSION")
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
       set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -stdlib=libc++")
-      message(STATUS "HDRView: using libc++.")
+      message(STATUS "SamplinSafari: using libc++.")
     else()
       message(
         WARNING
@@ -247,6 +234,8 @@ target_link_libraries(
   PUBLIC galois++ pcg32 tinyformat
 )
 
+set_target_properties(samplerlib PROPERTIES CXX_STANDARD 17)
+
 # Resource file (icons etc.)
 set(EXTRA_SOURCE "")
 if (APPLE)
@@ -272,7 +261,9 @@ target_link_libraries(
           tinyformat
           samplerlib)
 
-set_target_properties(SamplinSafari PROPERTIES OUTPUT_NAME "SamplinSafari")
+set_target_properties(SamplinSafari PROPERTIES
+  OUTPUT_NAME "SamplinSafari"
+  CXX_STANDARD 17)
 
 if (APPLE)
   # Build an application bundle on OSX
