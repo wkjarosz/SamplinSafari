@@ -1,0 +1,109 @@
+name: macOS build
+
+on:
+  push:
+    branches:
+      - "*"
+    pull_request:
+      - "*"
+    paths:
+      # This action only runs on push when C++ files are changed
+      - "**.cpp"
+      - "**.h"
+      - "**.cmake"
+      - "**Lists.txt"
+      - "**-mac.yml"
+  workflow_dispatch:
+
+env:
+  CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }} (${{ matrix.buildtype }})
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+              name: "macOS 11 - OpenGL",
+              os: macos-11,
+              suffix: "-opengl",
+              cmake_options: '-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DNANOGUI_BACKEND=OpenGL -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"',
+            }
+          - {
+              name: "macOS 12 - OpenGL",
+              os: macos-12,
+              suffix: "-opengl",
+              cmake_options: '-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DNANOGUI_BACKEND=OpenGL -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"',
+            }
+          - {
+              name: "Ubuntu 22.04",
+              os: ubuntu-22.04,
+              suffix: "",
+              cmake_options: "",
+            }
+          - {
+              name: "Ubuntu 20.04",
+              os: ubuntu-20.04,
+              suffix: "",
+              cmake_options: "",
+            }
+        buildtype: [Release, Debug]
+
+    steps:
+      - name: Install dependencies
+        run: ${{ runner.os == 'macOS' && 'brew install ninja create-dmg' || 'sudo apt-get update && sudo apt-get install cmake xorg-dev libglu1-mesa-dev zlib1g-dev libxrandr-dev ninja-build' }}
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@v3
+        with:
+          path: "**/cpm_modules"
+          key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+
+      # Setup caching of build artifacts to reduce total build time (only Linux and MacOS)
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.config.os }}-${{ matrix.buildtype }}
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        run: |
+          cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} -DCMAKE_POLICY_DEFAULT_CMP0135=NEW -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ${{ matrix.config.cmake_options }}
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --parallel 4 --config ${{ matrix.buildtype }}
+
+      - name: Checking that SamplinSafari runs
+        if: runner.os != 'Windows'
+        run: |
+          ${{github.workspace}}/build/${{ runner.os == 'macOS' && 'SamplinSafari.app/Contents/MacOS/SamplinSafari' || 'SamplinSafari' }} --help
+
+      - name: Creating dmg (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          RESULT="${{github.workspace}}/build/SamplinSafari${{ matrix.config.suffix }}.dmg"
+          test -f $RESULT && rm $RESULT
+          create-dmg --window-size 500 300 --icon-size 96 --volname "SamplinSafari Installer" --app-drop-link 360 105 --icon SamplinSafari.app 130 105 $RESULT ${{github.workspace}}/build/SamplinSafari.app
+
+      - name: Archive dmg (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
+        with:
+          name: SamplinSafari-${{ matrix.config.os }}${{ matrix.config.suffix }}-${{ matrix.buildtype }}.dmg
+          path: |
+            ${{github.workspace}}/build/SamplinSafari${{ matrix.config.suffix }}.dmg
+
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts-${{ matrix.config.os }}${{ matrix.config.suffix }}-${{ matrix.buildtype }}
+          path: |
+            ${{github.workspace}}/build
