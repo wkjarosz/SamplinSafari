@@ -1446,7 +1446,7 @@ bool SampleViewer::keyboard_event(int key, int scancode, int action, int modifie
     {
         float delta = (modifiers & GLFW_MOD_SHIFT) ? 1.0f / 15 : 1.0f / 60;
         delta *= (key == GLFW_KEY_RIGHT) ? 1.f : -1.f;
-        m_target_point_count = mapSlider2Count(::clamp(m_point_count_slider->value() + delta, 0.0f, 1.0f));
+        m_target_point_count = mapSlider2Count(std::clamp(m_point_count_slider->value() + delta, 0.0f, 1.0f));
         update_GPU_points();
         update_GPU_grids();
         return true;
