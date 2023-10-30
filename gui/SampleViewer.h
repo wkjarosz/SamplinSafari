@@ -9,6 +9,7 @@
 #include <nanogui/textbox.h>
 #include <thread>
 
+#include <galois++/array2d.h>
 #include <sampler/fwd.h>
 
 #include "utils.h"
@@ -131,7 +132,7 @@ private:
     nanogui::ref<Shader>     m_point_shader;
     nanogui::ref<Shader>     m_grid_shader;
     nanogui::ref<Shader>     m_point_2d_shader;
-    Array2D<float>           m_points, m_subset_points;
+    Array2d<float>           m_points, m_subset_points;
     vector<Vector3f>         m_3d_points;
     int m_target_point_count, m_point_count, m_subset_count = 0, m_coarse_line_count, m_fine_line_count;
 

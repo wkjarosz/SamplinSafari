@@ -96,7 +96,7 @@ string gridFragmentShader =
 void computeCameraMatrices(Matrix4f &model, Matrix4f &lookat, Matrix4f &view, Matrix4f &proj, const CameraParameters &c,
                            float window_aspect);
 void drawEPSGrid(const Matrix4f &mvp, int grid_res, ofstream &file);
-void writeEPSPoints(const Array2D<float> &points, int start, int count, const Matrix4f &mvp, ofstream &file, int dim_x,
+void writeEPSPoints(const Array2d<float> &points, int start, int count, const Matrix4f &mvp, ofstream &file, int dim_x,
                     int dim_y, int dim_z);
 
 float mapCount2Slider(int count)
@@ -1533,7 +1533,7 @@ void SampleViewer::generate_points()
     {
         vector<float> r(m_num_dimensions, 0.5f);
         generator->sample(r.data(), i);
-        for (int j = 0; j < m_points.size_y(); ++j)
+        for (int j = 0; j < m_points.sizeY(); ++j)
             m_points(i, j) = r[j] - 0.5f;
     }
     float time2      = (float)glfwGetTime();
@@ -1558,7 +1558,7 @@ void SampleViewer::populate_point_subset()
         //      << ((m_subset_level->value() + 0.0f)/m_num_subset_levels->value()) << ", "
         //      << ((m_subset_level->value()+1.0f)/m_num_subset_levels->value()) << ")." << endl;
         m_subset_count = 0;
-        for (int i = 0; i < m_points.size_x(); ++i)
+        for (int i = 0; i < m_points.sizeX(); ++i)
         {
             float v = m_points(i, m_subset_axis->value());
             // cout << v << endl;
@@ -1567,7 +1567,7 @@ void SampleViewer::populate_point_subset()
                 v < (m_subset_level->value() + 1.0f) / m_num_subset_levels->value())
             {
                 // copy all dimensions (rows) of point i
-                for (int j = 0; j < m_subset_points.size_y(); ++j)
+                for (int j = 0; j < m_subset_points.sizeY(); ++j)
                     m_subset_points(m_subset_count, j) = m_points(i, j);
                 ++m_subset_count;
             }
@@ -1703,7 +1703,7 @@ void drawEPSGrid(const Matrix4f &mvp, int grid_res, ofstream &file)
     }
 }
 
-void writeEPSPoints(const Array2D<float> &points, int start, int count, const Matrix4f &mvp, ofstream &file, int dim_x,
+void writeEPSPoints(const Array2d<float> &points, int start, int count, const Matrix4f &mvp, ofstream &file, int dim_x,
                     int dim_y, int dim_z)
 {
     for (int i = start; i < start + count; i++)
