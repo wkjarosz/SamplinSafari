@@ -1,6 +1,9 @@
 # Samplin' Safari
 
-Status: [![Build Status](https://travis-ci.org/wkjarosz/SamplinSafari.svg?branch=master)](https://travis-ci.org/wkjarosz/SamplinSafari)
+Master branch:
+[![macOS build](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-mac.yml/badge.svg?branch=master)](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-mac.yml)
+[![Linux build](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-linux.yml/badge.svg?branch=master)](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-linux.yml)
+[![Windows build](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-windows.yml/badge.svg?branch=master)](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-windows.yml)
 
 Samplin' Safari is a research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers.
 

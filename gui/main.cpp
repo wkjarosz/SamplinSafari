@@ -18,7 +18,8 @@ int nprocs = -1;
 int main(int argc, char **argv)
 {
     vector<string> args;
-    bool           help = false;
+    bool           help  = false;
+    bool           error = false;
 
 #if defined(__APPLE__)
     bool launched_from_finder = false;
@@ -43,7 +44,8 @@ int main(int argc, char **argv)
                 if (strncmp(argv[i], "-", 1) == 0)
                 {
                     cerr << "Invalid argument: \"" << argv[i] << "\"!" << endl;
-                    help = true;
+                    help  = true;
+                    error = true;
                 }
                 args.push_back(argv[i]);
             }
@@ -52,7 +54,8 @@ int main(int argc, char **argv)
     catch (const std::exception &e)
     {
         cout << "Error: " << e.what() << endl;
-        help = true;
+        help  = true;
+        error = true;
     }
 
     if (help)
@@ -60,7 +63,7 @@ int main(int argc, char **argv)
         cout << "Syntax: " << argv[0] << endl;
         cout << "Options:" << endl;
         cout << "   -h, --help                Display this message" << endl;
-        return -1;
+        return error ? EXIT_FAILURE : EXIT_SUCCESS;
     }
 
     try
@@ -83,7 +86,7 @@ int main(int argc, char **argv)
     catch (const std::runtime_error &e)
     {
         std::cerr << "Caught a fatal error: " << e.what() << endl;
-        return -1;
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
