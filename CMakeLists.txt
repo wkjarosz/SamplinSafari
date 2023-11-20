@@ -267,10 +267,13 @@ set_target_properties(SamplinSafari PROPERTIES
 
 if (APPLE)
   # Build an application bundle on OSX
-  set_target_properties(SamplinSafari PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "SamplinSafari")
-  set_target_properties(SamplinSafari PROPERTIES MACOSX_BUNDLE_BUNDLE_GUI_IDENTIFIER "com.im.SamplinSafari")
-  set_target_properties(SamplinSafari PROPERTIES MACOSX_BUNDLE_ICON_FILE icon.icns)
-  set_target_properties(SamplinSafari PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/resources/MacOSXBundleInfo.plist.in)
+  set_target_properties(SamplinSafari PROPERTIES
+    MACOSX_BUNDLE_BUNDLE_NAME             "Samplin' Safari"
+    MACOSX_BUNDLE_BUNDLE_GUI_IDENTIFIER   "com.im.SamplinSafari"
+    MACOSX_BUNDLE_ICON_FILE               icon.icns
+    MACOSX_BUNDLE_INFO_PLIST              ${CMAKE_CURRENT_SOURCE_DIR}/resources/MacOSXBundleInfo.plist.in
+    MACOSX_BUNDLE_INFO_STRING             "Samplin' Safari"
+    MACOSX_BUNDLE_COPYRIGHT               "© Wojciech Jarosz")
   set_source_files_properties(resources/icon.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 else()
   # Insulate from a few types of ABI changes by statically linking against libgcc and libstdc++
