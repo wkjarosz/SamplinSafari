@@ -3,6 +3,8 @@
 */
 #define _USE_MATH_DEFINES
 
+#define NOMINMAX
+
 #include "SampleViewer.h"
 
 #include <filesystem>
@@ -296,11 +298,11 @@ void SampleViewer::draw_gui()
     if (auto id = m_params.dockingParams.dockSpaceIdFromName("MainDockSpace"))
     {
         auto central_node = ImGui::DockBuilderGetCentralNode(*id);
-        m_viewport_size   = int2{central_node->Size.x, central_node->Size.y};
-        m_viewport_pos    = int2{central_node->Pos.x, central_node->Pos.y};
+        m_viewport_size   = int2{int(central_node->Size.x), int(central_node->Size.y)};
+        m_viewport_pos    = int2{int(central_node->Pos.x), int(central_node->Pos.y)};
         // flip y coordinates between ImGui and OpenGL screen coordinates
-        m_viewport_pos_GL =
-            int2{central_node->Pos.x, (ImGui::GetIO().DisplaySize.y - (central_node->Pos.y + central_node->Size.y))};
+        m_viewport_pos_GL = int2{int(central_node->Pos.x),
+                                 int(ImGui::GetIO().DisplaySize.y - (central_node->Pos.y + central_node->Size.y))};
     }
 
     float radius = map_slider_to_radius(m_radius);
