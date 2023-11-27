@@ -2,19 +2,43 @@
     \author Wojciech Jarosz
 */
 
-#include <fstream>
-#include <nanogui/common.h>
-#include <nanogui/opengl.h>
-#include <nanogui/screen.h>
-#include <nanogui/textbox.h>
-#include <thread>
+#include "linalg.h"
+using namespace linalg::aliases;
 
+// define extra conversion here before including imgui, don't do it in the imconfig.h
+#define IM_VEC2_CLASS_EXTRA                                                                                            \
+    constexpr ImVec2(const float2 &f) : x(f.x), y(f.y)                                                                 \
+    {                                                                                                                  \
+    }                                                                                                                  \
+    operator float2() const                                                                                            \
+    {                                                                                                                  \
+        return float2(x, y);                                                                                           \
+    }                                                                                                                  \
+    constexpr ImVec2(const int2 &i) : x(i.x), y(i.y)                                                                   \
+    {                                                                                                                  \
+    }                                                                                                                  \
+    operator int2() const                                                                                              \
+    {                                                                                                                  \
+        return int2((int)x, (int)y);                                                                                   \
+    }
+
+#define IM_VEC4_CLASS_EXTRA                                                                                            \
+    constexpr ImVec4(const float4 &f) : x(f.x), y(f.y), z(f.z), w(f.w)                                                 \
+    {                                                                                                                  \
+    }                                                                                                                  \
+    operator float4() const                                                                                            \
+    {                                                                                                                  \
+        return float4(x, y, z, w);                                                                                     \
+    }
+
+#include "arcball.h"
+#include "gui_app.h"
+#include "shader.h"
 #include <galois++/array2d.h>
 #include <sampler/fwd.h>
+#include <string>
+#include <vector>
 
-#include "utils.h"
-
-using namespace nanogui;
 using namespace std;
 
 enum PointType
@@ -51,8 +75,8 @@ enum CameraType
     CAMERA_XY = 0,
     CAMERA_YZ,
     CAMERA_XZ,
-    CAMERA_2D,
     CAMERA_CURRENT,
+    CAMERA_2D,
     CAMERA_PREVIOUS,
     CAMERA_NEXT,
     NUM_CAMERA_TYPES
@@ -64,23 +88,44 @@ struct CameraParameters
     float      persp_factor = 0.0f;
     float      zoom = 1.0f, view_angle = 35.0f;
     float      dnear = 0.05f, dfar = 1000.0f;
-    Vector3f   eye         = Vector3f(0.0f, 0.0f, 2.0f);
-    Vector3f   center      = Vector3f(0.0f, 0.0f, 0.0f);
-    Vector3f   up          = Vector3f(0.0f, 1.0f, 0.0f);
+    float3     eye         = float3{0.0f, 0.0f, 2.0f};
+    float3     center      = float3{0.0f, 0.0f, 0.0f};
+    float3     up          = float3{0.0f, 1.0f, 0.0f};
     CameraType camera_type = CAMERA_CURRENT;
 };
 
-class SampleViewer : public Screen
+enum TextAlign : int
+{
+    // Horizontal align
+    TextAlign_LEFT   = 1 << 0, // Default, align text horizontally to left.
+    TextAlign_CENTER = 1 << 1, // Align text horizontally to center.
+    TextAlign_RIGHT  = 1 << 2, // Align text horizontally to right.
+    // Vertical align
+    TextAlign_TOP    = 1 << 3, // Align text vertically to top.
+    TextAlign_MIDDLE = 1 << 4, // Align text vertically to middle.
+    TextAlign_BOTTOM = 1 << 5, // Align text vertically to bottom.
+};
+
+class SampleViewer : public GUIApp
 {
 public:
     SampleViewer();
-    ~SampleViewer();
+    virtual ~SampleViewer();
 
-    bool mouse_motion_event(const Vector2i &p, const Vector2i &rel, int button, int modifiers);
-    bool mouse_button_event(const Vector2i &p, int button, bool down, int modifiers);
-    bool scroll_event(const Vector2i &p, const Vector2f &rel);
-    void draw_contents();
-    bool keyboard_event(int key, int scancode, int action, int modifiers);
+    void mouse_motion_event(const float2 &pos);
+
+    void initialize_GL() override;
+    void draw() override;
+    void draw_gui();
+
+    bool mouse_button_event(const int2 &p, int button, bool down, int modifiers) override;
+    bool mouse_motion_event(const int2 &p, const int2 &rel, int button, int modifiers) override;
+    bool scroll_event(const int2 &p, const float2 &rel) override;
+
+    // bool keyboard_event(int key, int scancode, int action, int modifiers) override;
+    // bool resize_event(const int2 &size) override;
+    // bool focus_event(bool focused) override;
+    // bool maximize_event(bool maximized) override;
 
 private:
     void draw_contents_EPS(ofstream &file, CameraType camera, int dimX, int dimY, int dimZ);
@@ -89,56 +134,51 @@ private:
     void update_GPU_grids();
     void set_view(CameraType view);
     void update_current_camera();
-    void initialize_GUI();
+    void draw_editor();
     void generate_points();
     void populate_point_subset();
-    void generate_grid(vector<Vector3f> &positions, int gridRes);
-    void draw_text(const Vector2i &pos, const std::string &text, const Color &col = Color(1.0f, 1.0f, 1.0f, 1.0f),
-                   int fontSize = 10, int fixedWidth = 0, int align = NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM) const;
-    void draw_points(const Matrix4f &mvp, const Vector3f &color, bool showPointNums = false,
-                     bool showPointCoords = false);
-    void draw_grid(const Matrix4f &mvp, float alpha, uint32_t offset, uint32_t count);
-    void draw_2D_points_and_grid(const Matrix4f &mvp, int dimX, int dimY, int plotIndex);
-
-    // GUI elements
-    Window      *m_parameters_dialog = nullptr;
-    Window      *m_help_dialog       = nullptr;
-    Button      *m_help_button       = nullptr;
-    Slider      *m_point_count_slider, *m_point_radius_slider, *m_point_draw_count_slider, *m_jitter_slider;
-    IntBox<int> *m_dimension_box, *m_x_dimension, *m_y_dimension, *m_z_dimension, *m_point_count_box,
-        *m_first_draw_point_box, *m_point_draw_count_box, *m_subset_axis, *m_num_subset_levels, *m_subset_level;
-    ComboBox *m_point_type_box;
-
-    // Extra OA parameters
-    Label       *m_strength_label;
-    IntBox<int> *m_strength_box;
-    Label       *m_offset_type_label;
-    ComboBox    *m_offset_type_box;
-
-    CheckBox *m_coarse_grid_checkbox, *m_fine_grid_checkbox, *m_bbox_grid_checkbox, *m_randomize_checkbox,
-        *m_subset_by_index, *m_subset_by_coord, *m_show_1d_projections, *m_show_point_nums, *m_show_point_coords;
-    Button             *m_view_btns[CAMERA_CURRENT + 1];
-    Button             *m_scale_radius_with_points;
-    vector<std::string> m_time_strings;
+    void generate_grid(vector<float3> &positions, int gridRes);
+    void draw_text(const int2 &pos, const std::string &text, const float4 &col, int fontSize, int fixedWidth,
+                   int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
+    void draw_points(const float4x4 &mvp, const float3 &color);
+    void draw_grid(const float4x4 &mvp, float alpha, uint32_t offset, uint32_t count);
+    void draw_2D_points_and_grid(const float4x4 &mvp, int dimX, int dimY, int plotIndex);
+    void clear_and_setup_viewport();
+    int2 get_draw_range() const;
 
     /// X, Y, Z, and user-defined cameras
     CameraParameters m_camera[NUM_CAMERA_TYPES];
+    int              m_view = CAMERA_XY;
 
-    float m_animate_start_time = 0.0f;
-    bool  m_mouse_down         = false;
-    int   m_num_dimensions     = 3;
-
-    nanogui::ref<RenderPass> m_render_pass;
-    nanogui::ref<Shader>     m_point_shader;
-    nanogui::ref<Shader>     m_grid_shader;
-    nanogui::ref<Shader>     m_point_2d_shader;
-    Array2d<float>           m_points, m_subset_points;
-    vector<Vector3f>         m_3d_points;
-    int m_target_point_count, m_point_count, m_subset_count = 0, m_coarse_line_count, m_fine_line_count;
+    int            m_num_dimensions = 3;
+    int3           m_dimension{0, 1, 2};
+    Array2d<float> m_points, m_subset_points;
+    vector<float3> m_3d_points;
+    int            m_target_point_count = 256, m_point_count = 256;
+    int            m_subset_count = 0, m_coarse_line_count, m_fine_line_count;
 
     vector<Sampler *> m_samplers;
+    int               m_sampler                  = 0;
+    bool              m_randomize                = false;
+    float             m_jitter                   = 80.f;
+    float             m_radius                   = 0.5f;
+    bool              m_scale_radius_with_points = false;
+    bool              m_show_1d_projections = false, m_show_point_nums = false, m_show_point_coords = false,
+         m_show_coarse_grid = false, m_show_fine_grid = false, m_show_bbox = false;
 
-    std::thread       m_gui_refresh_thread;
-    std::atomic<bool> m_gui_refresh    = false;
-    std::atomic<bool> m_join_requested = false;
+    Shader *m_point_shader = nullptr, *m_grid_shader = nullptr, *m_point_2d_shader = nullptr;
+
+    int2  m_viewport_pos, m_viewport_pos_GL, m_viewport_size;
+    float m_animate_start_time = 0.0f;
+    bool  m_mouse_down         = false;
+
+    bool m_subset_by_index   = false;
+    int  m_first_draw_point  = 0;
+    int  m_point_draw_count  = 1;
+    bool m_subset_by_coord   = false;
+    int  m_subset_axis       = 0;
+    int  m_num_subset_levels = 1;
+    int  m_subset_level      = 0;
+
+    vector<std::string> m_time_strings;
 };

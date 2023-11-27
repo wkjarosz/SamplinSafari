@@ -26,12 +26,7 @@ include(sanitizers)
 # versions.
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT SamplinSafari)
 
-set(USE_IWYU OFF CACHE BOOL "INCLUDE WHAT YOU USE")
-
 include(CheckCXXCompilerFlag)
-
-# prevent glfw from changing the directory on macOS bundles
-# SET(GLFW_USE_CHDIR OFF CACHE BOOL "Prevent glfwInit from chdir to Contents/Resources" FORCE)
 
 # ============================================================================
 # Set a default build configuration (Release)
@@ -48,10 +43,6 @@ string(TOUPPER "${CMAKE_BUILD_TYPE}" U_CMAKE_BUILD_TYPE)
 # ============================================================================
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-endif()
-
-if(APPLE)
-  set(CMAKE_MACOSX_RPATH ON)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -126,12 +117,6 @@ endif()
 # ============================================================================
 include(cmake/CPM.cmake)
 
-cpmaddpackage("gh:mitsuba-renderer/tinyformat#43816c694297a27909da0982f91315fb33d60676")
-if(tinyformat_ADDED)
-  add_library(tinyformat INTERFACE IMPORTED)
-  target_include_directories(tinyformat INTERFACE "${tinyformat_SOURCE_DIR}")
-endif()
-
 cpmaddpackage("gh:wjakob/pcg32#70099eadb86d3999c38cf69d2c55f8adc1f7fe34")
 if(pcg32_ADDED)
   add_library(pcg32 INTERFACE IMPORTED)
@@ -143,29 +128,27 @@ if(galois_ADDED)
   target_include_directories(galois++ INTERFACE "${galois_SOURCE_DIR}/include")
 endif()
 
-set(NANOGUI_BACKEND "OpenGL" CACHE BOOL " " FORCE)
-cpmaddpackage(
-  NAME
-  nanogui
-  GITHUB_REPOSITORY
-  Tom94/nanogui-1
-  GIT_TAG
-  cf8baf7c2a02a0e8443379a6b80f6709139f84a0
-  OPTIONS
-  "NANOGUI_BACKEND OpenGL"
-  "NANOGUI_BUILD_EXAMPLES OFF"
-  "NANOGUI_BUILD_SHARED OFF"
-  "NANOGUI_BUILD_PYTHON OFF"
-  "NANOGUI_INSTALL OFF"
-  "EXCLUDE_FROM_ALL YES")
-if(nanogui_ADDED)
-  add_library(nanogui::nanogui INTERFACE IMPORTED)
-  target_include_directories(
-    nanogui::nanogui SYSTEM INTERFACE ${nanogui_SOURCE_DIR}/ext/glfw/include ${nanogui_SOURCE_DIR}/ext/nanovg/src
-                                      ${nanogui_SOURCE_DIR}/include ${NANOGUI_EXTRA_INCS})
-  target_link_libraries(nanogui::nanogui INTERFACE "nanogui")
-  target_compile_definitions(nanogui::nanogui INTERFACE "${NANOGUI_BACKEND_DEFS}")
+cpmaddpackage("gh:sgorsten/linalg@2.2")
+if(linalg_ADDED)
+  add_library(linalg INTERFACE IMPORTED)
+  target_include_directories(linalg INTERFACE "${linalg_SOURCE_DIR}")
 endif()
+
+cpmaddpackage("gh:fmtlib/fmt#7.1.3")
+
+cpmaddpackage("gh:samhocevar/portable-file-dialogs#7f852d88a480020d7f91957cbcefe514fc95000c")
+if(portable_file_dialogs_ADDED)
+  add_library(portable_file_dialogs INTERFACE IMPORTED)
+  target_include_directories(portable_file_dialogs INTERFACE "${portable_file_dialogs_SOURCE_DIR}")
+endif()
+
+cpmaddpackage(
+  NAME hello_imgui
+  GITHUB_REPOSITORY wkjarosz/hello_imgui
+  GIT_TAG "c5121ed50314596c575ec613df93b73b39711292"
+  OPTIONS
+    "HELLOIMGUI_WITH_GLFW ON"
+    "HELLOIMGUI_WITH_TEST_ENGINE OFF")
 
 
 # ============================================================================
@@ -231,54 +214,58 @@ add_library(samplerlib OBJECT STATIC
 # Link dependencies
 target_link_libraries(
   samplerlib
-  PUBLIC galois++ pcg32 tinyformat
-)
+  PUBLIC galois++ pcg32)
 
-set_target_properties(samplerlib PROPERTIES CXX_STANDARD 17)
+set_target_properties(samplerlib PROPERTIES
+  CXX_STANDARD 17)
+
+# Now build the Samplin' Safari viewer app
 
 # Resource file (icons etc.)
 set(EXTRA_SOURCE "")
 if (APPLE)
   set(EXTRA_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.icns")
 elseif(WIN32)
-  #set(EXTRA_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.rc")
+  set(EXTRA_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.rc")
 endif()
 
-# The following lines build the main executable.
-add_executable(SamplinSafari MACOSX_BUNDLE
-    gui/SampleViewer.cpp
-    gui/SampleViewer.h
-    gui/main.cpp
-    gui/Well.cpp
-    gui/Well.h
-    ${EXTRA_SOURCE}
-)
+set(HELLO_IMGUI_BUNDLE_IDENTIFIER_URL_PART "com.im.SamplinSafari")
+set(HELLO_IMGUI_BUNDLE_IDENTIFIER_NAME_PART ${app_name})
+set(HELLO_IMGUI_ICON_DISPLAY_NAME "Samplin' Safari")
+set(HELLO_IMGUI_BUNDLE_NAME "Samplin' Safari")
+set(HELLO_IMGUI_BUNDLE_COPYRIGHT "© Wojciech Jarosz")
+set(HELLO_IMGUI_BUNDLE_EXECUTABLE ${app_name})
+set(HELLO_IMGUI_BUNDLE_VERSION ${SAMPLINSAFARI_VERSION})
+set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
 
-add_definitions(${NANOGUI_EXTRA_DEFS})
-target_link_libraries(
-  SamplinSafari
-  PRIVATE nanogui::nanogui
-          tinyformat
-          samplerlib)
+hello_imgui_add_app(SamplinSafari
+  gui/SampleViewer.cpp
+  gui/shader.cpp
+  gui/gui_app.cpp
+  ${EXTRA_SOURCE})
 
 set_target_properties(SamplinSafari PROPERTIES
   OUTPUT_NAME "SamplinSafari"
   CXX_STANDARD 17)
 
+target_link_libraries(
+  SamplinSafari
+  PRIVATE samplerlib
+          linalg
+          fmt::fmt
+          portable_file_dialogs)
+
 if (APPLE)
   # Build an application bundle on OSX
   set_target_properties(SamplinSafari PROPERTIES
-    MACOSX_BUNDLE_BUNDLE_NAME             "Samplin' Safari"
-    MACOSX_BUNDLE_BUNDLE_GUI_IDENTIFIER   "com.im.SamplinSafari"
-    MACOSX_BUNDLE_ICON_FILE               icon.icns
-    MACOSX_BUNDLE_INFO_PLIST              ${CMAKE_CURRENT_SOURCE_DIR}/resources/MacOSXBundleInfo.plist.in
-    MACOSX_BUNDLE_INFO_STRING             "Samplin' Safari"
-    MACOSX_BUNDLE_COPYRIGHT               "© Wojciech Jarosz")
+    MACOSX_BUNDLE TRUE
+    MACOSX_BUNDLE_INFO_PLIST              ${CMAKE_CURRENT_SOURCE_DIR}/resources/MacOSXBundleInfo.plist.in)
   set_source_files_properties(resources/icon.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 else()
   # Insulate from a few types of ABI changes by statically linking against libgcc and libstdc++
   set_target_properties(SamplinSafari PROPERTIES LINK_FLAGS "-static-libgcc")
 endif()
+
 
 if (UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
   add_custom_command(TARGET SamplinSafari POST_BUILD COMMAND strip $<TARGET_FILE:SamplinSafari>)
@@ -294,5 +281,3 @@ if(CMAKE_GENERATOR STREQUAL "Ninja")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
   endif()
 endif()
-
-target_compile_features(samplerlib PRIVATE cxx_std_17)

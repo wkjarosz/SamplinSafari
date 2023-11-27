@@ -3,9 +3,8 @@
 */
 #pragma once
 
-#include <sampler/Sampler.h>
 #include <pcg32.h>
-#include <iostream>
+#include <sampler/Sampler.h>
 
 /// Encapsulate a 2D stratified or "jittered" point set.
 class Jittered : public TSamplerDim<2>
@@ -19,13 +18,16 @@ public:
 
     std::string name() const override;
 
-    int numSamples() const override {return m_resX*m_resY;}
+    int numSamples() const override
+    {
+        return m_resX * m_resY;
+    }
     int setNumSamples(unsigned n) override
     {
-        int sqrtVal = (n == 0) ? 1 : (int) (std::sqrt((float) n) + 0.5f);
+        int sqrtVal = (n == 0) ? 1 : (int)(std::sqrt((float)n) + 0.5f);
         m_resX = m_resY = sqrtVal;
         reset();
-        return m_resX*m_resY;
+        return m_resX * m_resY;
     }
     void setNumSamples(unsigned x, unsigned y)
     {
@@ -34,7 +36,10 @@ public:
         reset();
     }
 
-    bool randomized() const override {return m_randomize;}
+    bool randomized() const override
+    {
+        return m_randomize;
+    }
     void setRandomized(bool r = true) override
     {
         if ((m_randomize = r))
@@ -42,15 +47,21 @@ public:
     }
 
     /// Gets/sets how much the points are jittered
-    float jitter() const override {return m_maxJit;}
-    float setJitter(float j = 1.0f) override {return m_maxJit = j;}
+    float jitter() const override
+    {
+        return m_maxJit;
+    }
+    float setJitter(float j = 1.0f) override
+    {
+        return m_maxJit = j;
+    }
 
 private:
     unsigned m_resX, m_resY;
-    float m_maxJit;
+    float    m_maxJit;
 
-    float m_xScale, m_yScale;
-    bool m_randomize = true;
-    pcg32 m_rand;
+    float    m_xScale, m_yScale;
+    bool     m_randomize = true;
+    pcg32    m_rand;
     unsigned m_seed = 13;
 };
