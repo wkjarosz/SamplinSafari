@@ -1377,9 +1377,55 @@ static void writeEPSPoints(const Array2d<float> &points, int start, int count, c
     }
 }
 
-int main(int, char **)
+int main(int argc, char **argv)
 {
-    SampleViewer viewer;
-    viewer.run();
-    return 0;
+    vector<string> args;
+    bool           help                 = false;
+    bool           error                = false;
+    bool           launched_from_finder = false;
+
+    try
+    {
+        for (int i = 1; i < argc; ++i)
+        {
+            if (strcmp("--help", argv[i]) == 0 || strcmp("-h", argv[i]) == 0)
+                help = true;
+            else if (strncmp("-psn", argv[i], 4) == 0)
+                launched_from_finder = true;
+            else
+            {
+                if (strncmp(argv[i], "-", 1) == 0)
+                {
+                    cerr << "Invalid argument: \"" << argv[i] << "\"!" << endl;
+                    help  = true;
+                    error = true;
+                }
+                args.push_back(argv[i]);
+            }
+        }
+    }
+    catch (const std::exception &e)
+    {
+        cout << "Error: " << e.what() << endl;
+        help  = true;
+        error = true;
+    }
+    if (help)
+    {
+        cout << "Syntax: " << argv[0] << endl;
+        cout << "Options:" << endl;
+        cout << "   -h, --help                Display this message" << endl;
+        return error ? EXIT_FAILURE : EXIT_SUCCESS;
+    }
+    try
+    {
+        SampleViewer viewer;
+        viewer.run();
+    }
+    catch (const std::runtime_error &e)
+    {
+        cerr << "Caught a fatal error: " << e.what() << endl;
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }
