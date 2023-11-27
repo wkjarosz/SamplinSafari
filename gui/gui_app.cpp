@@ -129,7 +129,7 @@ void GUIApp::register_callbacks()
 
 void GUIApp::cursor_pos_event(double x, double y)
 {
-    int2 p{x, y};
+    int2 p{int(x), int(y)};
 
 #if defined(_WIN32) || defined(__linux__) || defined(EMSCRIPTEN)
     p = int2(float2(p) / m_pixel_ratio);

@@ -10,6 +10,12 @@
 namespace fs = std::filesystem;
 using namespace linalg::ostream_overloads;
 
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::ofstream;
+using std::to_string;
+
 #include "hello_imgui/hello_imgui.h"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -272,7 +278,7 @@ int2 SampleViewer::get_draw_range() const
 {
     int start = 0, count = m_point_count;
     if (m_subset_by_coord)
-        count = min(count, m_subset_count);
+        count = std::min(count, m_subset_count);
     else if (m_subset_by_index)
     {
         start = m_first_draw_point;
@@ -422,8 +428,8 @@ void SampleViewer::draw_editor()
         if (accept_keys && (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_RightArrow)))
         {
             m_target_point_count =
-                max(1u, ImGui::IsKeyPressed(ImGuiKey_RightArrow) ? roundUpPow2(m_target_point_count + 1)
-                                                                 : roundDownPow2(m_target_point_count - 1));
+                std::max(1u, ImGui::IsKeyPressed(ImGuiKey_RightArrow) ? roundUpPow2(m_target_point_count + 1)
+                                                                      : roundDownPow2(m_target_point_count - 1));
             update_GPU_points();
             update_GPU_grids();
         }
