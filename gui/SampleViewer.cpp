@@ -953,7 +953,7 @@ void SampleViewer::draw()
 void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &color, int font_size, int fixed_width,
                              int align) const
 {
-    float2 apos{pos.x, pos.y};
+    float2 apos{pos};
     float2 size = ImGui::CalcTextSize(text.c_str());
 
     if (align & TextAlign_LEFT)
