@@ -51,7 +51,7 @@ jobs:
 
       - name: Checking that Samplin Safari runs
         run: |
-          "${{github.workspace}}/build/${{ matrix.buildtype }}/Samplin Safari.exe" --help
+          "${{github.workspace}}/build/${{ matrix.buildtype }}/Samplin Safari.exe --help"
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
