@@ -164,7 +164,7 @@ private:
     bool              m_randomize                = false;
     float             m_jitter                   = 80.f;
     float             m_radius                   = 0.5f;
-    bool              m_scale_radius_with_points = false;
+    bool              m_scale_radius_with_points = true;
     bool              m_show_1d_projections = false, m_show_point_nums = false, m_show_point_coords = false,
          m_show_coarse_grid = false, m_show_fine_grid = false, m_show_bbox = false;
 

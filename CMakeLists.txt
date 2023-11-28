@@ -9,15 +9,14 @@ project(
   SamplinSafari
   DESCRIPTION
     "A research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers."
-  # VERSION ${VERSION}
-  LANGUAGES C CXX)
-
-set(SAMPLINSAFARI_VERSION "${GIT_DESCRIBE}")
+  VERSION 1.1.0
+  LANGUAGES C CXX
+  )
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(SAMPLINSAFARI_VERSION "${SAMPLINSAFARI_VERSION} (64 bit)")
+  set(APP_BITS_VERSION "64 bit")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  set(SAMPLINSAFARI_VERSION "${SAMPLINSAFARI_VERSION} (32 bit)")
+  set(APP_BITS_VERSION "32 bit")
 endif()
 
 include(sanitizers)
@@ -145,10 +144,12 @@ endif()
 cpmaddpackage(
   NAME hello_imgui
   GITHUB_REPOSITORY wkjarosz/hello_imgui
-  GIT_TAG "c5121ed50314596c575ec613df93b73b39711292"
+  GIT_TAG "873fec179d5ccc090f166f9cddc5caeca92dfa14"
   OPTIONS
     "HELLOIMGUI_WITH_GLFW ON"
-    "HELLOIMGUI_WITH_TEST_ENGINE OFF")
+    "HELLOIMGUI_WITH_TEST_ENGINE OFF"
+    # "HELLOIMGUI_MACOS_NO_BUNDLE ON"
+  )
 
 
 # ============================================================================
@@ -220,52 +221,37 @@ set_target_properties(samplerlib PROPERTIES
   CXX_STANDARD 17)
 
 # Now build the Samplin' Safari viewer app
+string(TIMESTAMP YEAR "%Y")
 
-# Resource file (icons etc.)
-set(EXTRA_SOURCE "")
-if (APPLE)
-  set(EXTRA_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.icns")
-# elseif(WIN32)
-  # set(EXTRA_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.rc")
-endif()
-
+set(output_name "Samplin Safari")
 set(HELLO_IMGUI_BUNDLE_IDENTIFIER_URL_PART "com.im.SamplinSafari")
 set(HELLO_IMGUI_BUNDLE_IDENTIFIER_NAME_PART ${app_name})
-set(HELLO_IMGUI_ICON_DISPLAY_NAME "Samplin' Safari")
-set(HELLO_IMGUI_BUNDLE_NAME "Samplin' Safari")
-set(HELLO_IMGUI_BUNDLE_COPYRIGHT "© Wojciech Jarosz")
-set(HELLO_IMGUI_BUNDLE_EXECUTABLE ${app_name})
-set(HELLO_IMGUI_BUNDLE_VERSION ${SAMPLINSAFARI_VERSION})
+set(HELLO_IMGUI_ICON_DISPLAY_NAME ${output_name})
+set(HELLO_IMGUI_BUNDLE_NAME ${output_name})
+set(HELLO_IMGUI_BUNDLE_COPYRIGHT "© Wojciech Jarosz, ${YEAR}")
+set(HELLO_IMGUI_BUNDLE_EXECUTABLE ${output_name})
+set(HELLO_IMGUI_BUNDLE_VERSION ${APP_BITS_VERSION})
+set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${PROJECT_VERSION})
 set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
 
 hello_imgui_add_app(SamplinSafari
   gui/SampleViewer.cpp
   gui/shader.cpp
   gui/gui_app.cpp
-  ${EXTRA_SOURCE})
+  )
 
 set_target_properties(SamplinSafari PROPERTIES
-  OUTPUT_NAME "SamplinSafari"
-  CXX_STANDARD 17)
+  OUTPUT_NAME ${output_name}
+  CXX_STANDARD 17
+  )
 
 target_link_libraries(
   SamplinSafari
   PRIVATE samplerlib
           linalg
           fmt::fmt
-          portable_file_dialogs)
-
-if (APPLE)
-  # Build an application bundle on OSX
-  set_target_properties(SamplinSafari PROPERTIES
-    MACOSX_BUNDLE TRUE
-    MACOSX_BUNDLE_INFO_PLIST              ${CMAKE_CURRENT_SOURCE_DIR}/resources/MacOSXBundleInfo.plist.in)
-  set_source_files_properties(resources/icon.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-else()
-  # Insulate from a few types of ABI changes by statically linking against libgcc and libstdc++
-  set_target_properties(SamplinSafari PROPERTIES LINK_FLAGS "-static-libgcc")
-endif()
-
+          portable_file_dialogs
+  )
 
 if (UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
   add_custom_command(TARGET SamplinSafari POST_BUILD COMMAND strip $<TARGET_FILE:SamplinSafari>)

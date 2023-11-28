@@ -7,9 +7,6 @@
 
 #include "SampleViewer.h"
 
-#include <filesystem>
-
-namespace fs = std::filesystem;
 using namespace linalg::ostream_overloads;
 
 using std::cerr;
@@ -198,29 +195,37 @@ SampleViewer::SampleViewer() : GUIApp()
 
     // Dockable windows
     // the parameter editor
-    HelloImGui::DockableWindow winEditor;
-    winEditor.label         = "Editor";
-    winEditor.dockSpaceName = "EditorDock";
-    winEditor.canBeClosed   = true;
-    winEditor.callBeginEnd  = false;
-    winEditor.GuiFunction   = [this] { draw_editor(); };
+    HelloImGui::DockableWindow editorWindow;
+    editorWindow.label         = "Sample parameters";
+    editorWindow.dockSpaceName = "EditorSpace";
+    editorWindow.canBeClosed   = false;
+    editorWindow.GuiFunction   = [this] { draw_editor(); };
 
-    // A Log window named "Logs" will be placed in "MiscSpace". It uses the HelloImGui logger gui
-    HelloImGui::DockableWindow logsWindow;
-    logsWindow.label         = "Logs";
-    logsWindow.dockSpaceName = "MiscSpace";
-    logsWindow.GuiFunction   = [] { HelloImGui::LogGui(); };
+    // A console window named "Console" will be placed in "ConsoleSpace". It uses the HelloImGui logger gui
+    HelloImGui::DockableWindow consoleWindow;
+    consoleWindow.label             = "Console";
+    consoleWindow.dockSpaceName     = "ConsoleSpace";
+    consoleWindow.isVisible         = false;
+    consoleWindow.rememberIsVisible = true;
+    consoleWindow.GuiFunction       = [] { HelloImGui::LogGui(); };
 
-    m_params.dockingParams.dockableWindows = {winEditor, logsWindow};
+    m_params.dockingParams.dockableWindows = {editorWindow, consoleWindow};
 
     // Docking Splits
     {
-        HelloImGui::DockingSplit split;
-        split.initialDock                    = "MainDockSpace";
-        split.newDock                        = "EditorDock";
-        split.direction                      = ImGuiDir_Right;
-        split.ratio                          = 0.25f;
-        m_params.dockingParams.dockingSplits = {split};
+        HelloImGui::DockingSplit splitEditorMain;
+        splitEditorMain.initialDock = "MainDockSpace";
+        splitEditorMain.newDock     = "EditorSpace";
+        splitEditorMain.direction   = ImGuiDir_Left;
+        splitEditorMain.ratio       = 0.2f;
+
+        HelloImGui::DockingSplit splitMainConsole;
+        splitMainConsole.initialDock = "MainDockSpace";
+        splitMainConsole.newDock     = "ConsoleSpace";
+        splitMainConsole.direction   = ImGuiDir_Down;
+        splitMainConsole.ratio       = 0.25f;
+
+        m_params.dockingParams.dockingSplits = {splitEditorMain, splitMainConsole};
     }
 
     m_params.callbacks.LoadAdditionalFonts = []()
@@ -291,8 +296,6 @@ int2 SampleViewer::get_draw_range() const
 
 void SampleViewer::draw_gui()
 {
-    HelloImGui::Log(HelloImGui::LogLevel::Info, "Current working directory: %s.", fs::current_path().c_str());
-
     m_viewport_pos_GL = m_viewport_pos = {0, 0};
     m_viewport_size                    = m_fbsize;
     if (auto id = m_params.dockingParams.dockSpaceIdFromName("MainDockSpace"))
@@ -338,7 +341,7 @@ void SampleViewer::draw_gui()
     else
     {
         for (int i = 0; i < 3; ++i)
-            draw_text(m_viewport_pos + m_viewport_size - int2(200, (2 - i) * 14 + 20), m_time_strings[i],
+            draw_text(m_viewport_pos + m_viewport_size - int2(20, (2 - i) * 14 + 20), m_time_strings[i],
                       float4(1.0f, 1.0f, 1.0f, 0.75f), 16, 0);
 
         int2 range = get_draw_range();
@@ -373,28 +376,138 @@ void SampleViewer::draw_editor()
         return;
     }
 
-    ImGui::Begin("Sample parameters");
-    {
-        // =========================================================
-        ImGui::SeparatorText("Point set");
-        // =========================================================
+    // =========================================================
+    ImGui::SeparatorText("Point set");
+    // =========================================================
 
-        if (ImGui::BeginCombo("##", m_samplers[m_sampler]->name().c_str()))
+    if (ImGui::BeginCombo("##", m_samplers[m_sampler]->name().c_str()))
+    {
+        for (int n = 0; n < NUM_POINT_TYPES; n++)
         {
-            for (int n = 0; n < NUM_POINT_TYPES; n++)
+            Sampler   *sampler     = m_samplers[n];
+            const bool is_selected = (m_sampler == n);
+            if (ImGui::Selectable(sampler->name().c_str(), is_selected))
             {
-                Sampler   *sampler     = m_samplers[n];
-                const bool is_selected = (m_sampler == n);
-                if (ImGui::Selectable(sampler->name().c_str(), is_selected))
-                {
-                    m_sampler = n;
-                    sampler->setJitter(m_jitter * 0.01f);
-                    sampler->setRandomized(m_randomize);
-                    update_GPU_points();
-                    update_GPU_grids();
-                    HelloImGui::Log(HelloImGui::LogLevel::Debug, "Switching to sampler %d: %s.", m_sampler,
-                                    sampler->name().c_str());
-                }
+                m_sampler = n;
+                sampler->setJitter(m_jitter * 0.01f);
+                sampler->setRandomized(m_randomize);
+                update_GPU_points();
+                update_GPU_grids();
+                HelloImGui::Log(HelloImGui::LogLevel::Debug, "Switching to sampler %d: %s.", m_sampler,
+                                sampler->name().c_str());
+            }
+
+            // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+            if (is_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("Key: Up/Down");
+    if (accept_keys && !ImGui::IsKeyDown(ImGuiMod_Shift) &&
+        (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)))
+    {
+        int delta        = ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1;
+        m_sampler        = mod(m_sampler + delta, (int)NUM_POINT_TYPES);
+        Sampler *sampler = m_samplers[m_sampler];
+        sampler->setJitter(m_jitter * 0.01f);
+        sampler->setRandomized(m_randomize);
+        update_GPU_points();
+        update_GPU_grids();
+    }
+
+    if (ImGui::SliderInt("Num points", &m_target_point_count, 1, 1 << 17, "%d",
+                         ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp))
+    {
+        HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
+        update_GPU_points();
+        update_GPU_grids();
+        HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
+    }
+    // now that the user has finished editing, sync the GUI value
+    if (ImGui::IsItemDeactivatedAfterEdit())
+        m_target_point_count = m_point_count;
+    ImGui::SetItemTooltip("Key: Left/Right");
+    if (accept_keys && (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_RightArrow)))
+    {
+        m_target_point_count =
+            std::max(1u, ImGui::IsKeyPressed(ImGuiKey_RightArrow) ? roundUpPow2(m_target_point_count + 1)
+                                                                  : roundDownPow2(m_target_point_count - 1));
+        update_GPU_points();
+        update_GPU_grids();
+    }
+
+    if (ImGui::SliderInt("Dimensions", &m_num_dimensions, 2, 10, "%d", ImGuiSliderFlags_AlwaysClamp))
+    {
+        update_GPU_points();
+        update_GPU_grids();
+    }
+    ImGui::SetItemTooltip("Key: D/d");
+    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_D))
+    {
+        m_num_dimensions = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
+        update_GPU_points();
+        update_GPU_grids();
+    }
+
+    if (ImGui::Checkbox("Randomize", &m_randomize))
+        update_GPU_points();
+    ImGui::SetItemTooltip("Key: R/r");
+    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_R))
+    {
+        if (ImGui::IsKeyDown(ImGuiMod_Shift))
+        {
+            m_randomize = true;
+            m_samplers[m_sampler]->setRandomized(true);
+        }
+        else
+            m_randomize = !m_randomize;
+        update_GPU_points();
+    }
+
+    if (ImGui::SliderFloat("Jitter", &m_jitter, 0.f, 100.f, "%3.1f%%"))
+    {
+        m_samplers[m_sampler]->setJitter(m_jitter * 0.01f);
+        update_GPU_points();
+        update_GPU_grids();
+    }
+
+    // add optional widgets for OA samplers
+    if (OrthogonalArray *oa = dynamic_cast<OrthogonalArray *>(m_samplers[m_sampler]))
+    {
+        // Controls for the strengths of the OA
+        auto change_strength = [oa, this](int strength)
+        {
+            if ((unsigned)strength != oa->strength())
+            {
+                oa->setStrength(strength);
+                update_GPU_points();
+                update_GPU_grids();
+            }
+        };
+        int strength = oa->strength();
+        if (ImGui::InputInt("Strength", &strength, 1))
+            change_strength(std::max(2, strength));
+        ImGui::SetItemTooltip("Key: T/t");
+        if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_T))
+            change_strength(std::max(2, strength + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1)));
+
+        // Controls for the offset type of the OA
+        auto offset_names       = oa->offsetTypeNames();
+        auto change_offset_type = [oa, this](int offset)
+        {
+            oa->setOffsetType(offset);
+            m_jitter = oa->jitter();
+            update_GPU_points();
+            update_GPU_grids();
+        };
+        if (ImGui::BeginCombo("Offset type", offset_names[oa->offsetType()].c_str()))
+        {
+            for (unsigned n = 0; n < offset_names.size(); n++)
+            {
+                const bool is_selected = (oa->offsetType() == n);
+                if (ImGui::Selectable(offset_names[n].c_str(), is_selected))
+                    change_offset_type(n);
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
                 if (is_selected)
@@ -402,262 +515,145 @@ void SampleViewer::draw_editor()
             }
             ImGui::EndCombo();
         }
-        ImGui::SetItemTooltip("Key: Up/Down");
-        if (accept_keys && !ImGui::IsKeyDown(ImGuiMod_Shift) &&
+        ImGui::SetItemTooltip("Key: Shift+Up/Down");
+        if (accept_keys && ImGui::IsKeyDown(ImGuiMod_Shift) &&
             (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)))
-        {
-            int delta        = ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1;
-            m_sampler        = mod(m_sampler + delta, (int)NUM_POINT_TYPES);
-            Sampler *sampler = m_samplers[m_sampler];
-            sampler->setJitter(m_jitter * 0.01f);
-            sampler->setRandomized(m_randomize);
-            update_GPU_points();
-            update_GPU_grids();
-        }
+            change_offset_type(
+                mod((int)oa->offsetType() + (ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1), (int)NUM_OFFSET_TYPES));
+    }
 
-        if (ImGui::SliderInt("Num points", &m_target_point_count, 1, 1 << 17, "%d",
-                             ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp))
-        {
-            HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
-            update_GPU_points();
-            update_GPU_grids();
-            HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
-        }
-        // now that the user has finished editing, sync the GUI value
-        if (ImGui::IsItemDeactivatedAfterEdit())
-            m_target_point_count = m_point_count;
-        ImGui::SetItemTooltip("Key: Left/Right");
-        if (accept_keys && (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_RightArrow)))
-        {
-            m_target_point_count =
-                std::max(1u, ImGui::IsKeyPressed(ImGuiKey_RightArrow) ? roundUpPow2(m_target_point_count + 1)
-                                                                      : roundDownPow2(m_target_point_count - 1));
-            update_GPU_points();
-            update_GPU_grids();
-        }
+    // =========================================================
+    ImGui::SeparatorText("Camera/view");
+    // =========================================================
 
-        if (ImGui::SliderInt("Dimensions", &m_num_dimensions, 2, 10, "%d", ImGuiSliderFlags_AlwaysClamp))
-        {
-            update_GPU_points();
-            update_GPU_grids();
-        }
-        ImGui::SetItemTooltip("Key: D/d");
-        if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_D))
-        {
-            m_num_dimensions = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
-            update_GPU_points();
-            update_GPU_grids();
-        }
+    // ImGui::RadioButton("XY", &m_view, 0);
+    // ImGui::SameLine();
+    // ImGui::RadioButton("YZ", &m_view, 1);
+    // ImGui::SameLine();
+    // ImGui::RadioButton("XZ", &m_view, 2);
+    // ImGui::SameLine();
+    // ImGui::RadioButton("XYZ", &m_view, 3);
+    // ImGui::SameLine();
+    // ImGui::RadioButton("2D", &m_view, 4);
 
-        if (ImGui::Checkbox("Randomize", &m_randomize))
-            update_GPU_points();
-        ImGui::SetItemTooltip("Key: R/r");
-        if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_R))
-        {
-            if (ImGui::IsKeyDown(ImGuiMod_Shift))
-            {
-                m_randomize = true;
-                m_samplers[m_sampler]->setRandomized(true);
-            }
-            else
-                m_randomize = !m_randomize;
-            update_GPU_points();
-        }
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
+                        ImVec2{ImGui::GetStyle().ItemSpacing.y, ImGui::GetStyle().ItemSpacing.y});
 
-        if (ImGui::SliderFloat("Jitter", &m_jitter, 0.f, 100.f, "%3.1f%%"))
-        {
-            m_samplers[m_sampler]->setJitter(m_jitter * 0.01f);
-            update_GPU_points();
-            update_GPU_grids();
-        }
+    const char *items[] = {"XY", "YZ", "XZ", "XYZ", "2D"};
+    bool        is_selected;
 
-        // add optional widgets for OA samplers
-        if (OrthogonalArray *oa = dynamic_cast<OrthogonalArray *>(m_samplers[m_sampler]))
-        {
-            // Controls for the strengths of the OA
-            auto change_strength = [oa, this](int strength)
-            {
-                if ((unsigned)strength != oa->strength())
-                {
-                    oa->setStrength(strength);
-                    update_GPU_points();
-                    update_GPU_grids();
-                }
-            };
-            int strength = oa->strength();
-            if (ImGui::InputInt("Strength", &strength, 1))
-                change_strength(std::max(2, strength));
-            ImGui::SetItemTooltip("Key: T/t");
-            if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_T))
-                change_strength(std::max(2, strength + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1)));
+    for (int i = 0; i < IM_ARRAYSIZE(items); ++i)
+    {
+        if (i > CAMERA_XY)
+            ImGui::SameLine();
 
-            // Controls for the offset type of the OA
-            auto offset_names       = oa->offsetTypeNames();
-            auto change_offset_type = [oa, this](int offset)
-            {
-                oa->setOffsetType(offset);
-                m_jitter = oa->jitter();
-                update_GPU_points();
-                update_GPU_grids();
-            };
-            if (ImGui::BeginCombo("Offset type", offset_names[oa->offsetType()].c_str()))
-            {
-                for (unsigned n = 0; n < offset_names.size(); n++)
-                {
-                    const bool is_selected = (oa->offsetType() == n);
-                    if (ImGui::Selectable(offset_names[n].c_str(), is_selected))
-                        change_offset_type(n);
-
-                    // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-                    if (is_selected)
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            ImGui::SetItemTooltip("Key: Shift+Up/Down");
-            if (accept_keys && ImGui::IsKeyDown(ImGuiMod_Shift) &&
-                (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)))
-                change_offset_type(mod((int)oa->offsetType() + (ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1),
-                                       (int)NUM_OFFSET_TYPES));
-        }
-
-        // =========================================================
-        ImGui::SeparatorText("Camera/view");
-        // =========================================================
-
-        // ImGui::RadioButton("XY", &m_view, 0);
-        // ImGui::SameLine();
-        // ImGui::RadioButton("YZ", &m_view, 1);
-        // ImGui::SameLine();
-        // ImGui::RadioButton("XZ", &m_view, 2);
-        // ImGui::SameLine();
-        // ImGui::RadioButton("XYZ", &m_view, 3);
-        // ImGui::SameLine();
-        // ImGui::RadioButton("2D", &m_view, 4);
-
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
-                            ImVec2{ImGui::GetStyle().ItemSpacing.y, ImGui::GetStyle().ItemSpacing.y});
-
-        const char *items[] = {"XY", "YZ", "XZ", "XYZ", "2D"};
-        bool        is_selected;
-
-        for (int i = 0; i < IM_ARRAYSIZE(items); ++i)
-        {
-            if (i > CAMERA_XY)
-                ImGui::SameLine();
-
-            is_selected = m_view == i;
-            if (is_selected)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
-
-            if (ImGui::Button(items[i], float2{40.f, 0.f}))
-            {
-                set_view((CameraType)i);
-            }
-            ImGui::SetItemTooltip("Key: %d", (i + 1) % IM_ARRAYSIZE(items));
-            ImGui::PopStyleColor(is_selected);
-        }
-
-        ImGui::PopStyleVar();
-
-        if (accept_keys)
-        {
-            if (ImGui::IsKeyPressed(ImGuiKey_1))
-                set_view(CAMERA_XY);
-            else if (ImGui::IsKeyPressed(ImGuiKey_2))
-                set_view(CAMERA_YZ);
-            else if (ImGui::IsKeyPressed(ImGuiKey_3))
-                set_view(CAMERA_XZ);
-            else if (ImGui::IsKeyPressed(ImGuiKey_4))
-                set_view(CAMERA_CURRENT);
-            else if (ImGui::IsKeyPressed(ImGuiKey_0))
-                set_view(CAMERA_2D);
-        }
-
-        // =========================================================
-        ImGui::SeparatorText("Display options");
-        // =========================================================
-
-        bool pushed = m_scale_radius_with_points;
-        if (pushed)
+        is_selected = m_view == i;
+        if (is_selected)
             ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
 
-        ImGui::SliderFloat("Radius", &m_radius, 0.f, 1.f, "");
-        ImGui::SameLine();
-        if (ImGui::Button(ICON_FA_COMPRESS))
-            m_scale_radius_with_points = !m_scale_radius_with_points;
-        ImGui::SetItemTooltip("Scale radius with number of points");
-        if (pushed)
-            ImGui::PopStyleColor();
-
-        ImGui::Checkbox("1D projections", &m_show_1d_projections);
-        ImGui::SetItemTooltip("Key: p");
-        if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_P))
-            m_show_1d_projections = !m_show_1d_projections;
-
-        ImGui::Checkbox("Point indices", &m_show_point_nums);
-        ImGui::Checkbox("Point coords", &m_show_point_coords);
-
-        ImGui::Checkbox("Coarse grid", &m_show_coarse_grid);
-        ImGui::SetItemTooltip("Key: g");
-        ImGui::Checkbox("Fine grid", &m_show_fine_grid);
-        ImGui::SetItemTooltip("Key: G");
-        if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_G))
+        if (ImGui::Button(items[i], float2{40.f, 0.f}))
         {
-            if (ImGui::IsKeyDown(ImGuiMod_Shift))
-                m_show_fine_grid = !m_show_fine_grid;
-            else
-                m_show_coarse_grid = !m_show_coarse_grid;
-            update_GPU_grids();
+            set_view((CameraType)i);
         }
-
-        ImGui::Checkbox("Bounding box", &m_show_bbox);
-        ImGui::SetItemTooltip("Key: b");
-        if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_B))
-        {
-            m_show_bbox = !m_show_bbox;
-            update_GPU_grids();
-        }
-
-        // =========================================================
-        ImGui::SeparatorText("Dimension mapping");
-        // =========================================================
-
-        if (ImGui::SliderInt3("XYZ", &m_dimension[0], 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
-            update_GPU_points(false);
-
-        // =========================================================
-        ImGui::SeparatorText("Visible subset");
-        // =========================================================
-
-        if (ImGui::Checkbox("Subset by point index", &m_subset_by_index))
-            update_GPU_points(false);
-        if (m_subset_by_index)
-        {
-            m_subset_by_coord = false;
-            ImGui::SliderInt("First point", &m_first_draw_point, 0, m_point_count - 1, "%d",
-                             ImGuiSliderFlags_AlwaysClamp);
-            ImGui::SliderInt("Num subset points", &m_point_draw_count, 0, m_point_count - m_first_draw_point, "%d",
-                             ImGuiSliderFlags_AlwaysClamp);
-        }
-
-        if (ImGui::Checkbox("Subset by coordinates", &m_subset_by_coord))
-            update_GPU_points(false);
-        if (m_subset_by_coord)
-        {
-            m_subset_by_index = false;
-            if (ImGui::SliderInt("Subset axis", &m_subset_axis, 0, m_num_dimensions - 1, "%d",
-                                 ImGuiSliderFlags_AlwaysClamp))
-                update_GPU_points(false);
-            if (ImGui::SliderInt("Num levels", &m_num_subset_levels, 1, m_point_count, "%d",
-                                 ImGuiSliderFlags_AlwaysClamp))
-                update_GPU_points(false);
-            if (ImGui::SliderInt("Level", &m_subset_level, 0, m_num_subset_levels - 1, "%d",
-                                 ImGuiSliderFlags_AlwaysClamp))
-                update_GPU_points(false);
-        }
+        ImGui::SetItemTooltip("Key: %d", (i + 1) % IM_ARRAYSIZE(items));
+        ImGui::PopStyleColor(is_selected);
     }
-    ImGui::End();
+
+    ImGui::PopStyleVar();
+
+    if (accept_keys)
+    {
+        if (ImGui::IsKeyPressed(ImGuiKey_1))
+            set_view(CAMERA_XY);
+        else if (ImGui::IsKeyPressed(ImGuiKey_2))
+            set_view(CAMERA_YZ);
+        else if (ImGui::IsKeyPressed(ImGuiKey_3))
+            set_view(CAMERA_XZ);
+        else if (ImGui::IsKeyPressed(ImGuiKey_4))
+            set_view(CAMERA_CURRENT);
+        else if (ImGui::IsKeyPressed(ImGuiKey_0))
+            set_view(CAMERA_2D);
+    }
+
+    // =========================================================
+    ImGui::SeparatorText("Display options");
+    // =========================================================
+
+    bool pushed = m_scale_radius_with_points;
+    if (pushed)
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
+
+    ImGui::SliderFloat("Radius", &m_radius, 0.f, 1.f, "");
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_COMPRESS))
+        m_scale_radius_with_points = !m_scale_radius_with_points;
+    ImGui::SetItemTooltip("Scale radius with number of points");
+    if (pushed)
+        ImGui::PopStyleColor();
+
+    ImGui::Checkbox("1D projections", &m_show_1d_projections);
+    ImGui::SetItemTooltip("Key: p");
+    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_P))
+        m_show_1d_projections = !m_show_1d_projections;
+
+    ImGui::Checkbox("Point indices", &m_show_point_nums);
+    ImGui::Checkbox("Point coords", &m_show_point_coords);
+
+    ImGui::Checkbox("Coarse grid", &m_show_coarse_grid);
+    ImGui::SetItemTooltip("Key: g");
+    ImGui::Checkbox("Fine grid", &m_show_fine_grid);
+    ImGui::SetItemTooltip("Key: G");
+    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_G))
+    {
+        if (ImGui::IsKeyDown(ImGuiMod_Shift))
+            m_show_fine_grid = !m_show_fine_grid;
+        else
+            m_show_coarse_grid = !m_show_coarse_grid;
+        update_GPU_grids();
+    }
+
+    ImGui::Checkbox("Bounding box", &m_show_bbox);
+    ImGui::SetItemTooltip("Key: b");
+    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_B))
+    {
+        m_show_bbox = !m_show_bbox;
+        update_GPU_grids();
+    }
+
+    // =========================================================
+    ImGui::SeparatorText("Dimension mapping");
+    // =========================================================
+
+    if (ImGui::SliderInt3("XYZ", &m_dimension[0], 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
+        update_GPU_points(false);
+
+    // =========================================================
+    ImGui::SeparatorText("Visible subset");
+    // =========================================================
+
+    if (ImGui::Checkbox("Subset by point index", &m_subset_by_index))
+        update_GPU_points(false);
+    if (m_subset_by_index)
+    {
+        m_subset_by_coord = false;
+        ImGui::SliderInt("First point", &m_first_draw_point, 0, m_point_count - 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderInt("Num subset points", &m_point_draw_count, 0, m_point_count - m_first_draw_point, "%d",
+                         ImGuiSliderFlags_AlwaysClamp);
+    }
+
+    if (ImGui::Checkbox("Subset by coordinates", &m_subset_by_coord))
+        update_GPU_points(false);
+    if (m_subset_by_coord)
+    {
+        m_subset_by_index = false;
+        if (ImGui::SliderInt("Subset axis", &m_subset_axis, 0, m_num_dimensions - 1, "%d",
+                             ImGuiSliderFlags_AlwaysClamp))
+            update_GPU_points(false);
+        if (ImGui::SliderInt("Num levels", &m_num_subset_levels, 1, m_point_count, "%d", ImGuiSliderFlags_AlwaysClamp))
+            update_GPU_points(false);
+        if (ImGui::SliderInt("Level", &m_subset_level, 0, m_num_subset_levels - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
+            update_GPU_points(false);
+    }
 }
 
 void SampleViewer::initialize_GL()
