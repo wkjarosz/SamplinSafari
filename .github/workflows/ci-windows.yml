@@ -49,13 +49,13 @@ jobs:
       - name: Build
         run: cmake --build ${{github.workspace}}/build --parallel --config ${{ matrix.buildtype }} --verbose
 
-      - name: Checking that SamplinSafari runs
+      - name: Checking that Samplin Safari runs
         run: |
-          ${{github.workspace}}/build/${{ matrix.buildtype }}/SamplinSafari.exe --help
+          "${{github.workspace}}/build/${{ matrix.buildtype }}/Samplin Safari.exe" --help
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: SamplinSafari
+          name: Samplin Safari
           path: |
-            ${{github.workspace}}/build/${{ matrix.buildtype }}/SamplinSafari.exe
+            "${{github.workspace}}/build/${{ matrix.buildtype }}/Samplin Safari.exe"
