@@ -50,6 +50,24 @@ using std::to_string;
 
 #include "GLFW/glfw3.h"
 
+namespace ImGui
+{
+
+bool ToggleButton(const char *label, bool *active)
+{
+    ImGui::PushStyleColor(ImGuiCol_Button, *active ? GetColorU32(ImGuiCol_ButtonActive) : GetColorU32(ImGuiCol_Button));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, GetColorU32(ImGuiCol_FrameBgHovered));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, GetColorU32(ImGuiCol_FrameBgActive));
+
+    bool ret;
+    if ((ret = ImGui::Button(label)))
+        *active = !*active;
+    ImGui::PopStyleColor(3);
+    return ret;
+}
+
+} // namespace ImGui
+
 // clang-format off
 #ifdef __EMSCRIPTEN__
     #define VERT_SHADER_HEADER "#version 100\n#define in attribute\n#define out varying\nprecision mediump float;\n"
@@ -133,8 +151,6 @@ static void layout_2d_matrix(float4x4 &position, int numDims, int dim_x, int dim
 
 SampleViewer::SampleViewer() : GUIApp()
 {
-    m_time_strings.resize(3);
-
     m_samplers.resize(NUM_POINT_TYPES, nullptr);
     m_samplers[RANDOM]   = new Random(m_num_dimensions);
     m_samplers[JITTERED] = new Jittered(1, 1, m_jitter * 0.01f);
@@ -196,10 +212,10 @@ SampleViewer::SampleViewer() : GUIApp()
     // Dockable windows
     // the parameter editor
     HelloImGui::DockableWindow editorWindow;
-    editorWindow.label         = "Sample parameters";
+    editorWindow.label         = "Settings";
     editorWindow.dockSpaceName = "EditorSpace";
-    editorWindow.canBeClosed   = false;
-    editorWindow.GuiFunction   = [this] { draw_editor(); };
+    // editorWindow.canBeClosed   = false;
+    editorWindow.GuiFunction = [this] { draw_editor(); };
 
     // A console window named "Console" will be placed in "ConsoleSpace". It uses the HelloImGui logger gui
     HelloImGui::DockableWindow consoleWindow;
@@ -209,34 +225,36 @@ SampleViewer::SampleViewer() : GUIApp()
     consoleWindow.rememberIsVisible = true;
     consoleWindow.GuiFunction       = [] { HelloImGui::LogGui(); };
 
-    m_params.dockingParams.dockableWindows = {editorWindow, consoleWindow};
-
-    // Docking Splits
+    // docking layouts
     {
-        HelloImGui::DockingSplit splitEditorMain;
-        splitEditorMain.initialDock = "MainDockSpace";
-        splitEditorMain.newDock     = "EditorSpace";
-        splitEditorMain.direction   = ImGuiDir_Left;
-        splitEditorMain.ratio       = 0.2f;
+        m_params.dockingParams.layoutName      = "Settings on left";
+        m_params.dockingParams.dockableWindows = {editorWindow, consoleWindow};
 
-        HelloImGui::DockingSplit splitMainConsole;
-        splitMainConsole.initialDock = "MainDockSpace";
-        splitMainConsole.newDock     = "ConsoleSpace";
-        splitMainConsole.direction   = ImGuiDir_Down;
-        splitMainConsole.ratio       = 0.25f;
+        HelloImGui::DockingSplit splitEditorMain{"MainDockSpace", "EditorSpace", ImGuiDir_Left, 0.2f};
+
+        HelloImGui::DockingSplit splitMainConsole{"MainDockSpace", "ConsoleSpace", ImGuiDir_Down, 0.25f};
 
         m_params.dockingParams.dockingSplits = {splitEditorMain, splitMainConsole};
+
+        HelloImGui::DockingParams alternativeLayout;
+        alternativeLayout.layoutName       = "Settings on right";
+        alternativeLayout.dockableWindows  = {editorWindow, consoleWindow};
+        splitEditorMain.direction          = ImGuiDir_Right;
+        alternativeLayout.dockingSplits    = {splitEditorMain, splitMainConsole};
+        m_params.alternativeDockingLayouts = {alternativeLayout};
     }
 
-    m_params.callbacks.LoadAdditionalFonts = []()
+    m_params.callbacks.LoadAdditionalFonts = [this]()
     {
-        std::string fontFilename = "fonts/Roboto/Roboto-Regular.ttf";
-        // std::string fontFilename = "fonts/DroidSans.ttf";
-        if (HelloImGui::AssetExists(fontFilename))
+        std::string roboto_r = "fonts/Roboto/Roboto-Regular.ttf";
+        std::string roboto_b = "fonts/Roboto/Roboto-Bold.ttf";
+        if (!HelloImGui::AssetExists(roboto_r) || !HelloImGui::AssetExists(roboto_b))
+            return;
+
+        for (auto font_size : {14.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 15.f, 16.f, 17.f, 18.f})
         {
-            float   fontSize = 14.f;
-            ImFont *font     = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(fontFilename, fontSize, false);
-            (void)font;
+            m_regular[(int)font_size] = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_r, font_size);
+            m_bold[(int)font_size]    = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_b, font_size);
         }
     };
 
@@ -272,6 +290,17 @@ SampleViewer::SampleViewer() : GUIApp()
         }
     };
 
+    m_params.callbacks.ShowStatus = [this]()
+    {
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - ImGui::GetFontSize() * 0.15f);
+        ImGui::Text("Reset + randomize: %3.3f ms   |   Sampling: %3.3f ms   |   Total: %3.3f ms (%3.0f pps)", m_time1,
+                    m_time2, m_time1 + m_time2, m_point_count / (m_time1 + m_time2));
+        // ImGui::SameLine();
+        ImGui::SameLine(ImGui::GetIO().DisplaySize.x - 16.f * ImGui::GetFontSize());
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - ImGui::GetFontSize() * 0.15f);
+        ImGui::ToggleButton(ICON_FA_TERMINAL, &m_params.dockingParams.dockableWindows[1].isVisible);
+    };
+
     m_params.callbacks.ShowGui = [this]() { draw_gui(); };
 }
 
@@ -289,7 +318,7 @@ int2 SampleViewer::get_draw_range() const
     else if (m_subset_by_index)
     {
         start = m_first_draw_point;
-        count = m_point_draw_count;
+        count = std::min(m_point_draw_count, m_point_count - m_first_draw_point);
     }
     return {start, count};
 }
@@ -328,22 +357,20 @@ void SampleViewer::draw_gui()
             float2 text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
             draw_text(m_viewport_pos +
                           int2((text_2d_pos.x) * m_viewport_size.x, (1.f - text_2d_pos.y) * m_viewport_size.y + 16),
-                      to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), 16, 0, TextAlign_CENTER | TextAlign_BOTTOM);
+                      to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
+                      TextAlign_CENTER | TextAlign_BOTTOM);
 
             layout_2d_matrix(pos, m_num_dimensions, 0, i + 1);
             text_pos    = mul(mvp, mul(pos, float4{-0.5f, 0.f, 0.0f, 1.0f}));
             text_2d_pos = float2((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
             draw_text(m_viewport_pos +
                           int2((text_2d_pos.x) * m_viewport_size.x - 4, (1.f - text_2d_pos.y) * m_viewport_size.y),
-                      to_string(i + 1), float4(1.0f, 1.0f, 1.0f, 0.75f), 16, 0, TextAlign_RIGHT | TextAlign_MIDDLE);
+                      to_string(i + 1), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
+                      TextAlign_RIGHT | TextAlign_MIDDLE);
         }
     }
     else
     {
-        for (int i = 0; i < 3; ++i)
-            draw_text(m_viewport_pos + m_viewport_size - int2(20, (2 - i) * 14 + 20), m_time_strings[i],
-                      float4(1.0f, 1.0f, 1.0f, 0.75f), 16, 0);
-
         int2 range = get_draw_range();
 
         if (m_show_point_nums || m_show_point_coords)
@@ -356,56 +383,286 @@ void SampleViewer::draw_gui()
                 if (m_show_point_nums)
                     draw_text(m_viewport_pos + int2((text_2d_pos.x) * m_viewport_size.x,
                                                     (1.f - text_2d_pos.y) * m_viewport_size.y - radius / 4),
-                              fmt::format("{:d}", p), float4(1.0f, 1.0f, 1.0f, 0.75f), 12, 0,
+                              fmt::format("{:d}", p), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[12],
                               TextAlign_CENTER | TextAlign_BOTTOM);
                 if (m_show_point_coords)
                     draw_text(m_viewport_pos + int2((text_2d_pos.x) * m_viewport_size.x,
                                                     (1.f - text_2d_pos.y) * m_viewport_size.y + radius / 4),
                               fmt::format("({:0.2f}, {:0.2f}, {:0.2f})", point.x + 0.5, point.y + 0.5, point.z + 0.5),
-                              float4(1.0f, 1.0f, 1.0f, 0.75f), 11, 0, TextAlign_CENTER | TextAlign_TOP);
+                              float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[11], TextAlign_CENTER | TextAlign_TOP);
             }
     }
+
+    process_hotkeys();
 }
 
 void SampleViewer::draw_editor()
 {
-    bool accept_keys = !ImGui::GetIO().WantCaptureKeyboard;
-    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_Escape))
+    auto big_header = [this](const char *label, ImGuiTreeNodeFlags flags = 0)
     {
-        m_params.appShallExit = true;
-        return;
-    }
+        ImGui::PushFont(m_bold[16.f]);
+        bool ret = ImGui::CollapsingHeader(label, flags | ImGuiTreeNodeFlags_DefaultOpen);
+        ImGui::PopFont();
+        return ret;
+    };
 
-    // =========================================================
-    ImGui::SeparatorText("Point set");
-    // =========================================================
-
-    if (ImGui::BeginCombo("##", m_samplers[m_sampler]->name().c_str()))
+    auto tooltip = [](const char *text, float wrap_width = 400.f)
     {
-        for (int n = 0; n < NUM_POINT_TYPES; n++)
+        if (ImGui::BeginItemTooltip())
         {
-            Sampler   *sampler     = m_samplers[n];
-            const bool is_selected = (m_sampler == n);
-            if (ImGui::Selectable(sampler->name().c_str(), is_selected))
+            ImGui::PushTextWrapPos(wrap_width);
+            ImGui::TextWrapped("%s", text);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+    };
+
+    // =========================================================
+    if (big_header(ICON_FA_SLIDERS_H "  Sampler settings"))
+    // =========================================================
+    {
+        if (ImGui::BeginCombo("##", m_samplers[m_sampler]->name().c_str()))
+        {
+            for (int n = 0; n < NUM_POINT_TYPES; n++)
             {
-                m_sampler = n;
-                sampler->setJitter(m_jitter * 0.01f);
-                sampler->setRandomized(m_randomize);
+                Sampler   *sampler     = m_samplers[n];
+                const bool is_selected = (m_sampler == n);
+                if (ImGui::Selectable(sampler->name().c_str(), is_selected))
+                {
+                    m_sampler = n;
+                    sampler->setJitter(m_jitter * 0.01f);
+                    sampler->setRandomized(m_randomize);
+                    update_GPU_points();
+                    update_GPU_grids();
+                    HelloImGui::Log(HelloImGui::LogLevel::Debug, "Switching to sampler %d: %s.", m_sampler,
+                                    sampler->name().c_str());
+                }
+
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if (is_selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        tooltip("Set the sampler used to generate the points (Key: Up/Down)");
+
+        if (ImGui::SliderInt("Num points", &m_target_point_count, 1, 1 << 17, "%d",
+                             ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp))
+        {
+            HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
+            update_GPU_points();
+            update_GPU_grids();
+            HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
+        }
+        // now that the user has finished editing, sync the GUI value
+        if (ImGui::IsItemDeactivatedAfterEdit())
+            m_target_point_count = m_point_count;
+
+        tooltip(
+            "Set the target number of points to generate. For samplers that only support certain numbers of points "
+            "(e.g. powers of 2) this target value will be snapped to the nearest admissable value (Key: Left/Right).");
+
+        if (ImGui::SliderInt("Dimensions", &m_num_dimensions, 2, 10, "%d", ImGuiSliderFlags_AlwaysClamp))
+        {
+            update_GPU_points();
+            update_GPU_grids();
+        }
+        tooltip("The number of dimensions to generate for each point (Key: D/d).");
+
+        if (ImGui::Checkbox("Randomize", &m_randomize))
+            update_GPU_points();
+        tooltip("Whether to randomize the points, or show the deterministic configuration (Key: r/R).");
+
+        if (ImGui::SliderFloat("Jitter", &m_jitter, 0.f, 100.f, "%3.1f%%"))
+        {
+            m_samplers[m_sampler]->setJitter(m_jitter * 0.01f);
+            update_GPU_points();
+            update_GPU_grids();
+        }
+        tooltip("How much the points should be jittered within their strata (Key: j/J).");
+
+        // add optional widgets for OA samplers
+        if (OrthogonalArray *oa = dynamic_cast<OrthogonalArray *>(m_samplers[m_sampler]))
+        {
+            // Controls for the strengths of the OA
+            auto change_strength = [oa, this](int strength)
+            {
+                if ((unsigned)strength != oa->strength())
+                {
+                    oa->setStrength(strength);
+                    update_GPU_points();
+                    update_GPU_grids();
+                }
+            };
+            int strength = oa->strength();
+            if (ImGui::InputInt("Strength", &strength, 1))
+                change_strength(std::max(2, strength));
+            ImGui::SetItemTooltip("Key: T/t");
+
+            // Controls for the offset type of the OA
+            auto offset_names       = oa->offsetTypeNames();
+            auto change_offset_type = [oa, this](int offset)
+            {
+                oa->setOffsetType(offset);
+                m_jitter = oa->jitter();
                 update_GPU_points();
                 update_GPU_grids();
-                HelloImGui::Log(HelloImGui::LogLevel::Debug, "Switching to sampler %d: %s.", m_sampler,
-                                sampler->name().c_str());
-            }
+            };
+            if (ImGui::BeginCombo("Offset type", offset_names[oa->offsetType()].c_str()))
+            {
+                for (unsigned n = 0; n < offset_names.size(); n++)
+                {
+                    const bool is_selected = (oa->offsetType() == n);
+                    if (ImGui::Selectable(offset_names[n].c_str(), is_selected))
+                        change_offset_type(n);
 
-            // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-            if (is_selected)
-                ImGui::SetItemDefaultFocus();
+                    // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            tooltip("Choose the type of offset witin each stratum (Key: Shift+Up/Down).");
         }
-        ImGui::EndCombo();
+        ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
     }
-    ImGui::SetItemTooltip("Key: Up/Down");
-    if (accept_keys && !ImGui::IsKeyDown(ImGuiMod_Shift) &&
-        (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)))
+    // =========================================================
+    if (big_header(ICON_FA_CAMERA "  Camera/view"))
+    // =========================================================
+    {
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
+                            ImVec2{ImGui::GetStyle().ItemSpacing.y, ImGui::GetStyle().ItemSpacing.y});
+        const char *items[] = {"XY", "YZ", "XZ", "XYZ", "2D"};
+        bool        is_selected;
+        for (int i = 0; i < IM_ARRAYSIZE(items); ++i)
+        {
+            if (i > CAMERA_XY)
+                ImGui::SameLine();
+
+            is_selected = m_view == i;
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
+
+            if (ImGui::Button(items[i], float2{40.f, 0.f}))
+            {
+                set_view((CameraType)i);
+            }
+            tooltip(fmt::format("(Key: {:d}).", (i + 1) % IM_ARRAYSIZE(items)).c_str());
+            ImGui::PopStyleColor(is_selected);
+        }
+        ImGui::PopStyleVar();
+        ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
+    }
+
+    // =========================================================
+    if (big_header(ICON_FA_EYE "  Display/visibility"))
+    // =========================================================
+    {
+        ImGui::ColorEdit3("Color", (float *)&m_point_color);
+        ImGui::SliderFloat("Radius", &m_radius, 0.f, 1.f, "");
+        ImGui::SameLine();
+        {
+            ImGui::ToggleButton(ICON_FA_COMPRESS, &m_scale_radius_with_points);
+            ImGui::SetItemTooltip("Scale radius with number of points");
+        }
+
+        ImGui::Checkbox("1D projections", &m_show_1d_projections);
+        tooltip("Also show the X-, Y-, and Z-axis projections of the 3D points (Key: p)?");
+        ImGui::Checkbox("Point indices", &m_show_point_nums);
+        tooltip("Show the index above each point?");
+        ImGui::Checkbox("Point coords", &m_show_point_coords);
+        tooltip("Show the XYZ coordinates below each point?");
+        ImGui::Checkbox("Coarse grid", &m_show_coarse_grid);
+        tooltip("Show a coarse grid (Key: g)?");
+        ImGui::Checkbox("Fine grid", &m_show_fine_grid);
+        tooltip("Show a fine grid (Key: G)?");
+        ImGui::Checkbox("Bounding box", &m_show_bbox);
+        tooltip("Show the XY, YZ, and XZ bounding boxes (Key: b)?");
+
+        ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
+    }
+
+    // =========================================================
+    if (big_header(ICON_FA_RANDOM "  Dimension mapping"))
+    // =========================================================
+    {
+        if (ImGui::SliderInt3("XYZ", &m_dimension[0], 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
+            update_GPU_points(false);
+        tooltip("Set which dimensions should be used for the XYZ dimensions of the displayed 3D points.");
+
+        ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
+    }
+
+    // =========================================================
+    if (big_header(ICON_FA_FILTER "  Filter points"))
+    // =========================================================
+    {
+        if (ImGui::Checkbox("Filter by point index", &m_subset_by_index))
+            update_GPU_points(false);
+        tooltip("Choose which points to show based on each point's index.");
+
+        if (m_subset_by_index)
+        {
+            m_subset_by_coord = false;
+            ImGui::SliderInt("First point", &m_first_draw_point, 0, m_point_count - 1, "%d",
+                             ImGuiSliderFlags_AlwaysClamp);
+            tooltip("Display points starting at this index.");
+
+            ImGui::SliderInt("Num points##2", &m_point_draw_count, 1, m_point_count - m_first_draw_point, "%d",
+                             ImGuiSliderFlags_AlwaysClamp);
+            tooltip("Display this many points from the first index.");
+        }
+
+        if (ImGui::Checkbox("Filter by coordinates", &m_subset_by_coord))
+            update_GPU_points(false);
+        tooltip("Show only points that fall within an interval along one of its dimensions.");
+        if (m_subset_by_coord)
+        {
+            m_subset_by_index = false;
+            if (ImGui::SliderInt("Axis", &m_subset_axis, 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
+                update_GPU_points(false);
+            tooltip("Filter points based on this axis.");
+
+            if (ImGui::SliderInt("Num levels", &m_num_subset_levels, 1, m_point_count, "%d",
+                                 ImGuiSliderFlags_AlwaysClamp))
+                update_GPU_points(false);
+            tooltip("Split the unit interval along the chosen axis into this many consecutive levels (or bins).");
+
+            if (ImGui::SliderInt("Level", &m_subset_level, 0, m_num_subset_levels - 1, "%d",
+                                 ImGuiSliderFlags_AlwaysClamp))
+                update_GPU_points(false);
+            tooltip("Show only points within this bin along the filtered axis.");
+        }
+
+        ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
+    }
+}
+
+void SampleViewer::process_hotkeys()
+{
+    if (ImGui::GetIO().WantCaptureKeyboard)
+        return;
+
+    OrthogonalArray *oa              = dynamic_cast<OrthogonalArray *>(m_samplers[m_sampler]);
+    auto             change_strength = [oa, this](int strength)
+    {
+        if ((unsigned)strength != oa->strength())
+        {
+            oa->setStrength(strength);
+            update_GPU_points();
+            update_GPU_grids();
+        }
+    };
+    auto change_offset_type = [oa, this](int offset)
+    {
+        oa->setOffsetType(offset);
+        m_jitter = oa->jitter();
+        update_GPU_points();
+        update_GPU_grids();
+    };
+
+    if ((ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)) &&
+        !ImGui::IsKeyDown(ImGuiMod_Shift))
     {
         int delta        = ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1;
         m_sampler        = mod(m_sampler + delta, (int)NUM_POINT_TYPES);
@@ -415,20 +672,7 @@ void SampleViewer::draw_editor()
         update_GPU_points();
         update_GPU_grids();
     }
-
-    if (ImGui::SliderInt("Num points", &m_target_point_count, 1, 1 << 17, "%d",
-                         ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp))
-    {
-        HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
-        update_GPU_points();
-        update_GPU_grids();
-        HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
-    }
-    // now that the user has finished editing, sync the GUI value
-    if (ImGui::IsItemDeactivatedAfterEdit())
-        m_target_point_count = m_point_count;
-    ImGui::SetItemTooltip("Key: Left/Right");
-    if (accept_keys && (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_RightArrow)))
+    else if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_RightArrow))
     {
         m_target_point_count =
             std::max(1u, ImGui::IsKeyPressed(ImGuiKey_RightArrow) ? roundUpPow2(m_target_point_count + 1)
@@ -436,24 +680,13 @@ void SampleViewer::draw_editor()
         update_GPU_points();
         update_GPU_grids();
     }
-
-    if (ImGui::SliderInt("Dimensions", &m_num_dimensions, 2, 10, "%d", ImGuiSliderFlags_AlwaysClamp))
-    {
-        update_GPU_points();
-        update_GPU_grids();
-    }
-    ImGui::SetItemTooltip("Key: D/d");
-    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_D))
+    else if (ImGui::IsKeyPressed(ImGuiKey_D))
     {
         m_num_dimensions = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
         update_GPU_points();
         update_GPU_grids();
     }
-
-    if (ImGui::Checkbox("Randomize", &m_randomize))
-        update_GPU_points();
-    ImGui::SetItemTooltip("Key: R/r");
-    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_R))
+    else if (ImGui::IsKeyPressed(ImGuiKey_R))
     {
         if (ImGui::IsKeyDown(ImGuiMod_Shift))
         {
@@ -464,146 +697,30 @@ void SampleViewer::draw_editor()
             m_randomize = !m_randomize;
         update_GPU_points();
     }
-
-    if (ImGui::SliderFloat("Jitter", &m_jitter, 0.f, 100.f, "%3.1f%%"))
+    else if (ImGui::IsKeyPressed(ImGuiKey_J))
     {
-        m_samplers[m_sampler]->setJitter(m_jitter * 0.01f);
+        m_jitter = std::clamp(m_jitter + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 10.f : -10.f), 0.f, 100.f);
         update_GPU_points();
-        update_GPU_grids();
     }
-
-    // add optional widgets for OA samplers
-    if (OrthogonalArray *oa = dynamic_cast<OrthogonalArray *>(m_samplers[m_sampler]))
-    {
-        // Controls for the strengths of the OA
-        auto change_strength = [oa, this](int strength)
-        {
-            if ((unsigned)strength != oa->strength())
-            {
-                oa->setStrength(strength);
-                update_GPU_points();
-                update_GPU_grids();
-            }
-        };
-        int strength = oa->strength();
-        if (ImGui::InputInt("Strength", &strength, 1))
-            change_strength(std::max(2, strength));
-        ImGui::SetItemTooltip("Key: T/t");
-        if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_T))
-            change_strength(std::max(2, strength + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1)));
-
-        // Controls for the offset type of the OA
-        auto offset_names       = oa->offsetTypeNames();
-        auto change_offset_type = [oa, this](int offset)
-        {
-            oa->setOffsetType(offset);
-            m_jitter = oa->jitter();
-            update_GPU_points();
-            update_GPU_grids();
-        };
-        if (ImGui::BeginCombo("Offset type", offset_names[oa->offsetType()].c_str()))
-        {
-            for (unsigned n = 0; n < offset_names.size(); n++)
-            {
-                const bool is_selected = (oa->offsetType() == n);
-                if (ImGui::Selectable(offset_names[n].c_str(), is_selected))
-                    change_offset_type(n);
-
-                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-                if (is_selected)
-                    ImGui::SetItemDefaultFocus();
-            }
-            ImGui::EndCombo();
-        }
-        ImGui::SetItemTooltip("Key: Shift+Up/Down");
-        if (accept_keys && ImGui::IsKeyDown(ImGuiMod_Shift) &&
-            (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)))
-            change_offset_type(
-                mod((int)oa->offsetType() + (ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1), (int)NUM_OFFSET_TYPES));
-    }
-
-    // =========================================================
-    ImGui::SeparatorText("Camera/view");
-    // =========================================================
-
-    // ImGui::RadioButton("XY", &m_view, 0);
-    // ImGui::SameLine();
-    // ImGui::RadioButton("YZ", &m_view, 1);
-    // ImGui::SameLine();
-    // ImGui::RadioButton("XZ", &m_view, 2);
-    // ImGui::SameLine();
-    // ImGui::RadioButton("XYZ", &m_view, 3);
-    // ImGui::SameLine();
-    // ImGui::RadioButton("2D", &m_view, 4);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
-                        ImVec2{ImGui::GetStyle().ItemSpacing.y, ImGui::GetStyle().ItemSpacing.y});
-
-    const char *items[] = {"XY", "YZ", "XZ", "XYZ", "2D"};
-    bool        is_selected;
-
-    for (int i = 0; i < IM_ARRAYSIZE(items); ++i)
-    {
-        if (i > CAMERA_XY)
-            ImGui::SameLine();
-
-        is_selected = m_view == i;
-        if (is_selected)
-            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
-
-        if (ImGui::Button(items[i], float2{40.f, 0.f}))
-        {
-            set_view((CameraType)i);
-        }
-        ImGui::SetItemTooltip("Key: %d", (i + 1) % IM_ARRAYSIZE(items));
-        ImGui::PopStyleColor(is_selected);
-    }
-
-    ImGui::PopStyleVar();
-
-    if (accept_keys)
-    {
-        if (ImGui::IsKeyPressed(ImGuiKey_1))
-            set_view(CAMERA_XY);
-        else if (ImGui::IsKeyPressed(ImGuiKey_2))
-            set_view(CAMERA_YZ);
-        else if (ImGui::IsKeyPressed(ImGuiKey_3))
-            set_view(CAMERA_XZ);
-        else if (ImGui::IsKeyPressed(ImGuiKey_4))
-            set_view(CAMERA_CURRENT);
-        else if (ImGui::IsKeyPressed(ImGuiKey_0))
-            set_view(CAMERA_2D);
-    }
-
-    // =========================================================
-    ImGui::SeparatorText("Display options");
-    // =========================================================
-
-    bool pushed = m_scale_radius_with_points;
-    if (pushed)
-        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
-
-    ImGui::SliderFloat("Radius", &m_radius, 0.f, 1.f, "");
-    ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_COMPRESS))
-        m_scale_radius_with_points = !m_scale_radius_with_points;
-    ImGui::SetItemTooltip("Scale radius with number of points");
-    if (pushed)
-        ImGui::PopStyleColor();
-
-    ImGui::Checkbox("1D projections", &m_show_1d_projections);
-    ImGui::SetItemTooltip("Key: p");
-    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_P))
+    else if (oa && ImGui::IsKeyPressed(ImGuiKey_T))
+        change_strength(std::max(2u, oa->strength() + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1)));
+    else if (oa && ImGui::IsKeyDown(ImGuiMod_Shift) &&
+             (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)))
+        change_offset_type(
+            mod((int)oa->offsetType() + (ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1), (int)NUM_OFFSET_TYPES));
+    else if (ImGui::IsKeyPressed(ImGuiKey_1))
+        set_view(CAMERA_XY);
+    else if (ImGui::IsKeyPressed(ImGuiKey_2))
+        set_view(CAMERA_YZ);
+    else if (ImGui::IsKeyPressed(ImGuiKey_3))
+        set_view(CAMERA_XZ);
+    else if (ImGui::IsKeyPressed(ImGuiKey_4))
+        set_view(CAMERA_CURRENT);
+    else if (ImGui::IsKeyPressed(ImGuiKey_0))
+        set_view(CAMERA_2D);
+    else if (ImGui::IsKeyPressed(ImGuiKey_P))
         m_show_1d_projections = !m_show_1d_projections;
-
-    ImGui::Checkbox("Point indices", &m_show_point_nums);
-    ImGui::Checkbox("Point coords", &m_show_point_coords);
-
-    ImGui::Checkbox("Coarse grid", &m_show_coarse_grid);
-    ImGui::SetItemTooltip("Key: g");
-    ImGui::Checkbox("Fine grid", &m_show_fine_grid);
-    ImGui::SetItemTooltip("Key: G");
-    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_G))
+    else if (ImGui::IsKeyPressed(ImGuiKey_G))
     {
         if (ImGui::IsKeyDown(ImGuiMod_Shift))
             m_show_fine_grid = !m_show_fine_grid;
@@ -611,48 +728,10 @@ void SampleViewer::draw_editor()
             m_show_coarse_grid = !m_show_coarse_grid;
         update_GPU_grids();
     }
-
-    ImGui::Checkbox("Bounding box", &m_show_bbox);
-    ImGui::SetItemTooltip("Key: b");
-    if (accept_keys && ImGui::IsKeyPressed(ImGuiKey_B))
+    else if (ImGui::IsKeyPressed(ImGuiKey_B))
     {
         m_show_bbox = !m_show_bbox;
         update_GPU_grids();
-    }
-
-    // =========================================================
-    ImGui::SeparatorText("Dimension mapping");
-    // =========================================================
-
-    if (ImGui::SliderInt3("XYZ", &m_dimension[0], 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
-        update_GPU_points(false);
-
-    // =========================================================
-    ImGui::SeparatorText("Visible subset");
-    // =========================================================
-
-    if (ImGui::Checkbox("Subset by point index", &m_subset_by_index))
-        update_GPU_points(false);
-    if (m_subset_by_index)
-    {
-        m_subset_by_coord = false;
-        ImGui::SliderInt("First point", &m_first_draw_point, 0, m_point_count - 1, "%d", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::SliderInt("Num subset points", &m_point_draw_count, 0, m_point_count - m_first_draw_point, "%d",
-                         ImGuiSliderFlags_AlwaysClamp);
-    }
-
-    if (ImGui::Checkbox("Subset by coordinates", &m_subset_by_coord))
-        update_GPU_points(false);
-    if (m_subset_by_coord)
-    {
-        m_subset_by_index = false;
-        if (ImGui::SliderInt("Subset axis", &m_subset_axis, 0, m_num_dimensions - 1, "%d",
-                             ImGuiSliderFlags_AlwaysClamp))
-            update_GPU_points(false);
-        if (ImGui::SliderInt("Num levels", &m_num_subset_levels, 1, m_point_count, "%d", ImGuiSliderFlags_AlwaysClamp))
-            update_GPU_points(false);
-        if (ImGui::SliderInt("Level", &m_subset_level, 0, m_num_subset_levels - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
-            update_GPU_points(false);
     }
 }
 
@@ -916,7 +995,7 @@ void SampleViewer::draw()
     else
     {
         // m_render_pass->set_depth_test(RenderPass::DepthTest::Less, true);
-        draw_points(mvp, {0.9f, 0.55f, 0.1f});
+        draw_points(mvp, m_point_color);
 
         if (m_show_1d_projections)
         {
@@ -946,9 +1025,9 @@ void SampleViewer::draw()
     }
 }
 
-void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &color, int font_size, int fixed_width,
-                             int align) const
+void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &color, ImFont *font, int align) const
 {
+    ImGui::PushFont(font);
     float2 apos{pos};
     float2 size = ImGui::CalcTextSize(text.c_str());
 
@@ -967,6 +1046,7 @@ void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &
         apos.y -= size.y;
 
     ImGui::GetBackgroundDrawList()->AddText(apos, ImColor(color), text.c_str());
+    ImGui::PopFont();
 }
 
 void SampleViewer::draw_contents_EPS(ofstream &file, CameraType camera_type, int dim_x, int dim_y, int dim_z)
@@ -1191,8 +1271,8 @@ void SampleViewer::generate_points()
     int num_pts   = generator->setNumSamples(m_target_point_count);
     m_point_count = num_pts > 0 ? num_pts : m_target_point_count;
 
-    float time1      = (float)glfwGetTime();
-    float time_diff1 = ((time1 - time0) * 1000.0f);
+    float time1 = (float)glfwGetTime();
+    m_time1     = ((time1 - time0) * 1000.0f);
 
     m_points.resize(m_point_count, m_num_dimensions);
     m_3d_points.resize(m_point_count);
@@ -1208,12 +1288,8 @@ void SampleViewer::generate_points()
             // HelloImGui::Log(HelloImGui::LogLevel::Debug, "%f", m_points(i, j));
         }
     }
-    float time2      = (float)glfwGetTime();
-    float time_diff2 = ((time2 - time1) * 1000.0f);
-
-    m_time_strings[0] = fmt::format("Reset and m_randomize: {:3.3f} ms", time_diff1);
-    m_time_strings[1] = fmt::format("Sampling: {:3.3f} ms", time_diff2);
-    m_time_strings[2] = fmt::format("Total generation time: {:3.3f} ms", time_diff1 + time_diff2);
+    float time2 = (float)glfwGetTime();
+    m_time2     = ((time2 - time1) * 1000.0f);
 }
 
 void SampleViewer::populate_point_subset()
@@ -1225,15 +1301,10 @@ void SampleViewer::populate_point_subset()
     m_subset_count  = m_point_count;
     if (m_subset_by_coord)
     {
-        // cout << "only accepting points where the coordinates along the " << m_subset_axis->value()
-        //      << " axis are within: ["
-        //      << ((m_subset_level->value() + 0.0f)/m_num_subset_levels->value()) << ", "
-        //      << ((m_subset_level->value()+1.0f)/m_num_subset_levels->value()) << ")." << endl;
         m_subset_count = 0;
         for (int i = 0; i < m_points.sizeX(); ++i)
         {
-            float v = m_points(i, m_subset_axis);
-            // cout << v << endl;
+            float v = m_points(i, std::clamp(m_subset_axis, 0, m_num_dimensions - 1));
             v += 0.5f;
             if (v >= (m_subset_level + 0.0f) / m_num_subset_levels && v < (m_subset_level + 1.0f) / m_num_subset_levels)
             {

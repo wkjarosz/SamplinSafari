@@ -17,6 +17,7 @@
 #pragma once
 
 #define NANOGUI_USE_OPENGL
+// #define NANOGUI_USE_GLES
 
 #include "linalg.h"
 #include "traits.h"

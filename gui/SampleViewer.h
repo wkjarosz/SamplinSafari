@@ -35,10 +35,12 @@ using namespace linalg::aliases;
 #include "gui_app.h"
 #include "shader.h"
 #include <galois++/array2d.h>
+#include <map>
 #include <sampler/fwd.h>
 #include <string>
 #include <vector>
 
+using std::map;
 using std::ofstream;
 using std::string;
 using std::vector;
@@ -137,10 +139,11 @@ private:
     void set_view(CameraType view);
     void update_current_camera();
     void draw_editor();
+    void process_hotkeys();
     void generate_points();
     void populate_point_subset();
     void generate_grid(vector<float3> &positions, int gridRes);
-    void draw_text(const int2 &pos, const std::string &text, const float4 &col, int fontSize, int fixedWidth,
+    void draw_text(const int2 &pos, const std::string &text, const float4 &col, ImFont *font = nullptr,
                    int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
     void draw_points(const float4x4 &mvp, const float3 &color);
     void draw_grid(const float4x4 &mvp, float alpha, uint32_t offset, uint32_t count);
@@ -182,5 +185,8 @@ private:
     int  m_num_subset_levels = 1;
     int  m_subset_level      = 0;
 
-    vector<std::string> m_time_strings;
+    map<int, ImFont *> m_regular, m_bold; // regular and bold fonts at various sizes
+
+    float  m_time1 = 0.f, m_time2 = 0.f;
+    float3 m_point_color = {0.9f, 0.55f, 0.1f};
 };
