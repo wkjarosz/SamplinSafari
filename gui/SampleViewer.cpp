@@ -18,6 +18,7 @@ using std::to_string;
 #include "hello_imgui/hello_imgui.h"
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "portable-file-dialogs.h"
 
 #include <sampler/Halton.h>
 #include <sampler/Hammersley.h>
@@ -34,13 +35,13 @@ using std::to_string;
 #include <sampler/Random.h>
 #include <sampler/Sobol.h>
 
+#include "export.h"
+
 #include <cmath>
 #include <fmt/core.h>
 #include <fstream>
 #include <string>
 #include <vector>
-
-#include "portable-file-dialogs.h"
 
 #ifndef __EMSCRIPTEN__
 #include <glad/glad.h>
@@ -126,18 +127,12 @@ void main()
 }
 )";
 
-static void computeCameraMatrices(float4x4 &model, float4x4 &lookat, float4x4 &view, float4x4 &proj,
-                                  const CameraParameters &c, float window_aspect);
-static void drawEPSGrid(const float4x4 &mvp, int grid_res, ofstream &file);
-static void writeEPSPoints(const Array2d<float> &points, int start, int count, const float4x4 &mvp, ofstream &file,
-                           int dim_x, int dim_y, int dim_z);
-
 static float map_slider_to_radius(float sliderValue)
 {
     return sliderValue * sliderValue * 32.0f + 2.0f;
 }
 
-static void layout_2d_matrix(float4x4 &position, int numDims, int dim_x, int dim_y)
+static float4x4 layout_2d_matrix(int numDims, int dim_x, int dim_y)
 {
     float cellSpacing = 1.f / (numDims - 1);
     float cellSize    = 0.96f / (numDims - 1);
@@ -145,38 +140,33 @@ static void layout_2d_matrix(float4x4 &position, int numDims, int dim_x, int dim
     float xOffset = dim_x - (numDims - 2) / 2.0f;
     float yOffset = -(dim_y - 1 - (numDims - 2) / 2.0f);
 
-    position = mul(translation_matrix(float3{cellSpacing * xOffset, cellSpacing * yOffset, 1}),
-                   scaling_matrix(float3{cellSize, cellSize, 1}));
+    return mul(translation_matrix(float3{cellSpacing * xOffset, cellSpacing * yOffset, 1}),
+               scaling_matrix(float3{cellSize, cellSize, 1}));
 }
 
 SampleViewer::SampleViewer() : GUIApp()
 {
-    m_samplers.resize(NUM_POINT_TYPES, nullptr);
-    m_samplers[RANDOM]   = new Random(m_num_dimensions);
-    m_samplers[JITTERED] = new Jittered(1, 1, m_jitter * 0.01f);
-    // m_samplers[MULTI_JITTERED]             = new MultiJittered(1, 1, false, 0.0f);
-    m_samplers[MULTI_JITTERED_IP] = new MultiJitteredInPlace(1, 1, false, m_jitter * 0.01f);
-    // m_samplers[CORRELATED_MULTI_JITTERED]  = new CorrelatedMultiJittered(1, 1, false, 0.0f);
-    m_samplers[CORRELATED_MULTI_JITTERED_IP] =
-        new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f);
-    m_samplers[CMJND]             = new CMJNDInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f);
-    m_samplers[BOSE_OA_IP]        = new BoseOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions);
-    m_samplers[BOSE_GALOIS_OA_IP] = new BoseGaloisOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions);
-    m_samplers[BUSH_OA_IP]        = new BushOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions);
-    m_samplers[BUSH_GALOIS_OA_IP] = new BushGaloisOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions);
-    m_samplers[ADDEL_KEMP_OA_IP] =
-        new AddelmanKempthorneOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions);
-    m_samplers[BOSE_BUSH_OA]           = new BoseBushOA(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions);
-    m_samplers[BOSE_BUSH_OA_IP]        = new BoseBushOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions);
-    m_samplers[N_ROOKS_IP]             = new NRooksInPlace(m_num_dimensions, 1, false, m_jitter * 0.01f);
-    m_samplers[SOBOL]                  = new Sobol(m_num_dimensions);
-    m_samplers[ZERO_TWO]               = new ZeroTwo(1, m_num_dimensions, false);
-    m_samplers[ZERO_TWO_SHUFFLED]      = new ZeroTwo(1, m_num_dimensions, true);
-    m_samplers[HALTON]                 = new Halton(m_num_dimensions);
-    m_samplers[HALTON_ZAREMBA]         = new HaltonZaremba(m_num_dimensions);
-    m_samplers[HAMMERSLEY]             = new Hammersley<Halton>(m_num_dimensions, 1);
-    m_samplers[HAMMERSLEY_ZAREMBA]     = new Hammersley<HaltonZaremba>(m_num_dimensions, 1);
-    m_samplers[LARCHER_PILLICHSHAMMER] = new LarcherPillichshammerGK(3, 1, false);
+    m_samplers.push_back(new Random(m_num_dimensions));
+    m_samplers.push_back(new Jittered(1, 1, m_jitter * 0.01f));
+    m_samplers.push_back(new MultiJitteredInPlace(1, 1, false, m_jitter * 0.01f));
+    m_samplers.push_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f));
+    m_samplers.push_back(new CMJNDInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f));
+    m_samplers.push_back(new BoseOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.push_back(new BoseGaloisOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.push_back(new BushOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.push_back(new BushGaloisOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.push_back(new AddelmanKempthorneOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.push_back(new BoseBushOA(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.push_back(new BoseBushOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.push_back(new NRooksInPlace(m_num_dimensions, 1, false, m_jitter * 0.01f));
+    m_samplers.push_back(new Sobol(m_num_dimensions));
+    m_samplers.push_back(new ZeroTwo(1, m_num_dimensions, false));
+    m_samplers.push_back(new ZeroTwo(1, m_num_dimensions, true));
+    m_samplers.push_back(new Halton(m_num_dimensions));
+    m_samplers.push_back(new HaltonZaremba(m_num_dimensions));
+    m_samplers.push_back(new Hammersley<Halton>(m_num_dimensions, 1));
+    m_samplers.push_back(new Hammersley<HaltonZaremba>(m_num_dimensions, 1));
+    m_samplers.push_back(new LarcherPillichshammerGK(3, 1, false));
 
     m_camera[CAMERA_XY].arcball.set_state({0, 0, 0, 1});
     m_camera[CAMERA_XY].persp_factor = 0.0f;
@@ -214,8 +204,7 @@ SampleViewer::SampleViewer() : GUIApp()
     HelloImGui::DockableWindow editorWindow;
     editorWindow.label         = "Settings";
     editorWindow.dockSpaceName = "EditorSpace";
-    // editorWindow.canBeClosed   = false;
-    editorWindow.GuiFunction = [this] { draw_editor(); };
+    editorWindow.GuiFunction   = [this] { draw_editor(); };
 
     // A console window named "Console" will be placed in "ConsoleSpace". It uses the HelloImGui logger gui
     HelloImGui::DockableWindow consoleWindow;
@@ -260,7 +249,7 @@ SampleViewer::SampleViewer() : GUIApp()
 
     m_params.callbacks.ShowAppMenuItems = [this]()
     {
-        if (ImGui::MenuItem(ICON_FA_SAVE "  Save as EPS"))
+        if (ImGui::MenuItem(ICON_FA_SAVE "  Export as EPS"))
         {
             try
             {
@@ -271,16 +260,45 @@ SampleViewer::SampleViewer() : GUIApp()
                 HelloImGui::Log(HelloImGui::LogLevel::Info, "Saving to base filename: %s.", basename.c_str());
 
                 ofstream fileAll(basename + "_all2D.eps");
-                draw_contents_2D_EPS(fileAll);
+                fileAll << export_all_points_2d("eps");
 
                 ofstream fileXYZ(basename + "_012.eps");
-                draw_contents_EPS(fileXYZ, CAMERA_CURRENT, m_dimension.x, m_dimension.y, m_dimension.z);
+                fileXYZ << export_XYZ_points("eps");
 
                 for (int y = 0; y < m_num_dimensions; ++y)
                     for (int x = 0; x < y; ++x)
                     {
                         ofstream fileXY(fmt::format("{:s}_{:d}{:d}.eps", basename, x, y));
-                        draw_contents_EPS(fileXY, CAMERA_XY, x, y, 2);
+                        fileXY << export_points_2d("eps", CAMERA_XY, {x, y, 2});
+                    }
+            }
+            catch (const std::exception &e)
+            {
+                HelloImGui::Log(HelloImGui::LogLevel::Error, "An error occurred: %s.", e.what());
+            }
+        }
+
+        if (ImGui::MenuItem(ICON_FA_SAVE "  Export as SVG"))
+        {
+            try
+            {
+                auto basename = pfd::save_file("Base filename").result();
+                if (basename.empty())
+                    return;
+
+                HelloImGui::Log(HelloImGui::LogLevel::Info, "Saving to base filename: %s.", basename.c_str());
+
+                ofstream fileAll(basename + "_all2D.svg");
+                fileAll << export_all_points_2d("svg");
+
+                ofstream fileXYZ(basename + "_012.svg");
+                fileXYZ << export_XYZ_points("svg");
+
+                for (int y = 0; y < m_num_dimensions; ++y)
+                    for (int x = 0; x < y; ++x)
+                    {
+                        ofstream fileXY(fmt::format("{:s}_{:d}{:d}.svg", basename, x, y));
+                        fileXY << export_points_2d("svg", CAMERA_XY, {x, y, 2});
                     }
             }
             catch (const std::exception &e)
@@ -341,26 +359,21 @@ void SampleViewer::draw_gui()
     if (m_scale_radius_with_points)
         radius *= 64.0f / std::sqrt(m_point_count);
 
-    float4x4 model, lookat, view, proj, mvp;
-    computeCameraMatrices(model, lookat, view, proj, m_camera[CAMERA_CURRENT],
-                          float(m_viewport_size.x) / m_viewport_size.y);
-    mvp = mul(proj, mul(lookat, mul(view, model)));
+    float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(m_viewport_size.x) / m_viewport_size.y);
 
     if (m_view == CAMERA_2D)
     {
-        float4x4 pos;
-
         for (int i = 0; i < m_num_dimensions - 1; ++i)
         {
-            layout_2d_matrix(pos, m_num_dimensions, i, m_num_dimensions - 1);
-            float4 text_pos = mul(mvp, mul(pos, float4{0.f, -0.5f, 0.0f, 1.0f}));
-            float2 text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
+            float4x4 pos      = layout_2d_matrix(m_num_dimensions, i, m_num_dimensions - 1);
+            float4   text_pos = mul(mvp, mul(pos, float4{0.f, -0.5f, 0.0f, 1.0f}));
+            float2   text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
             draw_text(m_viewport_pos +
                           int2((text_2d_pos.x) * m_viewport_size.x, (1.f - text_2d_pos.y) * m_viewport_size.y + 16),
                       to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
                       TextAlign_CENTER | TextAlign_BOTTOM);
 
-            layout_2d_matrix(pos, m_num_dimensions, 0, i + 1);
+            pos         = layout_2d_matrix(m_num_dimensions, 0, i + 1);
             text_pos    = mul(mvp, mul(pos, float4{-0.5f, 0.f, 0.0f, 1.0f}));
             text_2d_pos = float2((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
             draw_text(m_viewport_pos +
@@ -423,7 +436,7 @@ void SampleViewer::draw_editor()
     {
         if (ImGui::BeginCombo("##", m_samplers[m_sampler]->name().c_str()))
         {
-            for (int n = 0; n < NUM_POINT_TYPES; n++)
+            for (int n = 0; n < (int)m_samplers.size(); n++)
             {
                 Sampler   *sampler     = m_samplers[n];
                 const bool is_selected = (m_sampler == n);
@@ -665,7 +678,7 @@ void SampleViewer::process_hotkeys()
         !ImGui::IsKeyDown(ImGuiMod_Shift))
     {
         int delta        = ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1;
-        m_sampler        = mod(m_sampler + delta, (int)NUM_POINT_TYPES);
+        m_sampler        = mod(m_sampler + delta, (int)m_samplers.size());
         Sampler *sampler = m_samplers[m_sampler];
         sampler->setJitter(m_jitter * 0.01f);
         sampler->setRandomized(m_randomize);
@@ -900,8 +913,7 @@ void SampleViewer::draw_grid(const float4x4 &mvp, float alpha, uint32_t offset, 
 
 void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int dim_x, int dim_y, int plot_index)
 {
-    float4x4 pos;
-    layout_2d_matrix(pos, m_num_dimensions, dim_x, dim_y);
+    float4x4 pos = layout_2d_matrix(m_num_dimensions, dim_x, dim_y);
 
     // m_render_pass->set_depth_test(RenderPass::DepthTest::Less, true);
     // Render the point set
@@ -980,10 +992,7 @@ void SampleViewer::draw()
     // update/move the camera
     update_current_camera();
 
-    float4x4 model, lookat, view, proj, mvp;
-    computeCameraMatrices(model, lookat, view, proj, m_camera[CAMERA_CURRENT],
-                          float(m_viewport_size.x) / m_viewport_size.y);
-    mvp = mul(proj, mul(lookat, mul(view, model)));
+    float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(m_viewport_size.x) / m_viewport_size.y);
 
     if (m_view == CAMERA_2D)
     {
@@ -1049,168 +1058,95 @@ void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &
     ImGui::PopFont();
 }
 
-void SampleViewer::draw_contents_EPS(ofstream &file, CameraType camera_type, int dim_x, int dim_y, int dim_z)
+string SampleViewer::export_XYZ_points(const string &format)
 {
     int size = 900;
     int crop = 720;
 
-    int pointScale = m_samplers[m_sampler]->coarseGridRes(m_point_count);
+    string out =
+        (format == "eps") ? header_eps(size, crop, 1.f, m_point_color) : header_svg(size, crop, 1.f, m_point_color);
 
-    file << "%!PS-Adobe-3.0 EPSF-3.0\n";
-    file << "%%HiResBoundingBox: " << (-crop) << " " << (-crop) << " " << crop << " " << crop << "\n";
-    file << "%%BoundingBox: " << (-crop) << " " << (-crop) << " " << crop << " " << crop << "\n";
-    file << "%%CropBox: " << (-crop) << " " << (-crop) << " " << crop << " " << crop << "\n";
-    file << "gsave " << size << " " << size << " scale\n";
-    file << "/radius { " << (0.5f / pointScale) << " } def %define variable for point radius\n";
-    file << "/p { radius 0 360 arc closepath fill } def %define point command\n";
-    file << "/blw " << (0.01f) << " def %define variable for bounding box linewidth\n";
-    file << "/clw " << (0.003f) << " def %define variable for coarse linewidth\n";
-    file << "/flw " << (0.0004f) << " def %define variable for fine linewidth\n";
-    file << "/pfc "
-         << "{0.9 0.55 0.1}"
-         << " def %define variable for point fill color\n";
-    file << "/blc " << (0.0f) << " def %define variable for bounding box color\n";
-    file << "/clc " << (0.8f) << " def %define variable for coarse line color\n";
-    file << "/flc " << (0.9f) << " def %define variable for fine line color\n";
+    float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(1.0f);
 
-    float4x4 model, lookat, view, proj, mvp;
-    computeCameraMatrices(model, lookat, view, proj, m_camera[camera_type], 1.0f);
-    mvp            = mul(proj, mul(lookat, mul(view, model)));
-    int start_axis = CAMERA_XY, end_axis = CAMERA_XZ;
-    if (camera_type != CAMERA_CURRENT)
-        start_axis = end_axis = camera_type;
-    if (m_show_fine_grid)
+    for (int axis = CAMERA_XY; axis <= CAMERA_XZ; ++axis)
     {
-        file << "% Draw fine grids \n";
-        file << "flc setgray %fill color for fine grid \n";
-        file << "flw setlinewidth\n";
-        for (int axis = start_axis; axis <= end_axis; ++axis)
-        {
-            // this extra matrix multiply is needed to properly rotate the different grids for the XYZ view
-            float4x4 mvp2 = mul(mvp, m_camera[axis].arcball.matrix());
-            drawEPSGrid(mvp2, m_point_count, file);
-        }
+        if (format == "eps")
+            out += draw_grids_eps(mul(mvp, m_camera[axis].arcball.matrix()), m_point_count,
+                                  m_samplers[m_sampler]->coarseGridRes(m_point_count), m_show_fine_grid,
+                                  m_show_coarse_grid, m_show_bbox);
+        else
+            out += draw_grids_svg(mul(mvp, m_camera[axis].arcball.matrix()), m_point_count,
+                                  m_samplers[m_sampler]->coarseGridRes(m_point_count), m_show_fine_grid,
+                                  m_show_coarse_grid, m_show_bbox);
     }
 
-    if (m_show_coarse_grid)
-    {
-        file << "% Draw coarse grids \n";
-        file << "clc setgray %fill color for coarse grid \n";
-        file << "clw setlinewidth\n";
-        for (int axis = start_axis; axis <= end_axis; ++axis)
-        {
-            // this extra matrix multiply is needed to properly rotate the different grids for the XYZ view
-            float4x4 mvp2 = mul(mvp, m_camera[axis].arcball.matrix());
-            drawEPSGrid(mvp2, m_samplers[m_sampler]->coarseGridRes(m_point_count), file);
-        }
-    }
+    out += (format == "eps") ? draw_points_eps(mvp, m_dimension, m_subset_points, get_draw_range())
+                             : draw_points_svg(mvp, m_dimension, m_subset_points, get_draw_range());
 
-    if (m_show_bbox)
-    {
-        file << "% Draw bounding boxes \n";
-        file << "blc setgray %fill color for bounding box \n";
-        file << "blw setlinewidth\n";
-        for (int axis = start_axis; axis <= end_axis; ++axis)
-        {
-            // this extra matrix multiply is needed to properly rotate the different grids for the XYZ view
-            float4x4 mvp2 = mul(mvp, m_camera[axis].arcball.matrix());
-            drawEPSGrid(mvp2, 1, file);
-        }
-    }
-
-    // Generate and render the point set
-    {
-        generate_points();
-        populate_point_subset();
-        file << "% Draw points \n";
-        file << "pfc setrgbcolor %fill color for points\n";
-
-        int2 range = get_draw_range();
-        writeEPSPoints(m_subset_points, range.x, range.y, mvp, file, dim_x, dim_y, dim_z);
-    }
-
-    file << "grestore\n";
+    out += (format == "eps") ? footer_eps() : footer_svg();
+    return out;
 }
 
-void SampleViewer::draw_contents_2D_EPS(ofstream &file)
+string SampleViewer::export_points_2d(const string &format, CameraType camera_type, int3 dim)
+{
+    int size = 900;
+    int crop = 720;
+
+    string out =
+        (format == "eps") ? header_eps(size, crop, 1.f, m_point_color) : header_svg(size, crop, 1.f, m_point_color);
+
+    float4x4 mvp = m_camera[camera_type].matrix(1.0f);
+
+    if (format == "eps")
+    {
+        out += draw_grids_eps(mvp, m_point_count, m_samplers[m_sampler]->coarseGridRes(m_point_count), m_show_fine_grid,
+                              m_show_coarse_grid, m_show_bbox);
+        out += draw_points_eps(mvp, dim, m_subset_points, get_draw_range());
+    }
+    else
+    {
+        out += draw_grids_svg(mvp, m_point_count, m_samplers[m_sampler]->coarseGridRes(m_point_count), m_show_fine_grid,
+                              m_show_coarse_grid, m_show_bbox);
+        out += draw_points_svg(mvp, dim, m_subset_points, get_draw_range());
+    }
+
+    out += (format == "eps") ? footer_eps() : footer_svg();
+    return out;
+}
+
+string SampleViewer::export_all_points_2d(const string &format)
 {
     int   size  = 900 * 108.0f / 720.0f;
     int   crop  = 108; // 720;
     float scale = 1.0f / (m_num_dimensions - 1);
-    // int pointScale = m_samplers[m_point_type_box->selected_index()]->coarseGridRes(m_point_count);
 
-    file << "%!PS-Adobe-3.0 EPSF-3.0\n";
-    file << "%%HiResBoundingBox: " << (-crop) << " " << (-crop) << " " << crop << " " << crop << "\n";
-    file << "%%BoundingBox: " << (-crop) << " " << (-crop) << " " << crop << " " << crop << "\n";
-    file << "%%CropBox: " << (-crop) << " " << (-crop) << " " << crop << " " << crop << "\n";
-    file << "gsave " << size << " " << size << " scale\n";
-    // file << "/radius { " << (0.5f/pointScale*scale) << " } def %define variable for point radius\n";
-    file << "/radius { " << (0.02 * scale) << " } def %define variable for point radius\n";
-    file << "/p { radius 0 360 arc closepath fill } def %define point command\n";
-    file << "/blw " << (0.020f * scale) << " def %define variable for bounding box linewidth\n";
-    file << "/clw " << (0.01f * scale) << " def %define variable for coarse linewidth\n";
-    file << "/flw " << (0.005f * scale) << " def %define variable for fine linewidth\n";
-    file << "/pfc "
-         << "{0.9 0.55 0.1}"
-         << " def %define variable for point fill color\n";
-    file << "/blc " << (0.0f) << " def %define variable for bounding box color\n";
-    file << "/clc " << (0.5f) << " def %define variable for coarse line color\n";
-    file << "/flc " << (0.9f) << " def %define variable for fine line color\n";
+    string out =
+        (format == "eps") ? header_eps(size, crop, scale, m_point_color) : header_svg(size, crop, scale, m_point_color);
 
-    float4x4 model, lookat, view, proj, mvp;
-    computeCameraMatrices(model, lookat, view, proj, m_camera[CAMERA_2D], 1.0f);
-    mvp = mul(proj, mul(lookat, mul(view, model)));
+    float4x4 mvp = m_camera[CAMERA_2D].matrix(1.0f);
 
-    // Generate and render the point set
-    {
-        generate_points();
-        populate_point_subset();
+    for (int y = 0; y < m_num_dimensions; ++y)
+        for (int x = 0; x < y; ++x)
+        {
+            float4x4 pos = layout_2d_matrix(m_num_dimensions, x, y);
 
-        for (int y = 0; y < m_num_dimensions; ++y)
-            for (int x = 0; x < y; ++x)
+            if (format == "eps")
             {
-                float4x4 pos;
-                layout_2d_matrix(pos, m_num_dimensions, x, y);
-
-                if (m_show_fine_grid)
-                {
-                    file << "% Draw fine grid \n";
-                    file << "flc setgray %fill color for fine grid \n";
-                    file << "flw setlinewidth\n";
-                    drawEPSGrid(mul(mvp, pos), m_point_count, file);
-                }
-                if (m_show_coarse_grid)
-                {
-                    file << "% Draw coarse grids \n";
-                    file << "clc setgray %fill color for coarse grid \n";
-                    file << "clw setlinewidth\n";
-                    drawEPSGrid(mul(mvp, pos), m_samplers[m_sampler]->coarseGridRes(m_point_count), file);
-                }
-                if (m_show_bbox)
-                {
-                    file << "% Draw bounding box \n";
-                    file << "blc setgray %fill color for bounding box \n";
-                    file << "blw setlinewidth\n";
-                    drawEPSGrid(mul(mvp, pos), 1, file);
-                }
+                out += draw_grids_eps(mul(mvp, pos), m_point_count, m_samplers[m_sampler]->coarseGridRes(m_point_count),
+                                      m_show_fine_grid, m_show_coarse_grid, m_show_bbox);
+                out += draw_points_eps(mul(mvp, pos), {x, y, 2}, m_subset_points, get_draw_range());
             }
-
-        file << "% Draw points \n";
-        file << "pfc setrgbcolor %fill color for points\n";
-        for (int y = 0; y < m_num_dimensions; ++y)
-            for (int x = 0; x < y; ++x)
+            else
             {
-                float4x4 pos;
-                layout_2d_matrix(pos, m_num_dimensions, x, y);
-                file << "% Draw (" << x << "," << y << ") points\n";
-
-                int2 range = get_draw_range();
-
-                writeEPSPoints(m_subset_points, range.x, range.y, mul(mvp, pos), file, x, y, 2);
+                out += draw_grids_svg(mul(mvp, pos), m_point_count, m_samplers[m_sampler]->coarseGridRes(m_point_count),
+                                      m_show_fine_grid, m_show_coarse_grid, m_show_bbox);
+                out += draw_points_svg(mul(mvp, pos), {x, y, 2}, m_subset_points, get_draw_range());
             }
-    }
+        }
 
-    file << "grestore\n";
+    out += (format == "eps") ? footer_eps() : footer_svg();
+
+    return out;
 }
 void SampleViewer::set_view(CameraType view)
 {
@@ -1251,8 +1187,6 @@ void SampleViewer::update_current_camera()
     // if we are dragging the mouse, then just use the current arcball
     // rotation, otherwise, interpolate between the previous and next camera
     // orientations
-    // auto w = static_cast<GLFWwindow *>(m_params.backendPointers.glfwWindow);
-    // if (glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
     if (m_mouse_down)
         camera.arcball = camera1.arcball;
     else
@@ -1341,115 +1275,27 @@ void SampleViewer::generate_grid(vector<float3> &positions, int grid_res)
     }
 }
 
-static void computeCameraMatrices(float4x4 &model, float4x4 &lookat, float4x4 &view, float4x4 &proj,
-                                  const CameraParameters &c, float window_aspect)
+float4x4 CameraParameters::matrix(float window_aspect) const
 {
-    model = scaling_matrix(float3(c.zoom));
-    if (c.camera_type == CAMERA_XY || c.camera_type == CAMERA_2D)
+    float4x4 model = scaling_matrix(float3(zoom));
+    if (camera_type == CAMERA_XY || camera_type == CAMERA_2D)
         model = mul(scaling_matrix(float3(1, 1, 0)), model);
-    if (c.camera_type == CAMERA_XZ)
+    if (camera_type == CAMERA_XZ)
         model = mul(scaling_matrix(float3(1, 0, 1)), model);
-    if (c.camera_type == CAMERA_YZ)
+    if (camera_type == CAMERA_YZ)
         model = mul(scaling_matrix(float3(0, 1, 1)), model);
 
-    float fH = std::tan(c.view_angle / 360.0f * M_PI) * c.dnear;
+    float fH = std::tan(view_angle / 360.0f * M_PI) * dnear;
     float fW = fH * window_aspect;
 
-    float    oFF   = c.eye.z / c.dnear;
-    float4x4 orth  = linalg::ortho_matrix(-fW * oFF, fW * oFF, -fH * oFF, fH * oFF, c.dnear, c.dfar);
-    float4x4 frust = linalg::frustum_matrix(-fW, fW, -fH, fH, c.dnear, c.dfar);
+    float    oFF   = eye.z / dnear;
+    float4x4 orth  = linalg::ortho_matrix(-fW * oFF, fW * oFF, -fH * oFF, fH * oFF, dnear, dfar);
+    float4x4 frust = linalg::frustum_matrix(-fW, fW, -fH, fH, dnear, dfar);
 
-    proj   = lerp(orth, frust, c.persp_factor);
-    lookat = linalg::lookat_matrix(c.eye, c.center, c.up);
-    view   = c.arcball.matrix();
-}
-
-static void drawEPSGrid(const float4x4 &mvp, int grid_res, ofstream &file)
-{
-    float4 vA4d, vB4d;
-    float2 vA, vB;
-
-    int   fine_grid_res = 2;
-    float coarse_scale = 1.f / grid_res, fine_scale = 1.f / fine_grid_res;
-
-    // draw the bounding box
-    // if (grid_res == 1)
-    {
-        float4 c004d = mul(mvp, float4{0.f - 0.5f, 0.f - 0.5f, 0.f, 1.f});
-        float4 c104d = mul(mvp, float4{1.f - 0.5f, 0.f - 0.5f, 0.f, 1.f});
-        float4 c114d = mul(mvp, float4{1.f - 0.5f, 1.f - 0.5f, 0.f, 1.f});
-        float4 c014d = mul(mvp, float4{0.f - 0.5f, 1.f - 0.5f, 0.f, 1.f});
-        float2 c00   = float2(c004d.x / c004d.w, c004d.y / c004d.w);
-        float2 c10   = float2(c104d.x / c104d.w, c104d.y / c104d.w);
-        float2 c11   = float2(c114d.x / c114d.w, c114d.y / c114d.w);
-        float2 c01   = float2(c014d.x / c014d.w, c014d.y / c014d.w);
-
-        file << "newpath\n";
-        file << c00.x << " " << c00.y << " moveto\n";
-        file << c10.x << " " << c10.y << " lineto\n";
-        file << c11.x << " " << c11.y << " lineto\n";
-        file << c01.x << " " << c01.y << " lineto\n";
-        file << "closepath\n";
-        file << "stroke\n";
-    }
-
-    for (int i = 1; i <= grid_res - 1; i++)
-    {
-        // draw horizontal lines
-        file << "newpath\n";
-        for (int j = 0; j < fine_grid_res; j++)
-        {
-            vA4d = mul(mvp, float4{j * fine_scale - 0.5f, i * coarse_scale - 0.5f, 0.0f, 1.0f});
-            vB4d = mul(mvp, float4{(j + 1) * fine_scale - 0.5f, i * coarse_scale - 0.5f, 0.0f, 1.0f});
-
-            vA = float2(vA4d.x / vA4d.w, vA4d.y / vA4d.w);
-            vB = float2(vB4d.x / vB4d.w, vB4d.y / vB4d.w);
-
-            file << vA.x << " " << vA.y;
-
-            if (j == 0)
-                file << " moveto\n";
-            else
-                file << " lineto\n";
-
-            file << vB.x << " " << vB.y;
-            file << " lineto\n";
-        }
-        file << "stroke\n";
-
-        // draw vertical lines
-        file << "newpath\n";
-        for (int j = 0; j < fine_grid_res; j++)
-        {
-            vA4d = mul(mvp, float4{i * coarse_scale - 0.5f, j * fine_scale - 0.5f, 0.0f, 1.0f});
-            vB4d = mul(mvp, float4{i * coarse_scale - 0.5f, (j + 1) * fine_scale - 0.5f, 0.0f, 1.0f});
-
-            vA = float2(vA4d.x / vA4d.w, vA4d.y / vA4d.w);
-            vB = float2(vB4d.x / vB4d.w, vB4d.y / vB4d.w);
-
-            file << vA.x << " " << vA.y;
-
-            if (j == 0)
-                file << " moveto\n";
-            else
-                file << " lineto\n";
-
-            file << vB.x << " " << vB.y;
-            file << " lineto\n";
-        }
-        file << "stroke\n";
-    }
-}
-
-static void writeEPSPoints(const Array2d<float> &points, int start, int count, const float4x4 &mvp, ofstream &file,
-                           int dim_x, int dim_y, int dim_z)
-{
-    for (int i = start; i < start + count; i++)
-    {
-        float4 v4d = mul(mvp, float4{points(i, dim_x), points(i, dim_y), points(i, dim_z), 1.0f});
-        float2 v2d(v4d.x / v4d.w, v4d.y / v4d.w);
-        file << v2d.x << " " << v2d.y << " p\n";
-    }
+    float4x4 proj   = lerp(orth, frust, persp_factor);
+    float4x4 lookat = linalg::lookat_matrix(eye, center, up);
+    float4x4 view   = arcball.matrix();
+    return mul(proj, mul(lookat, mul(view, model)));
 }
 
 int main(int argc, char **argv)
@@ -1478,6 +1324,7 @@ int main(int argc, char **argv)
                 args.push_back(argv[i]);
             }
         }
+        (void)launched_from_finder;
     }
     catch (const std::exception &e)
     {

@@ -1,3 +1,7 @@
+/** \file arcball.h
+    \author Wojciech Jarosz
+*/
+
 #include "linalg.h"
 #include <cmath>
 

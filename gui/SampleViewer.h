@@ -2,6 +2,8 @@
     \author Wojciech Jarosz
 */
 
+#pragma once
+
 #include "linalg.h"
 using namespace linalg::aliases;
 
@@ -45,35 +47,6 @@ using std::ofstream;
 using std::string;
 using std::vector;
 
-enum PointType
-{
-    RANDOM = 0,
-    JITTERED,
-    // MULTI_JITTERED,
-    MULTI_JITTERED_IP,
-    // CORRELATED_MULTI_JITTERED,
-    // CORRELATED_MULTI_JITTERED_3D,
-    CORRELATED_MULTI_JITTERED_IP,
-    CMJND,
-    BOSE_OA_IP,
-    BOSE_GALOIS_OA_IP,
-    BUSH_OA_IP,
-    BUSH_GALOIS_OA_IP,
-    ADDEL_KEMP_OA_IP,
-    BOSE_BUSH_OA,
-    BOSE_BUSH_OA_IP,
-    N_ROOKS_IP,
-    SOBOL,
-    ZERO_TWO,
-    ZERO_TWO_SHUFFLED,
-    HALTON,
-    HALTON_ZAREMBA,
-    HAMMERSLEY,
-    HAMMERSLEY_ZAREMBA,
-    LARCHER_PILLICHSHAMMER,
-    NUM_POINT_TYPES
-};
-
 enum CameraType
 {
     CAMERA_XY = 0,
@@ -96,6 +69,8 @@ struct CameraParameters
     float3     center      = float3{0.0f, 0.0f, 0.0f};
     float3     up          = float3{0.0f, 1.0f, 0.0f};
     CameraType camera_type = CAMERA_CURRENT;
+
+    float4x4 matrix(float window_aspect) const;
 };
 
 enum TextAlign : int
@@ -132,8 +107,10 @@ public:
     // bool maximize_event(bool maximized) override;
 
 private:
-    void draw_contents_EPS(ofstream &file, CameraType camera, int dimX, int dimY, int dimZ);
-    void draw_contents_2D_EPS(ofstream &file);
+    string export_XYZ_points(const string &format);
+    string export_points_2d(const string &format, CameraType camera, int3 dim);
+    string export_all_points_2d(const string &format);
+
     void update_GPU_points(bool regenerate = true);
     void update_GPU_grids();
     void set_view(CameraType view);
