@@ -1,11 +1,8 @@
 #include "shader.h"
 #include "hello_imgui/hello_imgui.h"
 
-#ifndef __EMSCRIPTEN__
-#include <glad/glad.h>
-#else
-#include <GLES3/gl3.h>
-#endif
+// hello_imgui_include_opengl.h provides a cross-platform way to include OpenGL headers
+#include "hello_imgui/hello_imgui_include_opengl.h"
 
 #if !defined(GL_HALF_FLOAT)
 #define GL_HALF_FLOAT 0x140B
@@ -167,7 +164,7 @@ Shader::Shader(const std::string &name, const std::string &vertex_shader, const 
             buf.shape[0] = 4;
             break;
 
-#if defined(NANOGUI_USE_OPENGL)
+#if defined(HELLOIMGUI_USE_GLAD)
         case GL_UNSIGNED_INT:
             buf.dtype = VariableType::UInt32;
             buf.ndim  = 0;
@@ -277,7 +274,7 @@ Shader::Shader(const std::string &name, const std::string &vertex_shader, const 
     buf.type                    = IndexBuffer;
     buf.dtype                   = VariableType::UInt32;
 
-#if defined(NANOGUI_USE_OPENGL)
+#if defined(HELLOIMGUI_USE_GLAD)
     CHK(glGenVertexArrays(1, &m_vertex_array_handle));
 
     m_uses_point_size = vertex_shader.find("gl_PointSize") != std::string::npos;
@@ -287,7 +284,7 @@ Shader::Shader(const std::string &name, const std::string &vertex_shader, const 
 Shader::~Shader()
 {
     CHK(glDeleteProgram(m_shader_handle));
-#if defined(NANOGUI_USE_OPENGL)
+#if defined(HELLOIMGUI_USE_GLAD)
     CHK(glDeleteVertexArrays(1, &m_vertex_array_handle));
 #endif
 }
@@ -376,7 +373,7 @@ void Shader::begin()
 
     CHK(glUseProgram(m_shader_handle));
 
-#if defined(NANOGUI_USE_OPENGL)
+#if defined(HELLOIMGUI_USE_GLAD)
     CHK(glBindVertexArray(m_vertex_array_handle));
 #endif
 
@@ -396,7 +393,7 @@ void Shader::begin()
         GLuint buffer_id = (GLuint)((uintptr_t)buf.buffer);
         GLenum gl_type   = 0;
 
-#if defined(NANOGUI_USE_OPENGL)
+#if defined(HELLOIMGUI_USE_GLAD)
         if (!buf.dirty && buf.type != VertexTexture && buf.type != FragmentTexture)
             continue;
 #endif
@@ -477,7 +474,7 @@ void Shader::begin()
                 }
                 break;
 
-#if defined(NANOGUI_USE_GLES)
+#if defined(HELLOIMGUI_USE_GLES2)
             case VariableType::UInt32:
 #endif
             case VariableType::Int32:
@@ -501,7 +498,7 @@ void Shader::begin()
             }
             break;
 
-#if defined(NANOGUI_USE_OPENGL)
+#if !defined(HELLOIMGUI_USE_GLES2)
             case VariableType::UInt32:
             {
                 const uint32_t *v = (const uint32_t *)buf.buffer;

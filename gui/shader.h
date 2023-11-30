@@ -16,9 +16,6 @@
 
 #pragma once
 
-#define NANOGUI_USE_OPENGL
-// #define NANOGUI_USE_GLES
-
 #include "linalg.h"
 #include "traits.h"
 #include <string>
@@ -197,19 +194,19 @@ public:
      */
     void draw_array(PrimitiveType primitive_type, size_t offset, size_t count, bool indexed = false);
 
-#if defined(NANOGUI_USE_OPENGL) || defined(NANOGUI_USE_GLES)
+#if defined(HELLOIMGUI_HAS_OPENGL)
     uint32_t shader_handle() const
     {
         return m_shader_handle;
     }
-#elif defined(NANOGUI_USE_METAL)
+#elif defined(HELLOIMGUI_USE_METAL)
     void *pipeline_state() const
     {
         return m_pipeline_state;
     }
 #endif
 
-#if defined(NANOGUI_USE_OPENGL)
+#if defined(HELLOIMGUI_USE_GLAD)
     uint32_t vertex_array_handle() const
     {
         return m_vertex_array_handle;
@@ -253,13 +250,13 @@ protected:
     std::unordered_map<std::string, Buffer> m_buffers;
     BlendMode                               m_blend_mode;
 
-#if defined(NANOGUI_USE_OPENGL) || defined(NANOGUI_USE_GLES)
+#if defined(HELLOIMGUI_HAS_OPENGL)
     uint32_t m_shader_handle = 0;
-#if defined(NANOGUI_USE_OPENGL)
+#if defined(HELLOIMGUI_USE_GLAD)
     uint32_t m_vertex_array_handle = 0;
     bool     m_uses_point_size     = false;
 #endif
-#elif defined(NANOGUI_USE_METAL)
+#elif defined(HELLOIMGUI_USE_METAL)
     void *m_pipeline_state;
 #endif
 };

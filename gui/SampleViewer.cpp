@@ -49,7 +49,7 @@ using std::to_string;
 #include <GLES3/gl3.h>
 #endif
 
-#include "GLFW/glfw3.h"
+#include "timer.h"
 
 namespace ImGui
 {
@@ -405,8 +405,6 @@ void SampleViewer::draw_gui()
                               float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[11], TextAlign_CENTER | TextAlign_TOP);
             }
     }
-
-    process_hotkeys();
 }
 
 void SampleViewer::draw_editor()
@@ -649,6 +647,8 @@ void SampleViewer::draw_editor()
 
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
     }
+
+    process_hotkeys();
 }
 
 void SampleViewer::process_hotkeys()
@@ -721,15 +721,15 @@ void SampleViewer::process_hotkeys()
              (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)))
         change_offset_type(
             mod((int)oa->offsetType() + (ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1), (int)NUM_OFFSET_TYPES));
-    else if (ImGui::IsKeyPressed(ImGuiKey_1))
+    else if (ImGui::IsKeyPressed(ImGuiKey_1, false))
         set_view(CAMERA_XY);
-    else if (ImGui::IsKeyPressed(ImGuiKey_2))
+    else if (ImGui::IsKeyPressed(ImGuiKey_2, false))
         set_view(CAMERA_YZ);
-    else if (ImGui::IsKeyPressed(ImGuiKey_3))
+    else if (ImGui::IsKeyPressed(ImGuiKey_3, false))
         set_view(CAMERA_XZ);
-    else if (ImGui::IsKeyPressed(ImGuiKey_4))
+    else if (ImGui::IsKeyPressed(ImGuiKey_4, false))
         set_view(CAMERA_CURRENT);
-    else if (ImGui::IsKeyPressed(ImGuiKey_0))
+    else if (ImGui::IsKeyPressed(ImGuiKey_0, false))
         set_view(CAMERA_2D);
     else if (ImGui::IsKeyPressed(ImGuiKey_P))
         m_show_1d_projections = !m_show_1d_projections;
@@ -829,53 +829,6 @@ void SampleViewer::update_GPU_grids()
     positions.insert(positions.end(), coarse_grid.begin(), coarse_grid.end());
     positions.insert(positions.end(), fine_grid.begin(), fine_grid.end());
     m_grid_shader->set_buffer("position", positions);
-}
-
-bool SampleViewer::mouse_motion_event(const int2 &p, const int2 &rel, int button, int modifiers)
-{
-    if (m_camera[CAMERA_NEXT].arcball.motion(p - m_viewport_pos))
-    {
-        draw();
-        return true;
-    }
-
-    return false;
-}
-
-bool SampleViewer::mouse_button_event(const int2 &p, int button, bool down, int modifiers)
-{
-    if (button == GLFW_MOUSE_BUTTON_1)
-    {
-        if (down)
-        {
-            m_mouse_down = true;
-            // on mouse down we start switching to a perspective camera
-            // and start recording the arcball rotation in CAMERA_NEXT
-            set_view(CAMERA_CURRENT);
-            m_camera[CAMERA_NEXT].arcball.button(p - m_viewport_pos, down);
-            m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
-        }
-        else
-        {
-            m_mouse_down = false;
-            m_camera[CAMERA_NEXT].arcball.button(p - m_viewport_pos, down);
-            // since the time between mouse down and up could be shorter
-            // than the animation duration, we override the previous
-            // camera's arcball on mouse up to complete the animation
-            m_camera[CAMERA_PREVIOUS].arcball     = m_camera[CAMERA_NEXT].arcball;
-            m_camera[CAMERA_PREVIOUS].camera_type = m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
-        }
-        return true;
-    }
-
-    return false;
-}
-
-bool SampleViewer::scroll_event(const int2 &p, const float2 &rel)
-{
-    m_camera[CAMERA_NEXT].zoom = std::max(0.001, m_camera[CAMERA_NEXT].zoom * pow(1.1, rel.y));
-    draw();
-    return true;
 }
 
 void SampleViewer::draw_points(const float4x4 &mvp, const float3 &color)
@@ -988,6 +941,32 @@ void SampleViewer::clear_and_setup_viewport()
 void SampleViewer::draw()
 {
     clear_and_setup_viewport();
+
+    // process camera movement
+    auto io = ImGui::GetIO();
+    if (!io.WantCaptureMouse)
+    {
+        m_camera[CAMERA_NEXT].zoom = std::max(0.001, m_camera[CAMERA_NEXT].zoom * pow(1.1, io.MouseWheel));
+        if (io.MouseClicked[0])
+        {
+            // on mouse down we start switching to a perspective camera
+            // and start recording the arcball rotation in CAMERA_NEXT
+            set_view(CAMERA_CURRENT);
+            m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
+            m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
+        }
+        if (io.MouseReleased[0])
+        {
+            m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
+            // since the time between mouse down and up could be shorter
+            // than the animation duration, we override the previous
+            // camera's arcball on mouse up to complete the animation
+            m_camera[CAMERA_PREVIOUS].arcball     = m_camera[CAMERA_NEXT].arcball;
+            m_camera[CAMERA_PREVIOUS].camera_type = m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
+        }
+
+        m_camera[CAMERA_NEXT].arcball.motion(int2{io.MousePos} - m_viewport_pos);
+    }
 
     // update/move the camera
     update_current_camera();
@@ -1151,7 +1130,7 @@ string SampleViewer::export_all_points_2d(const string &format)
 }
 void SampleViewer::set_view(CameraType view)
 {
-    m_animate_start_time                 = (float)glfwGetTime();
+    m_animate_start_time                 = (float)ImGui::GetTime();
     m_camera[CAMERA_PREVIOUS]            = m_camera[CAMERA_CURRENT];
     m_camera[CAMERA_NEXT]                = m_camera[view];
     m_camera[CAMERA_NEXT].persp_factor   = (view == CAMERA_CURRENT) ? 1.0f : 0.0f;
@@ -1168,7 +1147,7 @@ void SampleViewer::update_current_camera()
     CameraParameters &camera1 = m_camera[CAMERA_NEXT];
     CameraParameters &camera  = m_camera[CAMERA_CURRENT];
 
-    float time_now  = (float)glfwGetTime();
+    float time_now  = (float)ImGui::GetTime();
     float time_diff = (m_animate_start_time != 0.0f) ? (time_now - m_animate_start_time) : 1.0f;
 
     // interpolate between the "perspectiveness" at the previous keyframe,
@@ -1188,7 +1167,7 @@ void SampleViewer::update_current_camera()
     // if we are dragging the mouse, then just use the current arcball
     // rotation, otherwise, interpolate between the previous and next camera
     // orientations
-    if (m_mouse_down)
+    if (ImGui::GetIO().MouseDown[0])
         camera.arcball = camera1.arcball;
     else
         camera.arcball.set_state(qslerp(camera0.arcball.state(), camera1.arcball.state(), t));
@@ -1196,7 +1175,7 @@ void SampleViewer::update_current_camera()
 
 void SampleViewer::generate_points()
 {
-    float    time0     = (float)glfwGetTime();
+    Timer    timer;
     Sampler *generator = m_samplers[m_sampler];
     if (generator->randomized() != m_randomize)
         generator->setRandomized(m_randomize);
@@ -1206,25 +1185,20 @@ void SampleViewer::generate_points()
     int num_pts   = generator->setNumSamples(m_target_point_count);
     m_point_count = num_pts > 0 ? num_pts : m_target_point_count;
 
-    float time1 = (float)glfwGetTime();
-    m_time1     = ((time1 - time0) * 1000.0f);
+    m_time1 = timer.elapsed();
 
     m_points.resize(m_point_count, m_num_dimensions);
     m_3d_points.resize(m_point_count);
 
-    time1 = (float)glfwGetTime();
+    timer.reset();
     for (int i = 0; i < m_point_count; ++i)
     {
         vector<float> r(m_num_dimensions, 0.5f);
         generator->sample(r.data(), i);
         for (int j = 0; j < m_points.sizeY(); ++j)
-        {
             m_points(i, j) = r[j] - 0.5f;
-            // HelloImGui::Log(HelloImGui::LogLevel::Debug, "%f", m_points(i, j));
-        }
     }
-    float time2 = (float)glfwGetTime();
-    m_time2     = ((time2 - time1) * 1000.0f);
+    m_time2 = timer.elapsed();
 }
 
 void SampleViewer::populate_point_subset()

@@ -244,7 +244,7 @@ void GUIApp::resize_callback_event()
 
     m_last_interaction = glfwGetTime();
 
-#if defined(NANOGUI_USE_METAL)
+#if defined(HELLOIMGUI_USE_METAL)
     if (m_depth_stencil_texture)
         m_depth_stencil_texture->resize(fb_size);
 #endif

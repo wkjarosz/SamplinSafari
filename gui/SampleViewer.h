@@ -91,20 +91,9 @@ public:
     SampleViewer();
     virtual ~SampleViewer();
 
-    void mouse_motion_event(const float2 &pos);
-
     void initialize_GL() override;
     void draw() override;
     void draw_gui();
-
-    bool mouse_button_event(const int2 &p, int button, bool down, int modifiers) override;
-    bool mouse_motion_event(const int2 &p, const int2 &rel, int button, int modifiers) override;
-    bool scroll_event(const int2 &p, const float2 &rel) override;
-
-    // bool keyboard_event(int key, int scancode, int action, int modifiers) override;
-    // bool resize_event(const int2 &size) override;
-    // bool focus_event(bool focused) override;
-    // bool maximize_event(bool maximized) override;
 
 private:
     string export_XYZ_points(const string &format);
@@ -152,7 +141,6 @@ private:
 
     int2  m_viewport_pos, m_viewport_pos_GL, m_viewport_size;
     float m_animate_start_time = 0.0f;
-    bool  m_mouse_down         = false;
 
     bool m_subset_by_index   = false;
     int  m_first_draw_point  = 0;
