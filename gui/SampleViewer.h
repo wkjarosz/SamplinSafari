@@ -63,7 +63,7 @@ struct CameraParameters
 {
     Arcball    arcball;
     float      persp_factor = 0.0f;
-    float      zoom = 1.0f, view_angle = 35.0f;
+    float      zoom = 1.0f, view_angle = 30.0f;
     float      dnear = 0.05f, dfar = 1000.0f;
     float3     eye         = float3{0.0f, 0.0f, 2.0f};
     float3     center      = float3{0.0f, 0.0f, 0.0f};

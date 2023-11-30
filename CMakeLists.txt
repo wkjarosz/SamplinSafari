@@ -143,12 +143,11 @@ endif()
 
 cpmaddpackage(
   NAME hello_imgui
-  GITHUB_REPOSITORY wkjarosz/hello_imgui
-  GIT_TAG "90ddefdeadcfef7569b94ea3d9c506841e9eb5ee"
+  GITHUB_REPOSITORY pthom/hello_imgui
+  GIT_TAG "c57e60ad898abd79524d073f3801b80d87ce5468"
   OPTIONS
     "HELLOIMGUI_WITH_GLFW ON"
     "HELLOIMGUI_WITH_TEST_ENGINE OFF"
-    # "HELLOIMGUI_MACOS_NO_BUNDLE ON"
   )
 
 
@@ -238,7 +237,7 @@ hello_imgui_add_app(SamplinSafari
   gui/SampleViewer.cpp
   gui/shader.cpp
   gui/gui_app.cpp
-  gui/export.cpp
+  gui/export_to_file.cpp
   )
 
 set_target_properties(SamplinSafari PROPERTIES

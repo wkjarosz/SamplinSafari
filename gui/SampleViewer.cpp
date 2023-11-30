@@ -35,7 +35,7 @@ using std::to_string;
 #include <sampler/Random.h>
 #include <sampler/Sobol.h>
 
-#include "export.h"
+#include "export_to_file.h"
 
 #include <cmath>
 #include <fmt/core.h>
@@ -1060,11 +1060,11 @@ void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &
 
 string SampleViewer::export_XYZ_points(const string &format)
 {
-    int size = 900;
-    int crop = 720;
+    float radius = map_slider_to_radius(m_radius);
+    if (m_scale_radius_with_points)
+        radius *= 64.0f / std::sqrt(m_point_count);
 
-    string out =
-        (format == "eps") ? header_eps(size, crop, 1.f, m_point_color) : header_svg(size, crop, 1.f, m_point_color);
+    string out = (format == "eps") ? header_eps(m_point_color, 1.f, radius) : header_svg(m_point_color);
 
     float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(1.0f);
 
@@ -1081,7 +1081,7 @@ string SampleViewer::export_XYZ_points(const string &format)
     }
 
     out += (format == "eps") ? draw_points_eps(mvp, m_dimension, m_subset_points, get_draw_range())
-                             : draw_points_svg(mvp, m_dimension, m_subset_points, get_draw_range());
+                             : draw_points_svg(mvp, m_dimension, m_subset_points, get_draw_range(), radius);
 
     out += (format == "eps") ? footer_eps() : footer_svg();
     return out;
@@ -1089,11 +1089,11 @@ string SampleViewer::export_XYZ_points(const string &format)
 
 string SampleViewer::export_points_2d(const string &format, CameraType camera_type, int3 dim)
 {
-    int size = 900;
-    int crop = 720;
+    float radius = map_slider_to_radius(m_radius);
+    if (m_scale_radius_with_points)
+        radius *= 64.0f / std::sqrt(m_point_count);
 
-    string out =
-        (format == "eps") ? header_eps(size, crop, 1.f, m_point_color) : header_svg(size, crop, 1.f, m_point_color);
+    string out = (format == "eps") ? header_eps(m_point_color, 1.f, radius) : header_svg(m_point_color);
 
     float4x4 mvp = m_camera[camera_type].matrix(1.0f);
 
@@ -1107,7 +1107,7 @@ string SampleViewer::export_points_2d(const string &format, CameraType camera_ty
     {
         out += draw_grids_svg(mvp, m_point_count, m_samplers[m_sampler]->coarseGridRes(m_point_count), m_show_fine_grid,
                               m_show_coarse_grid, m_show_bbox);
-        out += draw_points_svg(mvp, dim, m_subset_points, get_draw_range());
+        out += draw_points_svg(mvp, dim, m_subset_points, get_draw_range(), radius);
     }
 
     out += (format == "eps") ? footer_eps() : footer_svg();
@@ -1116,12 +1116,13 @@ string SampleViewer::export_points_2d(const string &format, CameraType camera_ty
 
 string SampleViewer::export_all_points_2d(const string &format)
 {
-    int   size  = 900 * 108.0f / 720.0f;
-    int   crop  = 108; // 720;
     float scale = 1.0f / (m_num_dimensions - 1);
 
-    string out =
-        (format == "eps") ? header_eps(size, crop, scale, m_point_color) : header_svg(size, crop, scale, m_point_color);
+    float radius = map_slider_to_radius(m_radius);
+    if (m_scale_radius_with_points)
+        radius *= 64.0f / std::sqrt(m_point_count);
+
+    string out = (format == "eps") ? header_eps(m_point_color, scale, radius) : header_svg(m_point_color, scale);
 
     float4x4 mvp = m_camera[CAMERA_2D].matrix(1.0f);
 
@@ -1140,7 +1141,7 @@ string SampleViewer::export_all_points_2d(const string &format)
             {
                 out += draw_grids_svg(mul(mvp, pos), m_point_count, m_samplers[m_sampler]->coarseGridRes(m_point_count),
                                       m_show_fine_grid, m_show_coarse_grid, m_show_bbox);
-                out += draw_points_svg(mul(mvp, pos), {x, y, 2}, m_subset_points, get_draw_range());
+                out += draw_points_svg(mul(mvp, pos), {x, y, 2}, m_subset_points, get_draw_range(), radius * scale);
             }
         }
 

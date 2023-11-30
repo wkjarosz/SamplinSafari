@@ -1,4 +1,4 @@
-/** \file export.h
+/** \file export_to_file.h
     \author Wojciech Jarosz
 */
 
@@ -9,14 +9,14 @@
 #include <string>
 using namespace linalg::aliases;
 
-std::string header_eps(int size, int crop, float scale, const float3 &point_color);
+std::string header_eps(const float3 &point_color, float scale, float radius);
 std::string footer_eps();
 std::string draw_grid_eps(const float4x4 &mvp, int grid_res);
 std::string draw_grids_eps(float4x4 mat, int fgrid_res, int cgrid_res, bool fine_grid, bool coarse_grid, bool bbox);
 std::string draw_points_eps(float4x4 mat, int3 dim, const Array2d<float> &points, int2 range);
 
-std::string header_svg(int size, int crop, float scale, const float3 &point_color);
+std::string header_svg(const float3 &point_color, float scale = 1.f);
 std::string footer_svg();
 std::string draw_grid_svg(const float4x4 &mvp, int grid_res, const std::string &css_class);
 std::string draw_grids_svg(float4x4 mat, int fgrid_res, int cgrid_res, bool fine_grid, bool coarse_grid, bool bbox);
-std::string draw_points_svg(float4x4 mat, int3 dim, const Array2d<float> &points, int2 range);
+std::string draw_points_svg(float4x4 mat, int3 dim, const Array2d<float> &points, int2 range, float radius);
