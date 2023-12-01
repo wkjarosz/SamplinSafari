@@ -1,26 +1,13 @@
-name: Emscripten build
+name: Publish web app version to gh-pages
 
-on:
-  push:
-    branches:
-      - "*"
-    pull_request:
-      - "*"
-    paths:
-      # This action only runs on push when C++ files are changed
-      - "**.cpp"
-      - "**.h"
-      - "**.cmake"
-      - "**Lists.txt"
-      - "**-emscripten.yml"
-  workflow_dispatch:
+on: workflow_dispatch
 
 env:
   CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
 
 jobs:
   build:
-    name: Web app
+    name: Build and deploy
     runs-on: macos-12
 
     steps:
@@ -48,9 +35,23 @@ jobs:
       - name: Build
         run: cmake --build ${{github.workspace}}/build --parallel 4
 
+      - name: Copy web app
+        working-directory: ${{github.workspace}}/build
+        run: |
+          mkdir deploy
+          cp SamplinSafari.data SamplinSafari.html SamplinSafari.js SamplinSafari.wasm deploy/
+          mv deploy/SamplinSafari.html deploy/index.html
+
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
         with:
           name: build-artifacts
           path: |
-            ${{github.workspace}}/build
+            ${{github.workspace}}/build/deploy
+
+      - name: Publish
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ${{github.workspace}}/build/deploy
