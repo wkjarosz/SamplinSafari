@@ -222,7 +222,7 @@ set_target_properties(samplerlib PROPERTIES
 # Now build the Samplin' Safari viewer app
 string(TIMESTAMP YEAR "%Y")
 
-set(output_name "SamplinSafari")
+set(output_name "Samplin Safari")
 set(HELLO_IMGUI_BUNDLE_IDENTIFIER_URL_PART "com.im.SamplinSafari")
 set(HELLO_IMGUI_BUNDLE_IDENTIFIER_NAME_PART ${app_name})
 set(HELLO_IMGUI_ICON_DISPLAY_NAME ${output_name})
