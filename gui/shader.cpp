@@ -474,7 +474,7 @@ void Shader::begin()
                 }
                 break;
 
-#if defined(HELLOIMGUI_USE_GLES2)
+#if defined(HELLOIMGUI_USE_GLES2) || defined(HELLOIMGUI_USE_GLES3)
             case VariableType::UInt32:
 #endif
             case VariableType::Int32:
@@ -498,7 +498,7 @@ void Shader::begin()
             }
             break;
 
-#if !defined(HELLOIMGUI_USE_GLES2)
+#if !defined(HELLOIMGUI_USE_GLES2) && !defined(HELLOIMGUI_USE_GLES3)
             case VariableType::UInt32:
             {
                 const uint32_t *v = (const uint32_t *)buf.buffer;

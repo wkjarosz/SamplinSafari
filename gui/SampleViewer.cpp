@@ -16,6 +16,7 @@ using std::ofstream;
 using std::to_string;
 
 #include "hello_imgui/hello_imgui.h"
+#include "hello_imgui/hello_imgui_include_opengl.h" // cross-platform way to include OpenGL headers
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "portable-file-dialogs.h"
@@ -36,20 +37,13 @@ using std::to_string;
 #include <sampler/Sobol.h>
 
 #include "export_to_file.h"
+#include "timer.h"
 
 #include <cmath>
 #include <fmt/core.h>
 #include <fstream>
 #include <string>
 #include <vector>
-
-#ifndef __EMSCRIPTEN__
-#include <glad/glad.h>
-#else
-#include <GLES3/gl3.h>
-#endif
-
-#include "timer.h"
 
 namespace ImGui
 {
@@ -144,7 +138,16 @@ static float4x4 layout_2d_matrix(int numDims, int dim_x, int dim_y)
                scaling_matrix(float3{cellSize, cellSize, 1}));
 }
 
-SampleViewer::SampleViewer() : GUIApp()
+// scaled_display_size() is a helper function that returns the size of the window in pixels:
+//     for retina displays, io.DisplaySize is the size of the window in points (logical pixels)
+//     but we need the size in pixels. So we scale io.DisplaySize by io.DisplayFramebufferScale
+static int2 scaled_display_size()
+{
+    auto &io = ImGui::GetIO();
+    return int2{io.DisplaySize.x * io.DisplayFramebufferScale.x, io.DisplaySize.y * io.DisplayFramebufferScale.y};
+}
+
+SampleViewer::SampleViewer()
 {
     m_samplers.push_back(new Random(m_num_dimensions));
     m_samplers.push_back(new Jittered(1, 1, m_jitter * 0.01f));
@@ -319,7 +322,9 @@ SampleViewer::SampleViewer() : GUIApp()
         ImGui::ToggleButton(ICON_FA_TERMINAL, &m_params.dockingParams.dockableWindows[1].isVisible);
     };
 
-    m_params.callbacks.ShowGui = [this]() { draw_gui(); };
+    m_params.callbacks.ShowGui          = [this]() { draw_gui(); };
+    m_params.callbacks.PostInit         = [this]() { initialize_GL(); };
+    m_params.callbacks.CustomBackground = [this]() { draw_scene(); };
 }
 
 SampleViewer::~SampleViewer()
@@ -343,16 +348,18 @@ int2 SampleViewer::get_draw_range() const
 
 void SampleViewer::draw_gui()
 {
+    auto &io = ImGui::GetIO();
+
     m_viewport_pos_GL = m_viewport_pos = {0, 0};
-    m_viewport_size                    = m_fbsize;
+    m_viewport_size                    = io.DisplaySize;
     if (auto id = m_params.dockingParams.dockSpaceIdFromName("MainDockSpace"))
     {
         auto central_node = ImGui::DockBuilderGetCentralNode(*id);
         m_viewport_size   = int2{int(central_node->Size.x), int(central_node->Size.y)};
         m_viewport_pos    = int2{int(central_node->Pos.x), int(central_node->Pos.y)};
         // flip y coordinates between ImGui and OpenGL screen coordinates
-        m_viewport_pos_GL = int2{int(central_node->Pos.x),
-                                 int(ImGui::GetIO().DisplaySize.y - (central_node->Pos.y + central_node->Size.y))};
+        m_viewport_pos_GL =
+            int2{int(central_node->Pos.x), int(io.DisplaySize.y - (central_node->Pos.y + central_node->Size.y))};
     }
 
     float radius = map_slider_to_radius(m_radius);
@@ -810,9 +817,6 @@ void SampleViewer::update_GPU_points(bool regenerate)
                 points2D[plot_index * m_subset_count + i] = float3{m_subset_points(i, x), m_subset_points(i, y), 0.5f};
 
     m_point_2d_shader->set_buffer("position", points2D);
-
-    // m_point_count_box->set_value(m_point_count);
-    // m_point_count_slider->set_value(mapCount2Slider(m_point_count));
 }
 
 void SampleViewer::update_GPU_grids()
@@ -915,18 +919,20 @@ void SampleViewer::clear_and_setup_viewport()
     try
     {
         // account for dpi factor on retina screens
-        float scale = pixel_ratio();
+        auto &io = ImGui::GetIO();
 
         const float4 background_color{0.f, 0.f, 0.f, 1.f};
 
         // first clear the entire window with the background color
-        CHK(glViewport(0, 0, m_fbsize.x, m_fbsize.y));
+        auto display_size = scaled_display_size();
+        CHK(glViewport(0, 0, display_size.x, display_size.y));
         CHK(glClearColor(background_color[0], background_color[1], background_color[2], background_color[3]));
-        CHK(glClear(GL_COLOR_BUFFER_BIT));
+        CHK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
         // now set up a new viewport for the rest of the drawing
-        CHK(glViewport(m_viewport_pos_GL.x * scale, m_viewport_pos_GL.y * scale, m_viewport_size.x * scale,
-                       m_viewport_size.y * scale));
+        CHK(glViewport(
+            m_viewport_pos_GL.x * io.DisplayFramebufferScale.x, m_viewport_pos_GL.y * io.DisplayFramebufferScale.y,
+            m_viewport_size.x * io.DisplayFramebufferScale.x, m_viewport_size.y * io.DisplayFramebufferScale.y));
 
         // inform the arcballs of the viewport size
         for (int i = 0; i < NUM_CAMERA_TYPES; ++i)
@@ -938,12 +944,12 @@ void SampleViewer::clear_and_setup_viewport()
     }
 }
 
-void SampleViewer::draw()
+void SampleViewer::draw_scene()
 {
     clear_and_setup_viewport();
 
     // process camera movement
-    auto io = ImGui::GetIO();
+    auto &io = ImGui::GetIO();
     if (!io.WantCaptureMouse)
     {
         m_camera[CAMERA_NEXT].zoom = std::max(0.001, m_camera[CAMERA_NEXT].zoom * pow(1.1, io.MouseWheel));

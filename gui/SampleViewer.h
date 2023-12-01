@@ -34,7 +34,8 @@ using namespace linalg::aliases;
     }
 
 #include "arcball.h"
-#include "gui_app.h"
+// #include "gui_app.h"
+#include "hello_imgui/hello_imgui.h"
 #include "shader.h"
 #include <galois++/array2d.h>
 #include <map>
@@ -85,15 +86,19 @@ enum TextAlign : int
     TextAlign_BOTTOM = 1 << 5, // Align text vertically to bottom.
 };
 
-class SampleViewer : public GUIApp
+class SampleViewer
 {
 public:
     SampleViewer();
     virtual ~SampleViewer();
 
-    void initialize_GL() override;
-    void draw() override;
+    void initialize_GL();
+    void draw_scene();
     void draw_gui();
+    void run()
+    {
+        HelloImGui::Run(m_params);
+    }
 
 private:
     string export_XYZ_points(const string &format);
@@ -152,6 +157,7 @@ private:
 
     map<int, ImFont *> m_regular, m_bold; // regular and bold fonts at various sizes
 
-    float  m_time1 = 0.f, m_time2 = 0.f;
-    float3 m_point_color = {0.9f, 0.55f, 0.1f};
+    float                    m_time1 = 0.f, m_time2 = 0.f;
+    float3                   m_point_color = {0.9f, 0.55f, 0.1f};
+    HelloImGui::RunnerParams m_params;
 };

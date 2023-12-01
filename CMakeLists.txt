@@ -222,7 +222,7 @@ set_target_properties(samplerlib PROPERTIES
 # Now build the Samplin' Safari viewer app
 string(TIMESTAMP YEAR "%Y")
 
-set(output_name "Samplin Safari")
+set(output_name "SamplinSafari")
 set(HELLO_IMGUI_BUNDLE_IDENTIFIER_URL_PART "com.im.SamplinSafari")
 set(HELLO_IMGUI_BUNDLE_IDENTIFIER_NAME_PART ${app_name})
 set(HELLO_IMGUI_ICON_DISPLAY_NAME ${output_name})
@@ -236,7 +236,6 @@ set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
 hello_imgui_add_app(SamplinSafari
   gui/SampleViewer.cpp
   gui/shader.cpp
-  gui/gui_app.cpp
   gui/export_to_file.cpp
   )
 
