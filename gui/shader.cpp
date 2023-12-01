@@ -8,6 +8,10 @@
 #define GL_HALF_FLOAT 0x140B
 #endif
 
+#include <fmt/core.h>
+
+#include <iostream>
+
 #define CHK(cmd)                                                                                                       \
     do                                                                                                                 \
     {                                                                                                                  \
@@ -35,6 +39,7 @@ bool check_glerror(const char *cmd)
     default: msg = "unknown error"; break;
     }
 
+    fmt::print(stderr, "OpenGL error ({}) during operation \"{}\"!\n", msg, cmd);
     HelloImGui::Log(HelloImGui::LogLevel::Error, "OpenGL error (%s) during operation \"%s\"!\n", msg, cmd);
     return true;
 }

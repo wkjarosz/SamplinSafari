@@ -63,22 +63,13 @@ bool ToggleButton(const char *label, bool *active)
 
 } // namespace ImGui
 
-// clang-format off
-#ifdef __EMSCRIPTEN__
-    #define VERT_SHADER_HEADER "#version 100\n#define in attribute\n#define out varying\nprecision mediump float;\n"
-    #define FRAG_SHADER_HEADER "#version 100\n#define in varying\n#define fo_FragColor gl_FragColor\nprecision mediump float;\n"
-#else
-    #define VERT_SHADER_HEADER "#version 330\n"
-    #define FRAG_SHADER_HEADER "#version 330\nout vec4 fo_FragColor;\n"
-#endif
-// clang-format on
-
 // Shader sources
-
-static const string pointVertexShader = FRAG_SHADER_HEADER R"(
+static const string pointVertexShader =
+    R"(#version 100
+precision mediump float;
 uniform mat4 mvp;
 uniform float pointSize;
-in vec3 position;
+attribute vec3 position;
 void main()
 {
     gl_Position = mvp * vec4(position, 1.0);
@@ -86,13 +77,15 @@ void main()
 }
 )";
 
-static const string pointFragmentShader = FRAG_SHADER_HEADER R"(
+static const string pointFragmentShader =
+    R"(#version 100
+precision mediump float;
 uniform vec3 color;
 uniform float pointSize;
 void main()
 {
     float alpha = 1.0;
-    if (pointSize > 3)
+    if (pointSize > 3.0)
     {
         vec2 circCoord = 2.0 * gl_PointCoord - 1.0;
         float radius2 = dot(circCoord, circCoord);
@@ -100,24 +93,28 @@ void main()
             discard;
         alpha = 1.0 - smoothstep(1.0 - 2.0/pointSize, 1.0, sqrt(radius2));
     }
-    fo_FragColor = vec4(color, alpha);
+    gl_FragColor = vec4(color, alpha);
 }
 )";
 
-static const string gridVertexShader = VERT_SHADER_HEADER R"(
+static const string gridVertexShader =
+    R"(#version 100
+precision mediump float;
 uniform mat4 mvp;
-in vec3 position;
+attribute vec3 position;
 void main()
 {
     gl_Position = mvp * vec4(position, 1.0);
 }
 )";
 
-static const string gridFragmentShader = FRAG_SHADER_HEADER R"(
+static const string gridFragmentShader =
+    R"(#version 100
+precision mediump float;
 uniform float alpha;
 void main()
 {
-    fo_FragColor = vec4(vec3(1.0), alpha);
+    gl_FragColor = vec4(vec3(1.0), alpha);
 }
 )";
 
@@ -277,6 +274,7 @@ SampleViewer::SampleViewer()
             }
             catch (const std::exception &e)
             {
+                fmt::print(stderr, "An error occurred: {}.", e.what());
                 HelloImGui::Log(HelloImGui::LogLevel::Error, "An error occurred: %s.", e.what());
             }
         }
@@ -306,6 +304,7 @@ SampleViewer::SampleViewer()
             }
             catch (const std::exception &e)
             {
+                fmt::print(stderr, "An error occurred: {}.", e.what());
                 HelloImGui::Log(HelloImGui::LogLevel::Error, "An error occurred: %s.", e.what());
             }
         }
@@ -703,6 +702,7 @@ void SampleViewer::process_hotkeys()
     else if (ImGui::IsKeyPressed(ImGuiKey_D))
     {
         m_num_dimensions = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
+        m_dimension      = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
         update_GPU_points();
         update_GPU_grids();
     }
@@ -779,6 +779,7 @@ void SampleViewer::initialize_GL()
     }
     catch (const std::exception &e)
     {
+        fmt::print(stderr, "Shader initialization failed!:\n\t{}.", e.what());
         HelloImGui::Log(HelloImGui::LogLevel::Error, "Shader initialization failed!:\n\t%s.", e.what());
     }
 }
@@ -794,6 +795,7 @@ void SampleViewer::update_GPU_points(bool regenerate)
         }
         catch (const std::exception &e)
         {
+            fmt::print(stderr, "An error occurred while generating points: {}.", e.what());
             HelloImGui::Log(HelloImGui::LogLevel::Error, "An error occurred while generating points: %s.", e.what());
             return;
         }
@@ -879,8 +881,7 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int dim_x, int d
     if (m_scale_radius_with_points)
         radius *= 64.0f / std::sqrt(m_point_count);
     m_point_2d_shader->set_uniform("pointSize", radius);
-    m_point_2d_shader->set_uniform("color", float3(0.9f, 0.55f, 0.1f));
-
+    m_point_2d_shader->set_uniform("color", m_point_color);
     int2 range = get_draw_range();
 
     m_point_2d_shader->begin();
@@ -940,6 +941,7 @@ void SampleViewer::clear_and_setup_viewport()
     }
     catch (const std::exception &e)
     {
+        fmt::print(stderr, "OpenGL drawing failed:\n\t{}.", e.what());
         HelloImGui::Log(HelloImGui::LogLevel::Error, "OpenGL drawing failed:\n\t%s.", e.what());
     }
 }
@@ -988,8 +990,6 @@ void SampleViewer::draw_scene()
     }
     else
     {
-        // m_render_pass->set_depth_test(RenderPass::DepthTest::Less, true);
-        draw_points(mvp, m_point_color);
 
         if (m_show_1d_projections)
         {
@@ -1006,6 +1006,9 @@ void SampleViewer::draw_scene()
                 mul(mvp, mul(translation_matrix(float3{0.f, 0.f, -0.51f}), scaling_matrix(float3{1.f, 1.f, 0.f})));
             draw_points(smashZ, {0.3f, 0.3f, 0.8f});
         }
+
+        // m_render_pass->set_depth_test(RenderPass::DepthTest::Less, true);
+        draw_points(mvp, m_point_color);
 
         // m_render_pass->set_depth_test(RenderPass::DepthTest::Less, true);
         if (m_show_bbox)

@@ -220,6 +220,7 @@ void CorrelatedMultiJitteredInPlace::sample(float r[], unsigned i)
         float jx = 0.5f + m_maxJit * (m_rand.nextFloat() - 0.5f);
         float jy = 0.5f + m_maxJit * (m_rand.nextFloat() - 0.5f);
         r[d]     = (sx + (sy + jx) / m_resY) / m_resX;
-        r[d + 1] = (s + jy) / m_numSamples;
+        if (d + 1 < dimensions())
+            r[d + 1] = (s + jy) / m_numSamples;
     }
 }

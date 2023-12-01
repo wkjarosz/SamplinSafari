@@ -37,6 +37,11 @@ public:
         return m_numDimensions;
     }
 
+    void setDimensions(unsigned d) override
+    {
+        m_numDimensions = d;
+    }
+
     std::string name() const override
     {
         return "LP-GK";
