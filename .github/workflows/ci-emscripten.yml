@@ -1,6 +1,19 @@
 name: Publish web app version to gh-pages
 
-on: workflow_dispatch
+on:
+  push:
+    branches:
+      - "*"
+    pull_request:
+      - "*"
+    paths:
+      # This action only runs on push when C++ files are changed
+      - "**.cpp"
+      - "**.h"
+      - "**.cmake"
+      - "**Lists.txt"
+      - "**-emscripten.yml"
+  workflow_dispatch:
 
 env:
   CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
