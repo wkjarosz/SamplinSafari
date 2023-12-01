@@ -48,19 +48,19 @@ jobs:
       - name: Build
         run: cmake --build ${{github.workspace}}/build --parallel 4
 
-      - name: Copy web app
-        working-directory: ${{github.workspace}}/build
-        run: |
-          mkdir deploy
-          cp SamplinSafari.data SamplinSafari.html SamplinSafari.js SamplinSafari.wasm deploy/
-          mv deploy/SamplinSafari.html deploy/index.html
-
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
         with:
           name: build-artifacts
           path: |
-            ${{github.workspace}}/build/deploy
+            ${{github.workspace}}/build
+
+      - name: Copy web app
+        working-directory: ${{github.workspace}}/build
+        run: |
+          mkdir deploy
+          cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm deploy/
+          mv deploy/Samplin\ Safari.html deploy/index.html
 
       - name: Publish
         uses: peaceiris/actions-gh-pages@v3
