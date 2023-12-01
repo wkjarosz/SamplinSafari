@@ -1,8 +1,6 @@
 #include "shader.h"
 #include "hello_imgui/hello_imgui.h"
-
-// hello_imgui_include_opengl.h provides a cross-platform way to include OpenGL headers
-#include "hello_imgui/hello_imgui_include_opengl.h"
+#include "hello_imgui/hello_imgui_include_opengl.h" // cross-platform way to include OpenGL headers
 
 #if !defined(GL_HALF_FLOAT)
 #define GL_HALF_FLOAT 0x140B
@@ -11,6 +9,8 @@
 #include <fmt/core.h>
 
 #include <iostream>
+
+using std::string;
 
 #define CHK(cmd)                                                                                                       \
     do                                                                                                                 \
@@ -82,11 +82,30 @@ static GLuint compile_gl_shader(GLenum type, const std::string &name, const std:
     return id;
 }
 
-Shader::Shader(const std::string &name, const std::string &vertex_shader, const std::string &fragment_shader,
+Shader::Shader(const std::string &name, const std::string &vs_filename, const std::string &fs_filename,
                BlendMode blend_mode) :
     m_name(name),
     m_blend_mode(blend_mode), m_shader_handle(0)
 {
+    string vertex_shader, fragment_shader;
+    {
+        auto load_shader_file = [](const string &filename)
+        {
+            auto shader_txt = HelloImGui::LoadAssetFileData(filename.c_str());
+            if (shader_txt.data == nullptr)
+                throw std::runtime_error(fmt::format("Cannot load point shader from file \"{}\"", filename));
+
+            return shader_txt;
+        };
+        auto vs = load_shader_file(vs_filename);
+        auto fs = load_shader_file(fs_filename);
+
+        vertex_shader   = string((char *)vs.data, vs.dataSize);
+        fragment_shader = string((char *)fs.data, fs.dataSize);
+
+        HelloImGui::FreeAssetFileData(&vs);
+        HelloImGui::FreeAssetFileData(&fs);
+    }
 
     GLuint vertex_shader_handle   = compile_gl_shader(GL_VERTEX_SHADER, name, vertex_shader),
            fragment_shader_handle = compile_gl_shader(GL_FRAGMENT_SHADER, name, fragment_shader);
@@ -445,7 +464,7 @@ void Shader::begin()
         case UniformBuffer:
             if (buf.ndim > 2)
                 throw std::runtime_error("\"" + m_name + "\": uniform attribute \"" + key +
-                                         "\" has an invalid shapeension (expected ndim=0/1/2, got " +
+                                         "\" has an invalid shape (expected ndim=0/1/2, got " +
                                          std::to_string(buf.ndim) + ")");
             switch (buf.dtype)
             {

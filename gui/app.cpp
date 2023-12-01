@@ -1,11 +1,10 @@
 /** \file SampleViewer.cpp
     \author Wojciech Jarosz
 */
-#define _USE_MATH_DEFINES
 
 #define NOMINMAX
 
-#include "SampleViewer.h"
+#include "app.h"
 
 using namespace linalg::ostream_overloads;
 
@@ -63,85 +62,21 @@ bool ToggleButton(const char *label, bool *active)
 
 } // namespace ImGui
 
-// Shader sources
-static const string pointVertexShader =
-    R"(#version 100
-precision mediump float;
-uniform mat4 mvp;
-uniform float pointSize;
-attribute vec3 position;
-void main()
-{
-    gl_Position = mvp * vec4(position, 1.0);
-    gl_PointSize = pointSize;
-}
-)";
-
-static const string pointFragmentShader =
-    R"(#version 100
-precision mediump float;
-uniform vec3 color;
-uniform float pointSize;
-void main()
-{
-    float alpha = 1.0;
-    if (pointSize > 3.0)
-    {
-        vec2 circCoord = 2.0 * gl_PointCoord - 1.0;
-        float radius2 = dot(circCoord, circCoord);
-        if (radius2 > 1.0)
-            discard;
-        alpha = 1.0 - smoothstep(1.0 - 2.0/pointSize, 1.0, sqrt(radius2));
-    }
-    gl_FragColor = vec4(color, alpha);
-}
-)";
-
-static const string gridVertexShader =
-    R"(#version 100
-precision mediump float;
-uniform mat4 mvp;
-attribute vec3 position;
-void main()
-{
-    gl_Position = mvp * vec4(position, 1.0);
-}
-)";
-
-static const string gridFragmentShader =
-    R"(#version 100
-precision mediump float;
-uniform float alpha;
-void main()
-{
-    gl_FragColor = vec4(vec3(1.0), alpha);
-}
-)";
-
 static float map_slider_to_radius(float sliderValue)
 {
     return sliderValue * sliderValue * 32.0f + 2.0f;
 }
 
-static float4x4 layout_2d_matrix(int numDims, int dim_x, int dim_y)
+static float4x4 layout_2d_matrix(int num_dims, int dim_x, int dim_y)
 {
-    float cellSpacing = 1.f / (numDims - 1);
-    float cellSize    = 0.96f / (numDims - 1);
+    float cell_spacing = 1.f / (num_dims - 1);
+    float cell_size    = 0.96f / (num_dims - 1);
 
-    float xOffset = dim_x - (numDims - 2) / 2.0f;
-    float yOffset = -(dim_y - 1 - (numDims - 2) / 2.0f);
+    float x_offset = dim_x - (num_dims - 2) / 2.0f;
+    float y_offset = -(dim_y - 1 - (num_dims - 2) / 2.0f);
 
-    return mul(translation_matrix(float3{cellSpacing * xOffset, cellSpacing * yOffset, 1}),
-               scaling_matrix(float3{cellSize, cellSize, 1}));
-}
-
-// scaled_display_size() is a helper function that returns the size of the window in pixels:
-//     for retina displays, io.DisplaySize is the size of the window in points (logical pixels)
-//     but we need the size in pixels. So we scale io.DisplaySize by io.DisplayFramebufferScale
-static int2 scaled_display_size()
-{
-    auto &io = ImGui::GetIO();
-    return int2{io.DisplaySize.x * io.DisplayFramebufferScale.x, io.DisplaySize.y * io.DisplayFramebufferScale.y};
+    return mul(translation_matrix(float3{cell_spacing * x_offset, cell_spacing * y_offset, 1}),
+               scaling_matrix(float3{cell_size, cell_size, 1}));
 }
 
 SampleViewer::SampleViewer()
@@ -321,8 +256,40 @@ SampleViewer::SampleViewer()
         ImGui::ToggleButton(ICON_FA_TERMINAL, &m_params.dockingParams.dockableWindows[1].isVisible);
     };
 
+    m_params.callbacks.SetupImGuiStyle = [this]()
+    {
+        // set the default theme for first startup
+        m_params.imGuiWindowParams.tweakedTheme.Theme = ImGuiTheme::ImGuiTheme_FromName("MaterialFlat");
+    };
+    m_params.callbacks.PostInit = [this]()
+    {
+        try
+        {
+#ifndef __EMSCRIPTEN__
+            glEnable(GL_PROGRAM_POINT_SIZE);
+            glEnable(GL_LINE_SMOOTH);
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+#endif
+
+            m_point_shader =
+                new Shader("Point shader", "shaders/points.vert", "shaders/points.frag", Shader::BlendMode::AlphaBlend);
+            m_grid_shader =
+                new Shader("Grid shader", "shaders/lines.vert", "shaders/lines.frag", Shader::BlendMode::AlphaBlend);
+            m_point_2d_shader = new Shader("Point shader 2D", "shaders/points.vert", "shaders/points.frag",
+                                           Shader::BlendMode::AlphaBlend);
+
+            update_GPU_points();
+            update_GPU_grids();
+
+            HelloImGui::Log(HelloImGui::LogLevel::Info, "Successfully initialized GL!");
+        }
+        catch (const std::exception &e)
+        {
+            fmt::print(stderr, "Shader initialization failed!:\n\t{}.", e.what());
+            HelloImGui::Log(HelloImGui::LogLevel::Error, "Shader initialization failed!:\n\t%s.", e.what());
+        }
+    };
     m_params.callbacks.ShowGui          = [this]() { draw_gui(); };
-    m_params.callbacks.PostInit         = [this]() { initialize_GL(); };
     m_params.callbacks.CustomBackground = [this]() { draw_scene(); };
 }
 
@@ -662,7 +629,8 @@ void SampleViewer::process_hotkeys()
     if (ImGui::GetIO().WantCaptureKeyboard)
         return;
 
-    OrthogonalArray *oa              = dynamic_cast<OrthogonalArray *>(m_samplers[m_sampler]);
+    Sampler         *sampler         = m_samplers[m_sampler];
+    OrthogonalArray *oa              = dynamic_cast<OrthogonalArray *>(sampler);
     auto             change_strength = [oa, this](int strength)
     {
         if ((unsigned)strength != oa->strength())
@@ -711,7 +679,7 @@ void SampleViewer::process_hotkeys()
         if (ImGui::IsKeyDown(ImGuiMod_Shift))
         {
             m_randomize = true;
-            m_samplers[m_sampler]->setRandomized(true);
+            sampler->setRandomized(true);
         }
         else
             m_randomize = !m_randomize;
@@ -720,6 +688,7 @@ void SampleViewer::process_hotkeys()
     else if (ImGui::IsKeyPressed(ImGuiKey_J))
     {
         m_jitter = std::clamp(m_jitter + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 10.f : -10.f), 0.f, 100.f);
+        sampler->setJitter(m_jitter * 0.01f);
         update_GPU_points();
     }
     else if (oa && ImGui::IsKeyPressed(ImGuiKey_T))
@@ -755,43 +724,39 @@ void SampleViewer::process_hotkeys()
     }
 }
 
-void SampleViewer::initialize_GL()
-{
-    try
-    {
-#ifndef __EMSCRIPTEN__
-        glEnable(GL_PROGRAM_POINT_SIZE);
-        glEnable(GL_LINE_SMOOTH);
-        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-#endif
-        m_point_shader =
-            new Shader("Point shader", pointVertexShader, pointFragmentShader, Shader::BlendMode::AlphaBlend);
-
-        m_grid_shader = new Shader("Grid shader", gridVertexShader, gridFragmentShader, Shader::BlendMode::AlphaBlend);
-
-        m_point_2d_shader =
-            new Shader("Point shader 2D", pointVertexShader, pointFragmentShader, Shader::BlendMode::AlphaBlend);
-
-        update_GPU_points();
-        update_GPU_grids();
-
-        HelloImGui::Log(HelloImGui::LogLevel::Info, "Successfully initialized GL!");
-    }
-    catch (const std::exception &e)
-    {
-        fmt::print(stderr, "Shader initialization failed!:\n\t{}.", e.what());
-        HelloImGui::Log(HelloImGui::LogLevel::Error, "Shader initialization failed!:\n\t%s.", e.what());
-    }
-}
-
 void SampleViewer::update_GPU_points(bool regenerate)
 {
+    //
     // Generate the point positions
+    //
     if (regenerate)
     {
         try
         {
-            generate_points();
+            Timer    timer;
+            Sampler *generator = m_samplers[m_sampler];
+            if (generator->randomized() != m_randomize)
+                generator->setRandomized(m_randomize);
+
+            generator->setDimensions(m_num_dimensions);
+
+            int num_pts   = generator->setNumSamples(m_target_point_count);
+            m_point_count = num_pts > 0 ? num_pts : m_target_point_count;
+
+            m_time1 = timer.elapsed();
+
+            m_points.resize(m_point_count, m_num_dimensions);
+            m_3d_points.resize(m_point_count);
+
+            timer.reset();
+            for (int i = 0; i < m_point_count; ++i)
+            {
+                vector<float> r(m_num_dimensions, 0.5f);
+                generator->sample(r.data(), i);
+                for (int j = 0; j < m_points.sizeY(); ++j)
+                    m_points(i, j) = r[j] - 0.5f;
+            }
+            m_time2 = timer.elapsed();
         }
         catch (const std::exception &e)
         {
@@ -801,13 +766,38 @@ void SampleViewer::update_GPU_points(bool regenerate)
         }
     }
 
-    // Upload points to GPU
+    //
+    // Populate point subsets
+    //
+    m_subset_points = m_points;
+    m_subset_count  = m_point_count;
+    if (m_subset_by_coord)
+    {
+        m_subset_count = 0;
+        for (int i = 0; i < m_points.sizeX(); ++i)
+        {
+            float v = m_points(i, std::clamp(m_subset_axis, 0, m_num_dimensions - 1));
+            v += 0.5f;
+            if (v >= (m_subset_level + 0.0f) / m_num_subset_levels && v < (m_subset_level + 1.0f) / m_num_subset_levels)
+            {
+                // copy all dimensions (rows) of point i
+                for (int j = 0; j < m_subset_points.sizeY(); ++j)
+                    m_subset_points(m_subset_count, j) = m_points(i, j);
+                ++m_subset_count;
+            }
+        }
+    }
 
-    populate_point_subset();
+    for (size_t i = 0; i < m_3d_points.size(); ++i)
+        m_3d_points[i] = float3{m_subset_points(i, m_dimension.x), m_subset_points(i, m_dimension.y),
+                                m_subset_points(i, m_dimension.z)};
+
+    //
+    // Upload points to the GPU
+    //
 
     m_point_shader->set_buffer("position", m_3d_points);
 
-    // Upload 2D points to GPU
     // create a temporary matrix to store all the 2D projections of the points
     // each 2D plot actually needs 3D points, and there are num2DPlots of them
     int            num2DPlots = m_num_dimensions * (m_num_dimensions - 1) / 2;
@@ -819,6 +809,26 @@ void SampleViewer::update_GPU_points(bool regenerate)
                 points2D[plot_index * m_subset_count + i] = float3{m_subset_points(i, x), m_subset_points(i, y), 0.5f};
 
     m_point_2d_shader->set_buffer("position", points2D);
+}
+
+void SampleViewer::generate_grid(vector<float3> &positions, int grid_res)
+{
+    int fine_grid_res = 1;
+    int idx           = 0;
+    positions.resize(4 * (grid_res + 1) * (fine_grid_res));
+    float coarse_scale = 1.f / grid_res, fine_scale = 1.f / fine_grid_res;
+    // for (int z = -1; z <= 1; z+=2)
+    int z = 0;
+    for (int i = 0; i <= grid_res; ++i)
+    {
+        for (int j = 0; j < fine_grid_res; ++j)
+        {
+            positions[idx++] = float3(j * fine_scale - 0.5f, i * coarse_scale - 0.5f, z * 0.5f);
+            positions[idx++] = float3((j + 1) * fine_scale - 0.5f, i * coarse_scale - 0.5f, z * 0.5f);
+            positions[idx++] = float3(i * coarse_scale - 0.5f, j * fine_scale - 0.5f, z * 0.5f);
+            positions[idx++] = float3(i * coarse_scale - 0.5f, (j + 1) * fine_scale - 0.5f, z * 0.5f);
+        }
+    }
 }
 
 void SampleViewer::update_GPU_grids()
@@ -835,39 +845,6 @@ void SampleViewer::update_GPU_grids()
     positions.insert(positions.end(), coarse_grid.begin(), coarse_grid.end());
     positions.insert(positions.end(), fine_grid.begin(), fine_grid.end());
     m_grid_shader->set_buffer("position", positions);
-}
-
-void SampleViewer::draw_points(const float4x4 &mvp, const float3 &color)
-{
-    // Render the point set
-    m_point_shader->set_uniform("mvp", mvp);
-    float radius = map_slider_to_radius(m_radius);
-    if (m_scale_radius_with_points)
-        radius *= 64.0f / std::sqrt(m_point_count);
-    m_point_shader->set_uniform("pointSize", radius);
-    m_point_shader->set_uniform("color", color);
-
-    int2 range = get_draw_range();
-
-    m_point_shader->begin();
-    m_point_shader->draw_array(Shader::PrimitiveType::Point, range.x, range.y);
-    m_point_shader->end();
-}
-
-void SampleViewer::draw_grid(const float4x4 &mvp, float alpha, uint32_t offset, uint32_t count)
-{
-    m_grid_shader->set_uniform("alpha", alpha);
-
-    for (int axis = CAMERA_XY; axis <= CAMERA_XZ; ++axis)
-    {
-        if (m_camera[CAMERA_CURRENT].camera_type == axis || m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
-        {
-            m_grid_shader->set_uniform("mvp", mul(mvp, m_camera[axis].arcball.matrix()));
-            m_grid_shader->begin();
-            m_grid_shader->draw_array(Shader::PrimitiveType::Line, offset, count);
-            m_grid_shader->end();
-        }
-    }
 }
 
 void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int dim_x, int dim_y, int plot_index)
@@ -915,17 +892,22 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int dim_x, int d
     }
 }
 
-void SampleViewer::clear_and_setup_viewport()
+void SampleViewer::draw_scene()
 {
+    auto &io = ImGui::GetIO();
+
+    //
+    // clear the scene and set up viewports
+    //
     try
     {
-        // account for dpi factor on retina screens
-        auto &io = ImGui::GetIO();
-
         const float4 background_color{0.f, 0.f, 0.f, 1.f};
 
         // first clear the entire window with the background color
-        auto display_size = scaled_display_size();
+        // display_size is the size of the window in pixels while accounting for dpi factor on retina screens.
+        //     for retina displays, io.DisplaySize is the size of the window in points (logical pixels)
+        //     but we need the size in pixels. So we scale io.DisplaySize by io.DisplayFramebufferScale
+        auto display_size = int2{io.DisplaySize} * int2{io.DisplayFramebufferScale};
         CHK(glViewport(0, 0, display_size.x, display_size.y));
         CHK(glClearColor(background_color[0], background_color[1], background_color[2], background_color[3]));
         CHK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
@@ -938,20 +920,21 @@ void SampleViewer::clear_and_setup_viewport()
         // inform the arcballs of the viewport size
         for (int i = 0; i < NUM_CAMERA_TYPES; ++i)
             m_camera[i].arcball.set_size(m_viewport_size);
+
+        // enable depth testing
+        CHK(glEnable(GL_DEPTH_TEST));
+        CHK(glDepthFunc(GL_LESS));
+        CHK(glDepthMask(GL_TRUE));
     }
     catch (const std::exception &e)
     {
         fmt::print(stderr, "OpenGL drawing failed:\n\t{}.", e.what());
         HelloImGui::Log(HelloImGui::LogLevel::Error, "OpenGL drawing failed:\n\t%s.", e.what());
     }
-}
 
-void SampleViewer::draw_scene()
-{
-    clear_and_setup_viewport();
-
+    //
     // process camera movement
-    auto &io = ImGui::GetIO();
+    //
     if (!io.WantCaptureMouse)
     {
         m_camera[CAMERA_NEXT].zoom = std::max(0.001, m_camera[CAMERA_NEXT].zoom * pow(1.1, io.MouseWheel));
@@ -976,11 +959,45 @@ void SampleViewer::draw_scene()
         m_camera[CAMERA_NEXT].arcball.motion(int2{io.MousePos} - m_viewport_pos);
     }
 
-    // update/move the camera
-    update_current_camera();
+    //
+    // perform animation of camera parameters, e.g. after clicking one of the view buttons
+    //
+    {
+        CameraParameters &camera0 = m_camera[CAMERA_PREVIOUS];
+        CameraParameters &camera1 = m_camera[CAMERA_NEXT];
+        CameraParameters &camera  = m_camera[CAMERA_CURRENT];
+
+        float time_now  = (float)ImGui::GetTime();
+        float time_diff = (m_animate_start_time != 0.0f) ? (time_now - m_animate_start_time) : 1.0f;
+
+        // interpolate between the "perspectiveness" at the previous keyframe,
+        // and the "perspectiveness" of the currently selected camera
+        float t = smoothStep(0.0f, 1.0f, time_diff);
+
+        camera.zoom         = lerp(camera0.zoom, camera1.zoom, t);
+        camera.view_angle   = lerp(camera0.view_angle, camera1.view_angle, t);
+        camera.persp_factor = lerp(camera0.persp_factor, camera1.persp_factor, t);
+        if (t >= 1.0f)
+        {
+            camera.camera_type         = camera1.camera_type;
+            m_params.fpsIdling.fpsIdle = 9.f; // animation is done, reduce FPS
+            m_animate_start_time       = 0.f;
+        }
+
+        // if we are dragging the mouse, then just use the current arcball
+        // rotation, otherwise, interpolate between the previous and next camera
+        // orientations
+        if (io.MouseDown[0])
+            camera.arcball = camera1.arcball;
+        else
+            camera.arcball.set_state(qslerp(camera0.arcball.state(), camera1.arcball.state(), t));
+    }
 
     float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(m_viewport_size.x) / m_viewport_size.y);
 
+    //
+    // Now render the points and grids
+    //
     if (m_view == CAMERA_2D)
     {
         int plot_index = 0;
@@ -1007,10 +1024,8 @@ void SampleViewer::draw_scene()
             draw_points(smashZ, {0.3f, 0.3f, 0.8f});
         }
 
-        // m_render_pass->set_depth_test(RenderPass::DepthTest::Less, true);
         draw_points(mvp, m_point_color);
 
-        // m_render_pass->set_depth_test(RenderPass::DepthTest::Less, true);
         if (m_show_bbox)
             draw_grid(mvp, 1.0f, 0, 8);
 
@@ -1019,6 +1034,52 @@ void SampleViewer::draw_scene()
 
         if (m_show_fine_grid)
             draw_grid(mvp, 0.2f, 8 + m_coarse_line_count, m_fine_line_count);
+    }
+}
+
+void SampleViewer::set_view(CameraType view)
+{
+    m_animate_start_time                 = (float)ImGui::GetTime();
+    m_camera[CAMERA_PREVIOUS]            = m_camera[CAMERA_CURRENT];
+    m_camera[CAMERA_NEXT]                = m_camera[view];
+    m_camera[CAMERA_NEXT].persp_factor   = (view == CAMERA_CURRENT) ? 1.0f : 0.0f;
+    m_camera[CAMERA_NEXT].camera_type    = view;
+    m_camera[CAMERA_CURRENT].camera_type = (view == m_camera[CAMERA_CURRENT].camera_type) ? view : CAMERA_CURRENT;
+    m_view                               = view;
+
+    m_params.fpsIdling.fpsIdle = 0.f; // during animation, increase FPS
+}
+
+void SampleViewer::draw_points(const float4x4 &mvp, const float3 &color)
+{
+    // Render the point set
+    m_point_shader->set_uniform("mvp", mvp);
+    float radius = map_slider_to_radius(m_radius);
+    if (m_scale_radius_with_points)
+        radius *= 64.0f / std::sqrt(m_point_count);
+    m_point_shader->set_uniform("point_size", radius);
+    m_point_shader->set_uniform("color", color);
+
+    int2 range = get_draw_range();
+
+    m_point_shader->begin();
+    m_point_shader->draw_array(Shader::PrimitiveType::Point, range.x, range.y);
+    m_point_shader->end();
+}
+
+void SampleViewer::draw_grid(const float4x4 &mvp, float alpha, uint32_t offset, uint32_t count)
+{
+    m_grid_shader->set_uniform("alpha", alpha);
+
+    for (int axis = CAMERA_XY; axis <= CAMERA_XZ; ++axis)
+    {
+        if (m_camera[CAMERA_CURRENT].camera_type == axis || m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
+        {
+            m_grid_shader->set_uniform("mvp", mul(mvp, m_camera[axis].arcball.matrix()));
+            m_grid_shader->begin();
+            m_grid_shader->draw_array(Shader::PrimitiveType::Line, offset, count);
+            m_grid_shader->end();
+        }
     }
 }
 
@@ -1137,137 +1198,10 @@ string SampleViewer::export_all_points_2d(const string &format)
 
     return out;
 }
-void SampleViewer::set_view(CameraType view)
-{
-    m_animate_start_time                 = (float)ImGui::GetTime();
-    m_camera[CAMERA_PREVIOUS]            = m_camera[CAMERA_CURRENT];
-    m_camera[CAMERA_NEXT]                = m_camera[view];
-    m_camera[CAMERA_NEXT].persp_factor   = (view == CAMERA_CURRENT) ? 1.0f : 0.0f;
-    m_camera[CAMERA_NEXT].camera_type    = view;
-    m_camera[CAMERA_CURRENT].camera_type = (view == m_camera[CAMERA_CURRENT].camera_type) ? view : CAMERA_CURRENT;
-    m_view                               = view;
-
-    m_params.fpsIdling.fpsIdle = 0.f; // during animation, increase FPS
-}
-
-void SampleViewer::update_current_camera()
-{
-    CameraParameters &camera0 = m_camera[CAMERA_PREVIOUS];
-    CameraParameters &camera1 = m_camera[CAMERA_NEXT];
-    CameraParameters &camera  = m_camera[CAMERA_CURRENT];
-
-    float time_now  = (float)ImGui::GetTime();
-    float time_diff = (m_animate_start_time != 0.0f) ? (time_now - m_animate_start_time) : 1.0f;
-
-    // interpolate between the "perspectiveness" at the previous keyframe,
-    // and the "perspectiveness" of the currently selected camera
-    float t = smoothStep(0.0f, 1.0f, time_diff);
-
-    camera.zoom         = lerp(camera0.zoom, camera1.zoom, t);
-    camera.view_angle   = lerp(camera0.view_angle, camera1.view_angle, t);
-    camera.persp_factor = lerp(camera0.persp_factor, camera1.persp_factor, t);
-    if (t >= 1.0f)
-    {
-        camera.camera_type         = camera1.camera_type;
-        m_params.fpsIdling.fpsIdle = 9.f; // animation is done, reduce FPS
-        m_animate_start_time       = 0.f;
-    }
-
-    // if we are dragging the mouse, then just use the current arcball
-    // rotation, otherwise, interpolate between the previous and next camera
-    // orientations
-    if (ImGui::GetIO().MouseDown[0])
-        camera.arcball = camera1.arcball;
-    else
-        camera.arcball.set_state(qslerp(camera0.arcball.state(), camera1.arcball.state(), t));
-}
-
-void SampleViewer::generate_points()
-{
-    Timer    timer;
-    Sampler *generator = m_samplers[m_sampler];
-    if (generator->randomized() != m_randomize)
-        generator->setRandomized(m_randomize);
-
-    generator->setDimensions(m_num_dimensions);
-
-    int num_pts   = generator->setNumSamples(m_target_point_count);
-    m_point_count = num_pts > 0 ? num_pts : m_target_point_count;
-
-    m_time1 = timer.elapsed();
-
-    m_points.resize(m_point_count, m_num_dimensions);
-    m_3d_points.resize(m_point_count);
-
-    timer.reset();
-    for (int i = 0; i < m_point_count; ++i)
-    {
-        vector<float> r(m_num_dimensions, 0.5f);
-        generator->sample(r.data(), i);
-        for (int j = 0; j < m_points.sizeY(); ++j)
-            m_points(i, j) = r[j] - 0.5f;
-    }
-    m_time2 = timer.elapsed();
-}
-
-void SampleViewer::populate_point_subset()
-{
-    //
-    // Populate point subsets
-    //
-    m_subset_points = m_points;
-    m_subset_count  = m_point_count;
-    if (m_subset_by_coord)
-    {
-        m_subset_count = 0;
-        for (int i = 0; i < m_points.sizeX(); ++i)
-        {
-            float v = m_points(i, std::clamp(m_subset_axis, 0, m_num_dimensions - 1));
-            v += 0.5f;
-            if (v >= (m_subset_level + 0.0f) / m_num_subset_levels && v < (m_subset_level + 1.0f) / m_num_subset_levels)
-            {
-                // copy all dimensions (rows) of point i
-                for (int j = 0; j < m_subset_points.sizeY(); ++j)
-                    m_subset_points(m_subset_count, j) = m_points(i, j);
-                ++m_subset_count;
-            }
-        }
-    }
-
-    for (size_t i = 0; i < m_3d_points.size(); ++i)
-        m_3d_points[i] = float3{m_subset_points(i, m_dimension.x), m_subset_points(i, m_dimension.y),
-                                m_subset_points(i, m_dimension.z)};
-}
-
-void SampleViewer::generate_grid(vector<float3> &positions, int grid_res)
-{
-    int fine_grid_res = 1;
-    int idx           = 0;
-    positions.resize(4 * (grid_res + 1) * (fine_grid_res));
-    float coarse_scale = 1.f / grid_res, fine_scale = 1.f / fine_grid_res;
-    // for (int z = -1; z <= 1; z+=2)
-    int z = 0;
-    for (int i = 0; i <= grid_res; ++i)
-    {
-        for (int j = 0; j < fine_grid_res; ++j)
-        {
-            positions[idx++] = float3(j * fine_scale - 0.5f, i * coarse_scale - 0.5f, z * 0.5f);
-            positions[idx++] = float3((j + 1) * fine_scale - 0.5f, i * coarse_scale - 0.5f, z * 0.5f);
-            positions[idx++] = float3(i * coarse_scale - 0.5f, j * fine_scale - 0.5f, z * 0.5f);
-            positions[idx++] = float3(i * coarse_scale - 0.5f, (j + 1) * fine_scale - 0.5f, z * 0.5f);
-        }
-    }
-}
 
 float4x4 CameraParameters::matrix(float window_aspect) const
 {
     float4x4 model = scaling_matrix(float3(zoom));
-    if (camera_type == CAMERA_XY || camera_type == CAMERA_2D)
-        model = mul(scaling_matrix(float3(1, 1, 0)), model);
-    if (camera_type == CAMERA_XZ)
-        model = mul(scaling_matrix(float3(1, 0, 1)), model);
-    if (camera_type == CAMERA_YZ)
-        model = mul(scaling_matrix(float3(0, 1, 1)), model);
 
     float fH = std::tan(view_angle / 360.0f * M_PI) * dnear;
     float fW = fH * window_aspect;

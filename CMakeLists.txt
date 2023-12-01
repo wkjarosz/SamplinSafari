@@ -234,7 +234,7 @@ set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${PROJECT_VERSION})
 set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
 
 hello_imgui_add_app(SamplinSafari
-  gui/SampleViewer.cpp
+  gui/app.cpp
   gui/shader.cpp
   gui/export_to_file.cpp
   )
