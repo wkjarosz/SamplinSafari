@@ -115,7 +115,7 @@ private:
                    int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
     void draw_points(const float4x4 &mvp, const float3 &color);
     void draw_grid(const float4x4 &mvp, float alpha, uint32_t offset, uint32_t count);
-    void draw_2D_points_and_grid(const float4x4 &mvp, int dimX, int dimY, int plotIndex);
+    void draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int plotIndex);
     int2 get_draw_range() const;
 
     /// X, Y, Z, and user-defined cameras
@@ -156,4 +156,6 @@ private:
     float                    m_time1 = 0.f, m_time2 = 0.f;
     float3                   m_point_color = {0.9f, 0.55f, 0.1f};
     HelloImGui::RunnerParams m_params;
+
+    bool m_idling_backup = false;
 };

@@ -45,6 +45,8 @@ using std::to_string;
 #include <string>
 #include <vector>
 
+static bool g_show_modal = true;
+
 namespace ImGui
 {
 
@@ -68,16 +70,14 @@ static float map_slider_to_radius(float sliderValue)
     return sliderValue * sliderValue * 32.0f + 2.0f;
 }
 
-static float4x4 layout_2d_matrix(int num_dims, int dim_x, int dim_y)
+static float4x4 layout_2d_matrix(int num_dims, int2 dims)
 {
     float cell_spacing = 1.f / (num_dims - 1);
     float cell_size    = 0.96f / (num_dims - 1);
 
-    float x_offset = dim_x - (num_dims - 2) / 2.0f;
-    float y_offset = -(dim_y - 1 - (num_dims - 2) / 2.0f);
+    float2 offset = (dims - int2{0, 1} - float2{(num_dims - 2) / 2.0f}) * float2{1, -1};
 
-    return mul(translation_matrix(float3{cell_spacing * x_offset, cell_spacing * y_offset, 1}),
-               scaling_matrix(float3{cell_size, cell_size, 1}));
+    return mul(translation_matrix(float3{offset * cell_spacing, 1}), scaling_matrix(float3{float2{cell_size}, 1}));
 }
 
 SampleViewer::SampleViewer()
@@ -176,73 +176,95 @@ SampleViewer::SampleViewer()
         if (!HelloImGui::AssetExists(roboto_r) || !HelloImGui::AssetExists(roboto_b))
             return;
 
-        for (auto font_size : {14.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 15.f, 16.f, 17.f, 18.f})
+        for (auto font_size :
+             {14.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 15.f, 16.f, 17.f, 18.f, 20.f, 22.f, 24.f, 26.f, 28.f, 30.f})
         {
             m_regular[(int)font_size] = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_r, font_size);
             m_bold[(int)font_size]    = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_b, font_size);
         }
     };
 
+    m_params.callbacks.ShowMenus = []()
+    {
+        string text = ICON_FA_INFO_CIRCLE;
+        auto   posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(text.c_str()).x -
+                     ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
+        if (posX > ImGui::GetCursorPosX())
+            ImGui::SetCursorPosX(posX);
+        if (ImGui::MenuItem(text.c_str()))
+            g_show_modal = true;
+    };
+
     m_params.callbacks.ShowAppMenuItems = [this]()
     {
-        if (ImGui::MenuItem(ICON_FA_SAVE "  Export as EPS"))
+        auto save_files = [this](const string &basename, const string &ext)
         {
-            try
+            vector<string> saved_files;
             {
-                auto basename = pfd::save_file("Base filename").result();
-                if (basename.empty())
-                    return;
-
                 HelloImGui::Log(HelloImGui::LogLevel::Info, "Saving to base filename: %s.", basename.c_str());
 
-                ofstream fileAll(basename + "_all2D.eps");
-                fileAll << export_all_points_2d("eps");
+                saved_files.push_back(basename + "_all2D." + ext);
+                ofstream fileAll(saved_files.back());
+                fileAll << export_all_points_2d(ext);
 
-                ofstream fileXYZ(basename + "_012.eps");
-                fileXYZ << export_XYZ_points("eps");
+                saved_files.push_back(basename + "_012." + ext);
+                ofstream fileXYZ(saved_files.back());
+                fileXYZ << export_XYZ_points(ext);
 
                 for (int y = 0; y < m_num_dimensions; ++y)
                     for (int x = 0; x < y; ++x)
                     {
-                        ofstream fileXY(fmt::format("{:s}_{:d}{:d}.eps", basename, x, y));
-                        fileXY << export_points_2d("eps", CAMERA_XY, {x, y, 2});
+                        saved_files.push_back(fmt::format("{:s}_{:d}{:d}.{}", basename, x, y, ext));
+                        ofstream fileXY(saved_files.back());
+                        fileXY << export_points_2d(ext, CAMERA_XY, {x, y, 2});
                     }
             }
-            catch (const std::exception &e)
-            {
-                fmt::print(stderr, "An error occurred: {}.", e.what());
-                HelloImGui::Log(HelloImGui::LogLevel::Error, "An error occurred: %s.", e.what());
-            }
-        }
+            return saved_files;
+        };
 
-        if (ImGui::MenuItem(ICON_FA_SAVE "  Export as SVG"))
+        for (string ext : {"eps", "svg"})
         {
-            try
+#ifndef __EMSCRIPTEN__
+            if (ImGui::MenuItem(fmt::format("{}  Export as {}...", ICON_FA_SAVE, ext).c_str()))
             {
-                auto basename = pfd::save_file("Base filename").result();
-                if (basename.empty())
-                    return;
+                try
+                {
+                    auto basename = pfd::save_file("Base filename").result();
+                    if (!basename.empty())
+                        (void)save_files(basename, ext);
+                }
+                catch (const std::exception &e)
+                {
+                    fmt::print(stderr, "An error occurred while exporting to {}: {}.", ext, e.what());
+                    HelloImGui::Log(HelloImGui::LogLevel::Error,
+                                    fmt::format("An error occurred while exporting to {}: {}.", ext, e.what()).c_str());
+                }
+            }
+#else
+            if (ImGui::BeginMenu(fmt::format("{}  Export as {}...", ICON_FA_SAVE, ext).c_str()))
+            {
+                const size_t filename_max_length = 128;
+                static char buff[filename_max_length];
 
-                HelloImGui::Log(HelloImGui::LogLevel::Info, "Saving to base filename: %s.", basename.c_str());
-
-                ofstream fileAll(basename + "_all2D.svg");
-                fileAll << export_all_points_2d("svg");
-
-                ofstream fileXYZ(basename + "_012.svg");
-                fileXYZ << export_XYZ_points("svg");
-
-                for (int y = 0; y < m_num_dimensions; ++y)
-                    for (int x = 0; x < y; ++x)
+                if (ImGui::InputText("Base filename", buff, filename_max_length, ImGuiInputTextFlags_EnterReturnsTrue))
+                {
+                    try
                     {
-                        ofstream fileXY(fmt::format("{:s}_{:d}{:d}.svg", basename, x, y));
-                        fileXY << export_points_2d("svg", CAMERA_XY, {x, y, 2});
+                        vector<string> saved_files = save_files(buff, ext);
+                        for (auto &saved_file : saved_files)
+                            emscripten_run_script(fmt::format("saveFileFromMemoryFSToDisk('{}');", saved_file).c_str());
                     }
+                    catch (const std::exception &e)
+                    {
+                        fmt::print(stderr, "An error occurred while exporting to {}: {}.", ext, e.what());
+                        HelloImGui::Log(
+                            HelloImGui::LogLevel::Error,
+                            fmt::format("An error occurred while exporting to {}: {}.", ext, e.what()).c_str());
+                    }
+                }
+                ImGui::EndMenu();
             }
-            catch (const std::exception &e)
-            {
-                fmt::print(stderr, "An error occurred: {}.", e.what());
-                HelloImGui::Log(HelloImGui::LogLevel::Error, "An error occurred: %s.", e.what());
-            }
+#endif
         }
     };
 
@@ -292,6 +314,7 @@ SampleViewer::SampleViewer()
     };
     m_params.callbacks.ShowGui          = [this]() { draw_gui(); };
     m_params.callbacks.CustomBackground = [this]() { draw_scene(); };
+    m_idling_backup                     = m_params.fpsIdling.enableIdling;
 }
 
 SampleViewer::~SampleViewer()
@@ -339,7 +362,7 @@ void SampleViewer::draw_gui()
     {
         for (int i = 0; i < m_num_dimensions - 1; ++i)
         {
-            float4x4 pos      = layout_2d_matrix(m_num_dimensions, i, m_num_dimensions - 1);
+            float4x4 pos      = layout_2d_matrix(m_num_dimensions, int2{i, m_num_dimensions - 1});
             float4   text_pos = mul(mvp, mul(pos, float4{0.f, -0.5f, 0.0f, 1.0f}));
             float2   text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
             draw_text(m_viewport_pos +
@@ -347,7 +370,7 @@ void SampleViewer::draw_gui()
                       to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
                       TextAlign_CENTER | TextAlign_BOTTOM);
 
-            pos         = layout_2d_matrix(m_num_dimensions, 0, i + 1);
+            pos         = layout_2d_matrix(m_num_dimensions, int2{0, i + 1});
             text_pos    = mul(mvp, mul(pos, float4{-0.5f, 0.f, 0.0f, 1.0f}));
             text_2d_pos = float2((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
             draw_text(m_viewport_pos +
@@ -379,13 +402,141 @@ void SampleViewer::draw_gui()
                               float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[11], TextAlign_CENTER | TextAlign_TOP);
             }
     }
+
+    if (g_show_modal)
+    {
+        ImGui::OpenPopup("About");
+        g_show_modal = false;
+    }
+
+    // Always center this window when appearing
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        if (ImGui::BeginTable("about_table1", 2))
+        {
+            ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * 10);
+            ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * 35);
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            // right align the image
+            {
+                auto posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - 128.f - ImGui::GetScrollX() -
+                             2 * ImGui::GetStyle().ItemSpacing.x);
+                if (posX > ImGui::GetCursorPosX())
+                    ImGui::SetCursorPosX(posX);
+            }
+            HelloImGui::ImageFromAsset("icons/icon_128x128.png"); // Display a static image
+
+            ImGui::TableNextColumn();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * 35);
+
+            ImGui::PushFont(m_bold[30]);
+            ImGui::Text("Samplin' Safari");
+            ImGui::PopFont();
+
+            ImGui::PushFont(m_bold[18]);
+            ImGui::Text("version v2.0.0 (64 bit)");
+            ImGui::PopFont();
+            // ImGui::PushFont(m_regular[10]);
+            // ImGui::Text("Built using the XXX backend on 2023-12-04.");
+            // ImGui::PopFont();
+
+            ImGui::Spacing();
+
+            ImGui::PushFont(m_bold[16]);
+            ImGui::Text("Samplin' Safari is a research tool to visualize and interactively inspect high-dimensional "
+                        "(quasi) Monte Carlo samplers.");
+            ImGui::PopFont();
+
+            ImGui::Spacing();
+
+            ImGui::PopTextWrapPos();
+            ImGui::EndTable();
+        }
+
+        auto right_align = [](const string &text)
+        {
+            auto posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(text.c_str()).x -
+                         ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
+            if (posX > ImGui::GetCursorPosX())
+                ImGui::SetCursorPosX(posX);
+            ImGui::Text("%s", text.c_str());
+        };
+
+        auto add_library = [this, right_align](string name, string desc)
+        {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+
+            ImGui::PushFont(m_bold[14]);
+            right_align(name);
+            ImGui::PopFont();
+
+            ImGui::TableNextColumn();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * 34);
+            ImGui::PushFont(m_regular[14]);
+            ImGui::Text("%s", desc.c_str());
+            ImGui::PopFont();
+        };
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::Text("It is freely available under a 3-clause BSD license and is developed by Wojciech Jarosz, "
+                    "initially as part of the publication:");
+
+        ImGui::Spacing();
+
+        ImGui::Indent(HelloImGui::EmSize() * 1);
+        ImGui::PushFont(m_bold[14]);
+        ImGui::Text("Orthogonal Array Sampling for Monte Carlo Rendering");
+        ImGui::PopFont();
+        ImGui::Text("Wojciech Jarosz, Afnan Enayet, Andrew Kensler, Charlie Kilpatrick, Per Christensen.\n"
+                    "In Computer Graphics Forum(Proceedings of EGSR), 38(4), July 2019.");
+        ImGui::Unindent(HelloImGui::EmSize() * 1);
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Text("It additionally makes use of the following external libraries:\n\n");
+
+        if (ImGui::BeginTable("about_table2", 2))
+        {
+            ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * 10);
+            ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * 35);
+
+            add_library("Hello ImGui", "Pascal Thomet's cross-platform starter-kit for Dear ImGui");
+            add_library("Dear ImGui", "Omar Cornut's immediate-mode graphical user interface for C++");
+            add_library("GLFW", "Multi-platform OpenGL/windowing library on the desktop");
+            add_library("NanoGUI", "Bits of code from Wenzel Jakob's BSD-licensed NanoGUI library (the shader "
+                                   "abstraction and arcball)");
+            add_library("{fmt}", "A modern formatting library");
+            add_library("halton/sobol", "Leonhard Gruenschloss's MIT-licensed code for Halton and Sobol sequences");
+            add_library("linalg", "Sterling Orsten's public domain, single header short vector math library for C++");
+            add_library("portable-file-dialogs",
+                        "Sam Hocevar's WTFPL portable GUI dialogs library, C++11, single-header");
+            add_library("pcg32", "Wenzel Jakob's tiny self-contained C++ version of Melissa O'Neill's PCG32 "
+                                 "pseudorandom number generator");
+            add_library("galois++", "My small C++ library for arithmetic over general Galois fields based on "
+                                    "Art Owen's code in Statlib");
+            ImGui::EndTable();
+        }
+
+        if (ImGui::Button("Dismiss", ImVec2(120, 0)))
+            ImGui::CloseCurrentPopup();
+    }
+    ImGui::SetItemDefaultFocus();
+    ImGui::EndPopup();
 }
 
 void SampleViewer::draw_editor()
 {
     auto big_header = [this](const char *label, ImGuiTreeNodeFlags flags = 0)
     {
-        ImGui::PushFont(m_bold[16.f]);
+        ImGui::PushFont(m_bold[16]);
         bool ret = ImGui::CollapsingHeader(label, flags | ImGuiTreeNodeFlags_DefaultOpen);
         ImGui::PopFont();
         return ret;
@@ -848,17 +999,16 @@ void SampleViewer::update_GPU_grids()
     m_grid_shader->set_buffer("position", positions);
 }
 
-void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int dim_x, int dim_y, int plot_index)
+void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int plot_index)
 {
-    float4x4 pos = layout_2d_matrix(m_num_dimensions, dim_x, dim_y);
+    float4x4 pos = layout_2d_matrix(m_num_dimensions, dims);
 
-    // m_render_pass->set_depth_test(RenderPass::DepthTest::Less, true);
     // Render the point set
     m_point_2d_shader->set_uniform("mvp", mul(mvp, pos));
     float radius = map_slider_to_radius(m_radius / (m_num_dimensions - 1));
     if (m_scale_radius_with_points)
         radius *= 64.0f / std::sqrt(m_point_count);
-    m_point_2d_shader->set_uniform("pointSize", radius);
+    m_point_2d_shader->set_uniform("point_size", radius);
     m_point_2d_shader->set_uniform("color", m_point_color);
     int2 range = get_draw_range();
 
@@ -866,7 +1016,6 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int dim_x, int d
     m_point_2d_shader->draw_array(Shader::PrimitiveType::Point, m_subset_count * plot_index + range.x, range.y);
     m_point_2d_shader->end();
 
-    // m_render_pass->set_depth_test(RenderPass::DepthTest::Less, true);
     if (m_show_bbox)
     {
         m_grid_shader->set_uniform("alpha", 1.0f);
@@ -897,11 +1046,11 @@ void SampleViewer::draw_scene()
 {
     auto &io = ImGui::GetIO();
 
-    //
-    // clear the scene and set up viewports
-    //
     try
     {
+        //
+        // clear the scene and set up viewports
+        //
         const float4 background_color{0.f, 0.f, 0.f, 1.f};
 
         // first clear the entire window with the background color
@@ -926,129 +1075,136 @@ void SampleViewer::draw_scene()
         CHK(glEnable(GL_DEPTH_TEST));
         CHK(glDepthFunc(GL_LESS));
         CHK(glDepthMask(GL_TRUE));
+
+        //
+        // process camera movement
+        //
+        if (!io.WantCaptureMouse)
+        {
+            m_camera[CAMERA_NEXT].zoom = std::max(0.001, m_camera[CAMERA_NEXT].zoom * pow(1.1, io.MouseWheel));
+            if (io.MouseClicked[0])
+            {
+                // on mouse down we start switching to a perspective camera
+                // and start recording the arcball rotation in CAMERA_NEXT
+                set_view(CAMERA_CURRENT);
+                m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
+                m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
+            }
+            if (io.MouseReleased[0])
+            {
+                m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
+                // since the time between mouse down and up could be shorter
+                // than the animation duration, we override the previous
+                // camera's arcball on mouse up to complete the animation
+                m_camera[CAMERA_PREVIOUS].arcball     = m_camera[CAMERA_NEXT].arcball;
+                m_camera[CAMERA_PREVIOUS].camera_type = m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
+            }
+
+            m_camera[CAMERA_NEXT].arcball.motion(int2{io.MousePos} - m_viewport_pos);
+        }
+
+        //
+        // perform animation of camera parameters, e.g. after clicking one of the view buttons
+        //
+        {
+            CameraParameters &camera0 = m_camera[CAMERA_PREVIOUS];
+            CameraParameters &camera1 = m_camera[CAMERA_NEXT];
+            CameraParameters &camera  = m_camera[CAMERA_CURRENT];
+
+            float time_now  = (float)ImGui::GetTime();
+            float time_diff = (m_animate_start_time != 0.0f) ? (time_now - m_animate_start_time) : 1.0f;
+
+            // interpolate between the "perspectiveness" at the previous keyframe,
+            // and the "perspectiveness" of the currently selected camera
+            float t = smoothStep(0.0f, 1.0f, time_diff);
+
+            camera.zoom         = lerp(camera0.zoom, camera1.zoom, t);
+            camera.view_angle   = lerp(camera0.view_angle, camera1.view_angle, t);
+            camera.persp_factor = lerp(camera0.persp_factor, camera1.persp_factor, t);
+            if (t >= 1.0f)
+            {
+                camera.camera_type = camera1.camera_type;
+                // m_params.fpsIdling.fpsIdle = 9.f; // animation is done, reduce FPS
+                if (m_animate_start_time != 0.0f)
+                    m_params.fpsIdling.enableIdling = m_idling_backup;
+                m_animate_start_time = 0.f;
+            }
+
+            // if we are dragging the mouse, then just use the current arcball
+            // rotation, otherwise, interpolate between the previous and next camera
+            // orientations
+            if (io.MouseDown[0])
+                camera.arcball = camera1.arcball;
+            else
+                camera.arcball.set_state(qslerp(camera0.arcball.state(), camera1.arcball.state(), t));
+        }
+
+        float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(m_viewport_size.x) / m_viewport_size.y);
+
+        //
+        // Now render the points and grids
+        //
+        if (m_view == CAMERA_2D)
+        {
+            int plot_index = 0;
+            for (int y = 0; y < m_num_dimensions; ++y)
+                for (int x = 0; x < y; ++x, ++plot_index)
+                    draw_2D_points_and_grid(mvp, int2{x, y}, plot_index);
+        }
+        else
+        {
+
+            if (m_show_1d_projections)
+            {
+                // smash the points against the axes and draw
+                float4x4 smashX =
+                    mul(mvp, mul(translation_matrix(float3{-0.51f, 0.f, 0.f}), scaling_matrix(float3{0.f, 1.f, 1.f})));
+                draw_points(smashX, {0.8f, 0.3f, 0.3f});
+
+                float4x4 smashY =
+                    mul(mvp, mul(translation_matrix(float3{0.f, -0.51f, 0.f}), scaling_matrix(float3{1.f, 0.f, 1.f})));
+                draw_points(smashY, {0.3f, 0.8f, 0.3f});
+
+                float4x4 smashZ =
+                    mul(mvp, mul(translation_matrix(float3{0.f, 0.f, -0.51f}), scaling_matrix(float3{1.f, 1.f, 0.f})));
+                draw_points(smashZ, {0.3f, 0.3f, 0.8f});
+            }
+
+            draw_points(mvp, m_point_color);
+
+            if (m_show_bbox)
+                draw_grid(mvp, 1.0f, 0, 8);
+
+            if (m_show_coarse_grid)
+                draw_grid(mvp, 0.6f, 8, m_coarse_line_count);
+
+            if (m_show_fine_grid)
+                draw_grid(mvp, 0.2f, 8 + m_coarse_line_count, m_fine_line_count);
+        }
     }
     catch (const std::exception &e)
     {
         fmt::print(stderr, "OpenGL drawing failed:\n\t{}.", e.what());
         HelloImGui::Log(HelloImGui::LogLevel::Error, "OpenGL drawing failed:\n\t%s.", e.what());
     }
-
-    //
-    // process camera movement
-    //
-    if (!io.WantCaptureMouse)
-    {
-        m_camera[CAMERA_NEXT].zoom = std::max(0.001, m_camera[CAMERA_NEXT].zoom * pow(1.1, io.MouseWheel));
-        if (io.MouseClicked[0])
-        {
-            // on mouse down we start switching to a perspective camera
-            // and start recording the arcball rotation in CAMERA_NEXT
-            set_view(CAMERA_CURRENT);
-            m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
-            m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
-        }
-        if (io.MouseReleased[0])
-        {
-            m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
-            // since the time between mouse down and up could be shorter
-            // than the animation duration, we override the previous
-            // camera's arcball on mouse up to complete the animation
-            m_camera[CAMERA_PREVIOUS].arcball     = m_camera[CAMERA_NEXT].arcball;
-            m_camera[CAMERA_PREVIOUS].camera_type = m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
-        }
-
-        m_camera[CAMERA_NEXT].arcball.motion(int2{io.MousePos} - m_viewport_pos);
-    }
-
-    //
-    // perform animation of camera parameters, e.g. after clicking one of the view buttons
-    //
-    {
-        CameraParameters &camera0 = m_camera[CAMERA_PREVIOUS];
-        CameraParameters &camera1 = m_camera[CAMERA_NEXT];
-        CameraParameters &camera  = m_camera[CAMERA_CURRENT];
-
-        float time_now  = (float)ImGui::GetTime();
-        float time_diff = (m_animate_start_time != 0.0f) ? (time_now - m_animate_start_time) : 1.0f;
-
-        // interpolate between the "perspectiveness" at the previous keyframe,
-        // and the "perspectiveness" of the currently selected camera
-        float t = smoothStep(0.0f, 1.0f, time_diff);
-
-        camera.zoom         = lerp(camera0.zoom, camera1.zoom, t);
-        camera.view_angle   = lerp(camera0.view_angle, camera1.view_angle, t);
-        camera.persp_factor = lerp(camera0.persp_factor, camera1.persp_factor, t);
-        if (t >= 1.0f)
-        {
-            camera.camera_type         = camera1.camera_type;
-            m_params.fpsIdling.fpsIdle = 9.f; // animation is done, reduce FPS
-            m_animate_start_time       = 0.f;
-        }
-
-        // if we are dragging the mouse, then just use the current arcball
-        // rotation, otherwise, interpolate between the previous and next camera
-        // orientations
-        if (io.MouseDown[0])
-            camera.arcball = camera1.arcball;
-        else
-            camera.arcball.set_state(qslerp(camera0.arcball.state(), camera1.arcball.state(), t));
-    }
-
-    float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(m_viewport_size.x) / m_viewport_size.y);
-
-    //
-    // Now render the points and grids
-    //
-    if (m_view == CAMERA_2D)
-    {
-        int plot_index = 0;
-        for (int y = 0; y < m_num_dimensions; ++y)
-            for (int x = 0; x < y; ++x, ++plot_index)
-                draw_2D_points_and_grid(mvp, x, y, plot_index);
-    }
-    else
-    {
-
-        if (m_show_1d_projections)
-        {
-            // smash the points against the axes and draw
-            float4x4 smashX =
-                mul(mvp, mul(translation_matrix(float3{-0.51f, 0.f, 0.f}), scaling_matrix(float3{0.f, 1.f, 1.f})));
-            draw_points(smashX, {0.8f, 0.3f, 0.3f});
-
-            float4x4 smashY =
-                mul(mvp, mul(translation_matrix(float3{0.f, -0.51f, 0.f}), scaling_matrix(float3{1.f, 0.f, 1.f})));
-            draw_points(smashY, {0.3f, 0.8f, 0.3f});
-
-            float4x4 smashZ =
-                mul(mvp, mul(translation_matrix(float3{0.f, 0.f, -0.51f}), scaling_matrix(float3{1.f, 1.f, 0.f})));
-            draw_points(smashZ, {0.3f, 0.3f, 0.8f});
-        }
-
-        draw_points(mvp, m_point_color);
-
-        if (m_show_bbox)
-            draw_grid(mvp, 1.0f, 0, 8);
-
-        if (m_show_coarse_grid)
-            draw_grid(mvp, 0.6f, 8, m_coarse_line_count);
-
-        if (m_show_fine_grid)
-            draw_grid(mvp, 0.2f, 8 + m_coarse_line_count, m_fine_line_count);
-    }
 }
 
 void SampleViewer::set_view(CameraType view)
 {
-    m_animate_start_time                 = (float)ImGui::GetTime();
-    m_camera[CAMERA_PREVIOUS]            = m_camera[CAMERA_CURRENT];
-    m_camera[CAMERA_NEXT]                = m_camera[view];
-    m_camera[CAMERA_NEXT].persp_factor   = (view == CAMERA_CURRENT) ? 1.0f : 0.0f;
-    m_camera[CAMERA_NEXT].camera_type    = view;
-    m_camera[CAMERA_CURRENT].camera_type = (view == m_camera[CAMERA_CURRENT].camera_type) ? view : CAMERA_CURRENT;
-    m_view                               = view;
+    if (m_view != view)
+    {
+        m_animate_start_time                 = (float)ImGui::GetTime();
+        m_camera[CAMERA_PREVIOUS]            = m_camera[CAMERA_CURRENT];
+        m_camera[CAMERA_NEXT]                = m_camera[view];
+        m_camera[CAMERA_NEXT].persp_factor   = (view == CAMERA_CURRENT) ? 1.0f : 0.0f;
+        m_camera[CAMERA_NEXT].camera_type    = view;
+        m_camera[CAMERA_CURRENT].camera_type = (view == m_camera[CAMERA_CURRENT].camera_type) ? view : CAMERA_CURRENT;
+        m_view                               = view;
 
-    m_params.fpsIdling.fpsIdle = 0.f; // during animation, increase FPS
+        // m_params.fpsIdling.fpsIdle = 0.f; // during animation, increase FPS
+        m_idling_backup                 = m_params.fpsIdling.enableIdling;
+        m_params.fpsIdling.enableIdling = false;
+    }
 }
 
 void SampleViewer::draw_points(const float4x4 &mvp, const float3 &color)
@@ -1179,7 +1335,7 @@ string SampleViewer::export_all_points_2d(const string &format)
     for (int y = 0; y < m_num_dimensions; ++y)
         for (int x = 0; x < y; ++x)
         {
-            float4x4 pos = layout_2d_matrix(m_num_dimensions, x, y);
+            float4x4 pos = layout_2d_matrix(m_num_dimensions, int2{x, y});
 
             if (format == "eps")
             {

@@ -9,7 +9,7 @@ project(
   SamplinSafari
   DESCRIPTION
     "A research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers."
-  VERSION 1.1.0
+  VERSION 2.0.0
   LANGUAGES C CXX
   )
 
