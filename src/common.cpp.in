@@ -28,27 +28,6 @@ string backend()
 }
 // clang-format on
 
-vector<string> split(string text, const string &delim)
-{
-    vector<string> result;
-    while (true)
-    {
-        size_t begin = text.find_last_of(delim);
-        if (begin == string::npos)
-        {
-            result.emplace_back(text);
-            return result;
-        }
-        else
-        {
-            result.emplace_back(text.substr(begin + 1));
-            text.resize(begin);
-        }
-    }
-
-    return result;
-}
-
 string to_lower(string str)
 {
     transform(begin(str), end(str), begin(str), [](unsigned char c) { return (char)tolower(c); });

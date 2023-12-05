@@ -14,9 +14,8 @@
 
 #include <string>
 
-std::vector<std::string> split(std::string text, const std::string &delim);
-std::string              to_lower(std::string str);
-std::string              to_upper(std::string str);
+std::string to_lower(std::string str);
+std::string to_upper(std::string str);
 
 int         version_major();
 int         version_minor();
