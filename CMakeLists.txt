@@ -7,13 +7,16 @@ include(VersionFromGit)
 string(TIMESTAMP BUILD_TIME "%Y-%m-%d %H:%M")
 message(STATUS "Saving build timestamp: ${BUILD_TIME}")
 
-version_from_git(LOG ON TIMESTAMP "%Y-%m-%d-%H:%M:%S")
+version_from_git(
+  LOG ON
+  TIMESTAMP "%Y-%m-%d-%H:%M:%S"
+  ARG_UTC)
 
 project(
   SamplinSafari
   DESCRIPTION
     "A research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers."
-  VERSION ${SEMVER}
+  VERSION ${VERSION}
   LANGUAGES C CXX
   )
 
@@ -235,8 +238,8 @@ set(HELLO_IMGUI_ICON_DISPLAY_NAME ${output_name})
 set(HELLO_IMGUI_BUNDLE_NAME ${output_name})
 set(HELLO_IMGUI_BUNDLE_COPYRIGHT "© Wojciech Jarosz, ${YEAR}")
 set(HELLO_IMGUI_BUNDLE_EXECUTABLE ${output_name})
-set(HELLO_IMGUI_BUNDLE_VERSION ${SEMVER})
-set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${SEMVER})
+set(HELLO_IMGUI_BUNDLE_VERSION ${VERSION})
+set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${VERSION})
 set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html.in ${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html @ONLY)

@@ -137,7 +137,7 @@ function( version_from_git )
 
     # Timestamp
     if( DEFINED ARG_TIMESTAMP )
-      string( TIMESTAMP timestamp "${ARG_TIMESTAMP}" ${ARG_UTC} )
+      string( TIMESTAMP timestamp "${ARG_TIMESTAMP}" UTC )
       list( APPEND metadata "${timestamp}" )
     endif( DEFINED ARG_TIMESTAMP )
 
