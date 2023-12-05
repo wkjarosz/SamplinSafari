@@ -2,9 +2,6 @@
     \author Wojciech Jarosz
 */
 
-#define _USE_MATH_DEFINES
-#define NOMINMAX
-
 #include "app.h"
 
 using namespace linalg::ostream_overloads;
@@ -17,7 +14,7 @@ using std::to_string;
 
 #include "hello_imgui/hello_imgui.h"
 #include "hello_imgui/hello_imgui_include_opengl.h" // cross-platform way to include OpenGL headers
-#include "imgui.h"
+#include "imgui_ext.h"
 #include "imgui_internal.h"
 #include "portable-file-dialogs.h"
 
@@ -46,24 +43,6 @@ using std::to_string;
 #include <vector>
 
 static bool g_show_modal = true;
-
-namespace ImGui
-{
-
-bool ToggleButton(const char *label, bool *active)
-{
-    ImGui::PushStyleColor(ImGuiCol_Button, *active ? GetColorU32(ImGuiCol_ButtonActive) : GetColorU32(ImGuiCol_Button));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, GetColorU32(ImGuiCol_FrameBgHovered));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, GetColorU32(ImGuiCol_FrameBgActive));
-
-    bool ret;
-    if ((ret = ImGui::Button(label)))
-        *active = !*active;
-    ImGui::PopStyleColor(3);
-    return ret;
-}
-
-} // namespace ImGui
 
 static float map_slider_to_radius(float sliderValue)
 {
@@ -191,7 +170,7 @@ SampleViewer::SampleViewer()
                      ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
         if (posX > ImGui::GetCursorPosX())
             ImGui::SetCursorPosX(posX);
-        if (ImGui::MenuItem(text.c_str()))
+        if (ImGui::MenuItem(text))
             g_show_modal = true;
     };
 
@@ -225,7 +204,7 @@ SampleViewer::SampleViewer()
         for (string ext : {"eps", "svg"})
         {
 #ifndef __EMSCRIPTEN__
-            if (ImGui::MenuItem(fmt::format("{}  Export as {}...", ICON_FA_SAVE, ext).c_str()))
+            if (ImGui::MenuItem(fmt::format("{}  Export as {}...", ICON_FA_SAVE, to_upper(ext))))
             {
                 try
                 {
@@ -241,16 +220,16 @@ SampleViewer::SampleViewer()
                 }
             }
 #else
-            if (ImGui::BeginMenu(fmt::format("{}  Export as {}...", ICON_FA_SAVE, ext).c_str()))
+            if (ImGui::BeginMenu(fmt::format("{}  Download as {}...", ICON_FA_SAVE, to_upper(ext)).c_str()))
             {
-                const size_t filename_max_length = 128;
-                static char buff[filename_max_length];
+                string basename;
 
-                if (ImGui::InputText("Base filename", buff, filename_max_length, ImGuiInputTextFlags_EnterReturnsTrue))
+                if (ImGui::InputText("Base filename", &basename, ImGuiInputTextFlags_EnterReturnsTrue))
                 {
                     try
                     {
-                        vector<string> saved_files = save_files(buff, ext);
+                        ImGui::CloseCurrentPopup();
+                        vector<string> saved_files = save_files(basename, ext);
                         for (auto &saved_file : saved_files)
                             emscripten_run_script(fmt::format("saveFileFromMemoryFSToDisk('{}');", saved_file).c_str());
                     }
@@ -403,22 +382,38 @@ void SampleViewer::draw_gui()
             }
     }
 
+    draw_about_dialog();
+}
+
+void SampleViewer::draw_about_dialog()
+{
     if (g_show_modal)
     {
         ImGui::OpenPopup("About");
-        g_show_modal = false;
+
+        // I think HelloGui's way of rendering the frame multiple times before it determines window sizes is
+        // closing this popup before we see the app, so we need this hack to show it at startup
+        static int count = 0;
+        if (count > 0)
+            g_show_modal = false;
+        count++;
     }
 
     // Always center this window when appearing
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowFocus();
 
-    if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::BeginPopup("About", ImGuiWindowFlags_AlwaysAutoResize))
     {
+        const int col_width[2] = {11, 34};
+
+        ImGui::Spacing();
+
         if (ImGui::BeginTable("about_table1", 2))
         {
-            ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * 10);
-            ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * 35);
+            ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[0]);
+            ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[1]);
 
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
@@ -432,18 +427,18 @@ void SampleViewer::draw_gui()
             HelloImGui::ImageFromAsset("icons/icon_128x128.png"); // Display a static image
 
             ImGui::TableNextColumn();
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * 35);
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * col_width[1]);
 
             ImGui::PushFont(m_bold[30]);
             ImGui::Text("Samplin' Safari");
             ImGui::PopFont();
 
             ImGui::PushFont(m_bold[18]);
-            ImGui::Text("version v2.0.0 (64 bit)");
+            ImGui::Text(fmt::format("version {}", version()));
             ImGui::PopFont();
-            // ImGui::PushFont(m_regular[10]);
-            // ImGui::Text("Built using the XXX backend on 2023-12-04.");
-            // ImGui::PopFont();
+            ImGui::PushFont(m_regular[10]);
+            ImGui::Text(fmt::format("Built using the {} backend on {}.", backend(), build_timestamp()));
+            ImGui::PopFont();
 
             ImGui::Spacing();
 
@@ -464,10 +459,10 @@ void SampleViewer::draw_gui()
                          ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
             if (posX > ImGui::GetCursorPosX())
                 ImGui::SetCursorPosX(posX);
-            ImGui::Text("%s", text.c_str());
+            ImGui::Text(text);
         };
 
-        auto add_library = [this, right_align](string name, string desc)
+        auto add_library = [this, right_align, col_width](string name, string desc)
         {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
@@ -477,9 +472,9 @@ void SampleViewer::draw_gui()
             ImGui::PopFont();
 
             ImGui::TableNextColumn();
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * 34);
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * (col_width[1] - 1));
             ImGui::PushFont(m_regular[14]);
-            ImGui::Text("%s", desc.c_str());
+            ImGui::Text(desc);
             ImGui::PopFont();
         };
 
@@ -497,7 +492,7 @@ void SampleViewer::draw_gui()
         ImGui::Text("Orthogonal Array Sampling for Monte Carlo Rendering");
         ImGui::PopFont();
         ImGui::Text("Wojciech Jarosz, Afnan Enayet, Andrew Kensler, Charlie Kilpatrick, Per Christensen.\n"
-                    "In Computer Graphics Forum(Proceedings of EGSR), 38(4), July 2019.");
+                    "In Computer Graphics Forum (Proceedings of EGSR), 38(4), July 2019.");
         ImGui::Unindent(HelloImGui::EmSize() * 1);
         ImGui::Spacing();
         ImGui::Spacing();
@@ -505,11 +500,11 @@ void SampleViewer::draw_gui()
 
         if (ImGui::BeginTable("about_table2", 2))
         {
-            ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * 10);
-            ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * 35);
+            ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[0]);
+            ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[1]);
 
-            add_library("Hello ImGui", "Pascal Thomet's cross-platform starter-kit for Dear ImGui");
             add_library("Dear ImGui", "Omar Cornut's immediate-mode graphical user interface for C++");
+            add_library("Hello ImGui", "Pascal Thomet's cross-platform starter-kit for Dear ImGui");
             add_library("GLFW", "Multi-platform OpenGL/windowing library on the desktop");
             add_library("NanoGUI", "Bits of code from Wenzel Jakob's BSD-licensed NanoGUI library (the shader "
                                    "abstraction and arcball)");
@@ -525,11 +520,14 @@ void SampleViewer::draw_gui()
             ImGui::EndTable();
         }
 
-        if (ImGui::Button("Dismiss", ImVec2(120, 0)))
+        ImGui::SetKeyboardFocusHere();
+        if (ImGui::Button("Dismiss", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape) ||
+            ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Space))
             ImGui::CloseCurrentPopup();
+        ImGui::SetItemDefaultFocus();
+
+        ImGui::EndPopup();
     }
-    ImGui::SetItemDefaultFocus();
-    ImGui::EndPopup();
 }
 
 void SampleViewer::draw_editor()
@@ -694,7 +692,8 @@ void SampleViewer::draw_editor()
     if (big_header(ICON_FA_EYE "  Display/visibility"))
     // =========================================================
     {
-        ImGui::ColorEdit3("Color", (float *)&m_point_color);
+        ImGui::ColorEdit3("Bg color", (float *)&m_bg_color);
+        ImGui::ColorEdit3("Point color", (float *)&m_point_color);
         ImGui::SliderFloat("Radius", &m_radius, 0.f, 1.f, "");
         ImGui::SameLine();
         {
@@ -772,8 +771,6 @@ void SampleViewer::draw_editor()
 
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
     }
-
-    process_hotkeys();
 }
 
 void SampleViewer::process_hotkeys()
@@ -1046,12 +1043,13 @@ void SampleViewer::draw_scene()
 {
     auto &io = ImGui::GetIO();
 
+    process_hotkeys();
+
     try
     {
         //
         // clear the scene and set up viewports
         //
-        const float4 background_color{0.f, 0.f, 0.f, 1.f};
 
         // first clear the entire window with the background color
         // display_size is the size of the window in pixels while accounting for dpi factor on retina screens.
@@ -1059,7 +1057,7 @@ void SampleViewer::draw_scene()
         //     but we need the size in pixels. So we scale io.DisplaySize by io.DisplayFramebufferScale
         auto display_size = int2{io.DisplaySize} * int2{io.DisplayFramebufferScale};
         CHK(glViewport(0, 0, display_size.x, display_size.y));
-        CHK(glClearColor(background_color[0], background_color[1], background_color[2], background_color[3]));
+        CHK(glClearColor(m_bg_color[0], m_bg_color[1], m_bg_color[2], 1.f));
         CHK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
         // now set up a new viewport for the rest of the drawing

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "common.h"
 #include "linalg.h"
 using namespace linalg::aliases;
 
@@ -34,8 +35,8 @@ using namespace linalg::aliases;
     }
 
 #include "arcball.h"
-// #include "gui_app.h"
 #include "hello_imgui/hello_imgui.h"
+#include "misc/cpp/imgui_stdlib.h"
 #include "shader.h"
 #include <galois++/array2d.h>
 #include <map>
@@ -108,6 +109,7 @@ private:
     void update_GPU_grids();
     void set_view(CameraType view);
     void draw_editor();
+    void draw_about_dialog();
     void process_hotkeys();
     void populate_point_subset();
     void generate_grid(vector<float3> &positions, int gridRes);
@@ -155,6 +157,7 @@ private:
 
     float                    m_time1 = 0.f, m_time2 = 0.f;
     float3                   m_point_color = {0.9f, 0.55f, 0.1f};
+    float3                   m_bg_color    = {0.0f, 0.0f, 0.0f};
     HelloImGui::RunnerParams m_params;
 
     bool m_idling_backup = false;

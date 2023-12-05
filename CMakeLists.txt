@@ -2,22 +2,28 @@ cmake_minimum_required(VERSION 3.13)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/" "${CMAKE_SOURCE_DIR}/resources")
 
+include(VersionFromGit)
+
 string(TIMESTAMP BUILD_TIME "%Y-%m-%d %H:%M")
 message(STATUS "Saving build timestamp: ${BUILD_TIME}")
+
+version_from_git(LOG ON TIMESTAMP "%Y-%m-%d-%H:%M:%S")
 
 project(
   SamplinSafari
   DESCRIPTION
     "A research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers."
-  VERSION 2.0.0
+  VERSION ${SEMVER}
   LANGUAGES C CXX
   )
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(APP_BITS_VERSION "64 bit")
+set(VERSION_LONG "${SEMVER} (64 bit)")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  set(APP_BITS_VERSION "32 bit")
+set(VERSION_LONG "${SEMVER} (32 bit)")
 endif()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/common.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp @ONLY)
 
 include(sanitizers)
 
@@ -194,22 +200,22 @@ add_library(samplerlib OBJECT STATIC
   include/sampler/Random.h
   include/sampler/RandomPermutation.h
   include/sampler/Sobol.h
-  src/Misc.cpp
-  src/Halton.cpp
-  src/Jittered.cpp
-  src/LP.cpp
-  src/MultiJittered.cpp
-  src/NRooks.cpp
-  src/OA.cpp
-  src/OAAddelmanKempthorne.cpp
-  src/OABose.cpp
-  src/OABoseBush.cpp
-  src/OABush.cpp
-  src/OACMJND.cpp
-  src/SOA.cpp
-  src/Random.cpp
-  src/Sobol.cpp
-  src/SobolMatrices.cpp)
+  src/sampler/Misc.cpp
+  src/sampler/Halton.cpp
+  src/sampler/Jittered.cpp
+  src/sampler/LP.cpp
+  src/sampler/MultiJittered.cpp
+  src/sampler/NRooks.cpp
+  src/sampler/OA.cpp
+  src/sampler/OAAddelmanKempthorne.cpp
+  src/sampler/OABose.cpp
+  src/sampler/OABoseBush.cpp
+  src/sampler/OABush.cpp
+  src/sampler/OACMJND.cpp
+  src/sampler/SOA.cpp
+  src/sampler/Random.cpp
+  src/sampler/Sobol.cpp
+  src/sampler/SobolMatrices.cpp)
   
 # Link dependencies
 target_link_libraries(
@@ -229,14 +235,17 @@ set(HELLO_IMGUI_ICON_DISPLAY_NAME ${output_name})
 set(HELLO_IMGUI_BUNDLE_NAME ${output_name})
 set(HELLO_IMGUI_BUNDLE_COPYRIGHT "© Wojciech Jarosz, ${YEAR}")
 set(HELLO_IMGUI_BUNDLE_EXECUTABLE ${output_name})
-set(HELLO_IMGUI_BUNDLE_VERSION ${APP_BITS_VERSION})
-set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${PROJECT_VERSION})
+set(HELLO_IMGUI_BUNDLE_VERSION ${SEMVER})
+set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${SEMVER})
 set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html.in ${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html @ONLY)
+
 hello_imgui_add_app(SamplinSafari
-  gui/app.cpp
-  gui/shader.cpp
-  gui/export_to_file.cpp
+  src/app.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp
+  src/shader.cpp
+  src/export_to_file.cpp
   )
 
 set_target_properties(SamplinSafari PROPERTIES
