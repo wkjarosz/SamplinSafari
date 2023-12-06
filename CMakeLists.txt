@@ -130,7 +130,7 @@ if(pcg32_ADDED)
   target_include_directories(pcg32 INTERFACE "${pcg32_SOURCE_DIR}")
 endif()
 
-CPMAddPackage("gh:wkjarosz/galois#1a81ee0c514fa38e230d8295b25511f0b85dc5d3")
+CPMAddPackage("gh:wkjarosz/galois#2bf22e85952c8612832838a26baf68ad93beff7a")
 if(galois_ADDED)
   target_include_directories(galois++ INTERFACE "${galois_SOURCE_DIR}/include")
 endif()
