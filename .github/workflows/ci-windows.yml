@@ -1,10 +1,11 @@
 name: Windows build
 
 on:
-  push:
+  pull_request:
     branches:
       - "*"
-    pull_request:
+  push:
+    branches:
       - "*"
     paths:
       # This action only runs on push when C++ files are changed
@@ -16,7 +17,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_windows:
+  build:
     name: ${{ matrix.config.name }} (${{ matrix.buildtype }})
     runs-on: ${{ matrix.config.os }}
     strategy:
@@ -56,6 +57,6 @@ jobs:
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: Samplin Safari
+          name: build-artifacts-${{ matrix.config.os }}-${{ matrix.buildtype }}
           path: |
             "${{github.workspace}}/build/${{ matrix.buildtype }}/Samplin Safari.exe"
