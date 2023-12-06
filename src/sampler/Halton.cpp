@@ -2,15 +2,12 @@
     \author Wojciech Jarosz
 */
 
+#include <galois++/primes.h> // for nthPrime
 #include <sampler/Halton.h>
-#include <sampler/Misc.h>
-#include <galois++/primes.h>
-#include <iostream>
-#include <random>
+#include <sampler/Misc.h>           // for foldedRadicalInverse
+#include <sampler/halton_sampler.h> // for Halton_sampler
 
-
-Halton::Halton(unsigned dimensions) :
-    m_numDimensions(0), m_randomized(true)
+Halton::Halton(unsigned dimensions) : m_numDimensions(0), m_randomized(true)
 {
     setDimensions(dimensions);
     setRandomized(true);
@@ -44,10 +41,7 @@ void Halton::sample(float r[], unsigned i)
         r[d] = m_halton.sample(d, i);
 }
 
-
-
-HaltonZaremba::HaltonZaremba(unsigned dimensions) :
-    m_numDimensions(0)
+HaltonZaremba::HaltonZaremba(unsigned dimensions) : m_numDimensions(0)
 {
     setDimensions(dimensions);
 }
@@ -63,5 +57,5 @@ void HaltonZaremba::setDimensions(unsigned n)
 void HaltonZaremba::sample(float r[], unsigned i)
 {
     for (unsigned d = 0; d < m_numDimensions; d++)
-        r[d] = foldedRadicalInverse(i, nthPrime(d+1));
+        r[d] = foldedRadicalInverse(i, nthPrime(d + 1));
 }

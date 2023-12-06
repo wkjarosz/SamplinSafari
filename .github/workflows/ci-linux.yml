@@ -59,9 +59,9 @@ jobs:
       - name: Build
         run: cmake --build ${{github.workspace}}/build/${{ matrix.buildtype }} --parallel 4 --config ${{ matrix.buildtype }}
 
-      - name: Checking that SamplinSafari runs
+      - name: Checking that Samplin Safari runs
         run: |
-          ${{github.workspace}}/build/${{ matrix.buildtype }}/SamplinSafari --help
+          ${{github.workspace}}/build/${{ matrix.buildtype }}/Samplin\ Safari --help
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3

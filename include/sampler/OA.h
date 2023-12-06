@@ -3,8 +3,9 @@
 */
 #pragma once
 
-#include <sampler/Sampler.h>
-#include <vector>
+#include <sampler/Sampler.h> // for TSamplerMinMaxDim
+#include <string>            // for basic_string, string
+#include <vector>            // for vector
 
 enum OffsetType : unsigned
 {
@@ -24,26 +25,35 @@ enum OffsetType : unsigned
 class OrthogonalArray : public TSamplerMinMaxDim<2, (unsigned)-1>
 {
 public:
-    OrthogonalArray(unsigned t = 2, unsigned ot = CENTERED,
-                    bool randomize = false, float jitter = 0.0f)
-        : m_t(t), m_ot(ot), m_randomize(randomize),
-          m_maxJit(jitter)
+    OrthogonalArray(unsigned t = 2, unsigned ot = CENTERED, bool randomize = false, float jitter = 0.0f) :
+        m_t(t), m_ot(ot), m_randomize(randomize), m_maxJit(jitter)
     {
     }
 
-    ~OrthogonalArray() override {}
+    ~OrthogonalArray() override
+    {
+    }
 
-    virtual unsigned strength() const { return m_t; }
+    virtual unsigned strength() const
+    {
+        return m_t;
+    }
     virtual unsigned setStrength(unsigned t)
     {
         return m_t = (t > 1) ? t : m_t;
     }
 
-    virtual unsigned offsetType() const { return m_ot; }
-    virtual unsigned setOffsetType(unsigned ot);
+    virtual unsigned offsetType() const
+    {
+        return m_ot;
+    }
+    virtual unsigned                 setOffsetType(unsigned ot);
     virtual std::vector<std::string> offsetTypeNames() const;
 
-    bool randomized() const override { return m_randomize; }
+    bool randomized() const override
+    {
+        return m_randomize;
+    }
     void setRandomized(bool r) override
     {
         if ((m_randomize = r))
@@ -52,7 +62,10 @@ public:
             m_seed = 0;
     }
 
-    float jitter() const override { return m_maxJit; }
+    float jitter() const override
+    {
+        return m_maxJit;
+    }
     float setJitter(float j = 1.0f) override
     {
         m_maxJit = j;
@@ -60,12 +73,15 @@ public:
         return m_maxJit;
     }
 
-    std::string name() const override { return "Abstract Orthogonal Array"; }
+    std::string name() const override
+    {
+        return "Abstract Orthogonal Array";
+    }
 
 protected:
-    unsigned m_t;       ///< strength
-    unsigned m_ot;      ///< offset type
-    bool m_randomize;
-    unsigned m_seed;    ///< randomization/permutation seed
-    float m_maxJit;     ///< amount to jitter within each substratum
+    unsigned m_t;  ///< strength
+    unsigned m_ot; ///< offset type
+    bool     m_randomize;
+    unsigned m_seed;   ///< randomization/permutation seed
+    float    m_maxJit; ///< amount to jitter within each substratum
 };

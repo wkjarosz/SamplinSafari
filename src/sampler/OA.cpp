@@ -14,5 +14,5 @@ unsigned OrthogonalArray::setOffsetType(unsigned ot)
 }
 vector<string> OrthogonalArray::offsetTypeNames() const
 {
-    return {{"CTR", "J", "MJ", "CMJ"}};
+    return {{"Centered", "Jittered", "Multi-jittered", "Correlated Multi-jittered"}};
 }

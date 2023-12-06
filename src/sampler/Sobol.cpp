@@ -2,13 +2,11 @@
     \author Wojciech Jarosz
 */
 
-#include <sampler/Sobol.h>
-#include <sampler/Misc.h>
 #include <iostream>
+#include <sampler/Misc.h>
+#include <sampler/Sobol.h>
 
-
-Sobol::Sobol(unsigned dimensions) :
-    m_numDimensions(dimensions)
+Sobol::Sobol(unsigned dimensions) : m_numDimensions(dimensions)
 {
     // empty
 }
@@ -39,16 +37,11 @@ void Sobol::setRandomized(bool b)
     }
 }
 
-
-
-
 ZeroTwo::ZeroTwo(unsigned n, unsigned dimensions, bool shuffle) :
     m_numSamples(n), m_numDimensions(dimensions), m_shuffle(shuffle)
 {
-    // empty
     reset();
 }
-
 
 void ZeroTwo::reset()
 {
@@ -57,19 +50,17 @@ void ZeroTwo::reset()
     for (unsigned d = 0; d < dimensions(); ++d)
     {
         m_scrambles[d] = m_randomize ? m_rand.nextUInt() : 0;
-        m_permutes[d] = m_shuffle ? m_rand.nextUInt() : 0;
+        m_permutes[d]  = m_shuffle ? m_rand.nextUInt() : 0;
     }
 }
-
 
 int ZeroTwo::setNumSamples(unsigned n)
 {
     return m_numSamples = (n == 0) ? 1 : n;
 }
 
-
 void ZeroTwo::sample(float r[], unsigned i)
 {
     for (unsigned d = 0; d < dimensions(); ++d)
-        r[d] = sobol(permute(i, m_numSamples, m_permutes[d/2]), d % 2, m_scrambles[d]);
+        r[d] = sobol(permute(i, m_numSamples, m_permutes[d / 2]), d % 2, m_scrambles[d]);
 }

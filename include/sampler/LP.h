@@ -3,8 +3,9 @@
 */
 #pragma once
 
-#include <sampler/Sampler.h>
-#include <pcg32.h>
+#include <pcg32.h>           // for pcg32
+#include <sampler/Sampler.h> // for TSamplerMinMaxDim
+#include <string>            // for basic_string, string
 
 /// The Larcher-Pillichshammer Gruenschloss-Keller (0,3) sequence
 /**
@@ -23,25 +24,37 @@
     in P. L'Ecuyer and A. Owen (eds.),
     Monte Carlo and Quasi-Monte Carlo Methods 2008, Springer-Verlag, 2009.
 */
-class LarcherPillichshammerGK : public TSamplerMinMaxDim<1,3>
+class LarcherPillichshammerGK : public TSamplerMinMaxDim<1, 3>
 {
 public:
-    LarcherPillichshammerGK(unsigned dimensions = 2,
-                            unsigned numSamples = 64,
-                            bool randomize = false);
+    LarcherPillichshammerGK(unsigned dimensions = 2, unsigned numSamples = 64, bool randomize = false);
     ~LarcherPillichshammerGK() override;
 
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override {return m_numDimensions;}
+    unsigned dimensions() const override
+    {
+        return m_numDimensions;
+    }
 
-    std::string name() const override {return "LP-GK";}
+    void setDimensions(unsigned d) override
+    {
+        m_numDimensions = d;
+    }
 
-    int numSamples() const override          {return m_numSamples;}
+    std::string name() const override
+    {
+        return "LP-GK";
+    }
+
+    int numSamples() const override
+    {
+        return m_numSamples;
+    }
     int setNumSamples(unsigned n) override
     {
         m_numSamples = (n == 0) ? 1 : n;
-        m_inv = 1.0f / m_numSamples;
+        m_inv        = 1.0f / m_numSamples;
         return m_numSamples;
     }
 
@@ -63,7 +76,7 @@ public:
 
 protected:
     unsigned m_numSamples, m_numDimensions;
-    float m_inv;
-    pcg32 m_rand;
+    float    m_inv;
+    pcg32    m_rand;
     unsigned m_scramble1, m_scramble2, m_scramble3;
 };

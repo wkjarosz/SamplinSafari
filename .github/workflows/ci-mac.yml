@@ -81,17 +81,17 @@ jobs:
       - name: Build
         run: cmake --build ${{github.workspace}}/build --parallel 4 --config ${{ matrix.buildtype }}
 
-      - name: Checking that SamplinSafari runs
+      - name: Checking that Samplin Safari runs
         if: runner.os != 'Windows'
         run: |
-          ${{github.workspace}}/build/${{ runner.os == 'macOS' && 'SamplinSafari.app/Contents/MacOS/SamplinSafari' || 'SamplinSafari' }} --help
+          ${{github.workspace}}/build/${{ runner.os == 'macOS' && 'Samplin\ Safari.app/Contents/MacOS/Samplin\ Safari' || 'Samplin\ Safari' }} --help
 
       - name: Creating dmg (macOS)
         if: runner.os == 'macOS'
         run: |
           RESULT="${{github.workspace}}/build/SamplinSafari${{ matrix.config.suffix }}.dmg"
           test -f $RESULT && rm $RESULT
-          create-dmg --window-size 500 300 --icon-size 96 --volname "SamplinSafari Installer" --app-drop-link 360 105 --icon SamplinSafari.app 130 105 $RESULT ${{github.workspace}}/build/SamplinSafari.app
+          create-dmg --window-size 500 300 --icon-size 96 --volname "Samplin Safari Installer" --app-drop-link 360 105 --icon Samplin\ Safari.app 130 105 $RESULT ${{github.workspace}}/build/Samplin\ Safari.app
 
       - name: Archive dmg (macOS)
         if: runner.os == 'macOS'
