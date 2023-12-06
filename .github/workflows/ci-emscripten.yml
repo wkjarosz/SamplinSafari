@@ -26,7 +26,9 @@ jobs:
 
     steps:
       - name: Install dependencies
-        run: brew install ninja emscripten pillow
+        run: |
+          brew install ninja emscripten
+          python3 -m pip install Pillow
 
       - uses: actions/checkout@v3
         with:
