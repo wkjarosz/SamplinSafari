@@ -15,7 +15,7 @@
 	<string>${HELLO_IMGUI_BUNDLE_EXECUTABLE}</string>
 
 	<key>CFBundleShortVersionString</key>
-	<string>${HELLO_IMGUI_BUNDLE_SHORT_VERSION}</string>
+	<string>${HELLO_IMGUI_BUNDLE_VERSION}</string>
 
 	<key>CFBundleVersion</key>
 	<string>${HELLO_IMGUI_BUNDLE_VERSION}</string>

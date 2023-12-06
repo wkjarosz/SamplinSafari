@@ -424,7 +424,7 @@ void SampleViewer::draw_about_dialog()
                 if (posX > ImGui::GetCursorPosX())
                     ImGui::SetCursorPosX(posX);
             }
-            HelloImGui::ImageFromAsset("icons/icon_128x128.png"); // Display a static image
+            HelloImGui::ImageFromAsset("app_settings/icon.png", {128, 128}); // show the app icon
 
             ImGui::TableNextColumn();
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * col_width[1]);
@@ -434,7 +434,7 @@ void SampleViewer::draw_about_dialog()
             ImGui::PopFont();
 
             ImGui::PushFont(m_bold[18]);
-            ImGui::Text(fmt::format("version {}", version()));
+            ImGui::Text(version());
             ImGui::PopFont();
             ImGui::PushFont(m_regular[10]);
             ImGui::Text(fmt::format("Built using the {} backend on {}.", backend(), build_timestamp()));
@@ -505,7 +505,6 @@ void SampleViewer::draw_about_dialog()
 
             add_library("Dear ImGui", "Omar Cornut's immediate-mode graphical user interface for C++");
             add_library("Hello ImGui", "Pascal Thomet's cross-platform starter-kit for Dear ImGui");
-            add_library("GLFW", "Multi-platform OpenGL/windowing library on the desktop");
             add_library("NanoGUI", "Bits of code from Wenzel Jakob's BSD-licensed NanoGUI library (the shader "
                                    "abstraction and arcball)");
             add_library("{fmt}", "A modern formatting library");

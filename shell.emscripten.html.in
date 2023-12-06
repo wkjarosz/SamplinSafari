@@ -1,35 +1,25 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en-us">
-
 <head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no"
-        name="viewport" />
+    <link rel="icon" type="image/x-icon" href="@HELLO_IMGUI_FAVICON@">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
     <title>@HELLO_IMGUI_ICON_DISPLAY_NAME@</title>
     <style>
-        body {
-            margin: 0;
-            background-color: #000;
-        }
-
+        body { margin: 0; background-color: black }
         .emscripten {
             position: absolute;
-            top: 0;
-            left: 0;
-            margin: 0;
+            top: 0px;
+            left: 0px;
+            margin: 0px;
             border: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
             display: block;
             image-rendering: optimizeSpeed;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: -o-crisp-edges;
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: optimize-contrast;
-            image-rendering: crisp-edges;
-            image-rendering: pixelated;
-            -ms-interpolation-mode: nearest-neighbor;
+                        image-rendering: crisp-edges;
+                        -ms-interpolation-mode: nearest-neighbor;
         }
     </style>
 
@@ -221,31 +211,38 @@
         }
     </script>
 </head>
-
 <body>
     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-    <script>
+    <script type='text/javascript'>
         var Module = {
             preRun: [],
             postRun: [],
-            print: function (o) {
-                (o = Array.prototype.slice.call(arguments).join(" ")), console.log(o);
+            print: (function() {
+                return function(text) {
+                text = Array.prototype.slice.call(arguments).join(' ');
+                console.log(text);
+            };
+        })(),
+            printErr: function(text) {
+                text = Array.prototype.slice.call(arguments).join(' ');
+                    console.error(text);
             },
-            printErr: function (o) {
-                (o = Array.prototype.slice.call(arguments).join(" ")),
-                    console.error(o);
+            canvas: (function() {
+            var canvas = document.getElementById('canvas');
+            //canvas.addEventListener("webglcontextlost", function(e) { alert('FIXME: WebGL context lost, please reload the page'); e.preventDefault(); }, false);
+            return canvas;
+        })(),
+        setStatus: function(text) {
+                console.log("status: " + text);
             },
-            canvas: document.getElementById("canvas"),
-            setStatus: function (o) {
-                console.log("status: " + o);
-            },
-            monitorRunDependencies: function (o) { },
+            monitorRunDependencies: function(left) {
+            // no run dependencies to log
+        }
         };
-        window.onerror = function () {
+        window.onerror = function() {
             console.log("onerror: " + event);
         };
     </script>
     {{{ SCRIPT }}}
 </body>
-
 </html>

@@ -7,23 +7,19 @@ include(VersionFromGit)
 string(TIMESTAMP BUILD_TIME "%Y-%m-%d %H:%M")
 message(STATUS "Saving build timestamp: ${BUILD_TIME}")
 
-version_from_git(
-  LOG ON
-  TIMESTAMP "%Y-%m-%d-%H:%M:%S"
-  ARG_UTC)
+version_from_git(LOG ON TIMESTAMP "%Y-%m-%d-%H:%M:%S")
 
 project(
   SamplinSafari
-  DESCRIPTION
-    "A research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers."
+  DESCRIPTION "A research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers."
   VERSION ${VERSION}
   LANGUAGES C CXX
-  )
+)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-set(VERSION_LONG "${SEMVER} (64 bit)")
+  set(VERSION_LONG "${GIT_DESCRIBE} (64 bit)")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-set(VERSION_LONG "${SEMVER} (32 bit)")
+  set(VERSION_LONG "${GIT_DESCRIBE} (32 bit)")
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/common.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp @ONLY)
@@ -41,7 +37,10 @@ include(CheckCXXCompilerFlag)
 # ============================================================================
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to 'Release' as none was specified.")
-  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+  set(CMAKE_BUILD_TYPE
+      Release
+      CACHE STRING "Choose the type of build." FORCE
+  )
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 string(TOUPPER "${CMAKE_BUILD_TYPE}" U_CMAKE_BUILD_TYPE)
@@ -111,12 +110,12 @@ if(MSVC)
       CMAKE_C_FLAGS_DEBUG
       CMAKE_C_FLAGS_RELEASE
       CMAKE_C_FLAGS_MINSIZEREL
-      CMAKE_C_FLAGS_RELWITHDEBINFO)
+      CMAKE_C_FLAGS_RELWITHDEBINFO
+  )
   foreach(CompilerFlag ${CompilerFlags})
     string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
   endforeach()
 endif()
-
 
 # ============================================================================
 # Add dependencies via CPM (cmake/tools.cmake includes cmake/CPM.cmake)
@@ -125,40 +124,32 @@ endif()
 # ============================================================================
 include(cmake/CPM.cmake)
 
-cpmaddpackage("gh:wjakob/pcg32#70099eadb86d3999c38cf69d2c55f8adc1f7fe34")
+CPMAddPackage("gh:wjakob/pcg32#70099eadb86d3999c38cf69d2c55f8adc1f7fe34")
 if(pcg32_ADDED)
   add_library(pcg32 INTERFACE IMPORTED)
   target_include_directories(pcg32 INTERFACE "${pcg32_SOURCE_DIR}")
 endif()
 
-cpmaddpackage("gh:wkjarosz/galois#1a81ee0c514fa38e230d8295b25511f0b85dc5d3")
+CPMAddPackage("gh:wkjarosz/galois#1a81ee0c514fa38e230d8295b25511f0b85dc5d3")
 if(galois_ADDED)
   target_include_directories(galois++ INTERFACE "${galois_SOURCE_DIR}/include")
 endif()
 
-cpmaddpackage("gh:sgorsten/linalg@2.2")
+CPMAddPackage("gh:sgorsten/linalg@2.2")
 if(linalg_ADDED)
   add_library(linalg INTERFACE IMPORTED)
   target_include_directories(linalg INTERFACE "${linalg_SOURCE_DIR}")
 endif()
 
-cpmaddpackage("gh:fmtlib/fmt#7.1.3")
+CPMAddPackage("gh:fmtlib/fmt#7.1.3")
 
-cpmaddpackage("gh:samhocevar/portable-file-dialogs#7f852d88a480020d7f91957cbcefe514fc95000c")
+CPMAddPackage("gh:samhocevar/portable-file-dialogs#7f852d88a480020d7f91957cbcefe514fc95000c")
 if(portable_file_dialogs_ADDED)
   add_library(portable_file_dialogs INTERFACE IMPORTED)
   target_include_directories(portable_file_dialogs INTERFACE "${portable_file_dialogs_SOURCE_DIR}")
 endif()
 
-cpmaddpackage(
-  NAME hello_imgui
-  GITHUB_REPOSITORY pthom/hello_imgui
-  GIT_TAG "c57e60ad898abd79524d073f3801b80d87ce5468"
-  OPTIONS
-    "HELLOIMGUI_WITH_GLFW ON"
-    "HELLOIMGUI_WITH_TEST_ENGINE OFF"
-  )
-
+CPMAddPackage("gh:pthom/hello_imgui#cf10f7f82cc226be81976424f36b2ff8243ad812")
 
 # ============================================================================
 # Compile remainder of the codebase with compiler warnings turned on
@@ -178,11 +169,12 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "G
   endif()
 endif()
 
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Compile samplers library
-add_library(samplerlib OBJECT STATIC
+add_library(
+  samplerlib OBJECT
+  STATIC
   include/sampler/fwd.h
   include/sampler/Misc.h
   include/sampler/Sampler.h
@@ -218,15 +210,13 @@ add_library(samplerlib OBJECT STATIC
   src/sampler/SOA.cpp
   src/sampler/Random.cpp
   src/sampler/Sobol.cpp
-  src/sampler/SobolMatrices.cpp)
-  
-# Link dependencies
-target_link_libraries(
-  samplerlib
-  PUBLIC galois++ pcg32)
+  src/sampler/SobolMatrices.cpp
+)
 
-set_target_properties(samplerlib PROPERTIES
-  CXX_STANDARD 17)
+# Link dependencies
+target_link_libraries(samplerlib PUBLIC galois++ pcg32)
+
+set_target_properties(samplerlib PROPERTIES CXX_STANDARD 17)
 
 # Now build the Samplin' Safari viewer app
 string(TIMESTAMP YEAR "%Y")
@@ -241,31 +231,26 @@ set(HELLO_IMGUI_BUNDLE_EXECUTABLE ${output_name})
 set(HELLO_IMGUI_BUNDLE_VERSION ${VERSION})
 set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${VERSION})
 set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
+set(HELLO_IMGUI_FAVICON "SamplinSafari_favicon.ico")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html.in ${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html.in ${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html @ONLY
+)
 
-hello_imgui_add_app(SamplinSafari
-  src/app.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp
-  src/shader.cpp
-  src/export_to_file.cpp
+hello_imgui_add_app(
+  SamplinSafari src/app.cpp ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp src/shader.cpp src/export_to_file.cpp
+)
+
+set_target_properties(SamplinSafari PROPERTIES OUTPUT_NAME ${output_name} CXX_STANDARD 17)
+
+target_link_libraries(SamplinSafari PRIVATE samplerlib linalg fmt::fmt portable_file_dialogs)
+
+if(UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
+  add_custom_command(
+    TARGET SamplinSafari
+    POST_BUILD
+    COMMAND strip $<TARGET_FILE:SamplinSafari>
   )
-
-set_target_properties(SamplinSafari PROPERTIES
-  OUTPUT_NAME ${output_name}
-  CXX_STANDARD 17
-  )
-
-target_link_libraries(
-  SamplinSafari
-  PRIVATE samplerlib
-          linalg
-          fmt::fmt
-          portable_file_dialogs
-  )
-
-if (UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
-  add_custom_command(TARGET SamplinSafari POST_BUILD COMMAND strip $<TARGET_FILE:SamplinSafari>)
 endif()
 
 # Force colored output for the ninja generator
