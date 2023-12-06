@@ -1,4 +1,4 @@
-name: Publish web app version to gh-pages
+name: Emscripten build
 
 on:
   pull_request:
@@ -62,7 +62,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           mkdir deploy
-          cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm deploy/
+          cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm SamplinSafari_favicon.ico deploy/
           mv deploy/Samplin\ Safari.html deploy/index.html
 
       - name: Publish
