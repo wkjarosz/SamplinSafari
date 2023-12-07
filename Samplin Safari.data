@@ -269,7 +269,7 @@ function saveFileFromMemoryFSToDisk(name) {
         blob = new Blob([data.buffer], { type: "application/octet-binary" });
     }
     saveAs(blob, name);
-}<!doctype html>
+}<!DOCTYPE html>
 <html lang="en-us">
 
 <head>
