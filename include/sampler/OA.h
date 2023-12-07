@@ -17,10 +17,30 @@ enum OffsetType : unsigned
 };
 
 /**
-   Base class for all Orthogonal Array-based samplers.
+    Base class for all Orthogonal Array-based samplers.
 
-   Provides member variables and functions for strength, randomization,
-   sub-strata jitter, and style of substrata offsets.
+    Provides member variables and functions for strength, randomization, sub-strata jitter, and style of substrata
+    offsets.
+
+    In the literature, an orthogonal array OA(N, k, n, t) denotes a (k × N) matrix whose entries are the numbers 1...n
+    with the property that in any subset of t rows of the matrix, each of the n^t possible t-tuples of these numbers
+    appears precisely λ times.
+
+    These parameters are typically given the following names (with interpretation for Monte Carlo sampling in
+    parenthases):
+
+        N is the number of experimental runs (number of points),
+        k is the number of factors (dimensions),
+        n is the number of levels (number of strata per dimension),
+        t is the strength (number of simultaneous dimensions that are stratified), and
+        λ is the index (number of points per stratum).
+
+    The definition of strength leads to the parameter relation
+        N = λnt.
+
+    In many constructions, n is a prime or a power of a prime.
+
+    Sometimes an OA is defined transposed to the above.
  */
 class OrthogonalArray : public TSamplerMinMaxDim<2, (unsigned)-1>
 {
