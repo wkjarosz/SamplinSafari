@@ -273,7 +273,17 @@ function saveFileFromMemoryFSToDisk(name) {
 <html lang="en-us">
 
 <head>
-    <link rel="icon" type="image/x-icon" href="@HELLO_IMGUI_FAVICON@">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/app_settings/icon.png?v=2">
+    <link rel="icon" type="image/x-icon" href="@HELLO_IMGUI_FAVICON@?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/app_settings/icon.png?v=2">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/app_settings/icon.png?v=2">
+    <!-- <link rel="manifest" href="assets/app_settings/site.webmanifest?v=2"> -->
+    <!-- <link rel="mask-icon" href="assets/app_settings/safari-pinned-tab.svg?v=2" color="#5bbad5"> -->
+    <link rel="shortcut icon" href="@HELLO_IMGUI_FAVICON@?v=2">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <!-- <meta name="msapplication-config" content="assets/app_settings/browserconfig.xml?v=2"> -->
+    <meta name="theme-color" content="#000000">
+
     <meta charset="utf-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />
