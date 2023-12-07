@@ -150,7 +150,7 @@ if(portable_file_dialogs_ADDED)
 endif()
 
 set(HELLOIMGUI_WITH_GLFW ON)
-CPMAddPackage("gh:pthom/hello_imgui#c118a47790a4bbaa939621e07cd74906434f3df8")
+CPMAddPackage("gh:pthom/hello_imgui#b1a74a7d76a84c08c1fa3a97b8dc3e2c5b5b97b3")
 
 # ============================================================================
 # Compile remainder of the codebase with compiler warnings turned on
