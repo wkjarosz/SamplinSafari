@@ -272,18 +272,13 @@ function saveFileFromMemoryFSToDisk(name) {
 }<html lang="en-us">
 
 <head>
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon.png?v=3">
-    <link rel="icon" type="image/x-icon" href="@HELLO_IMGUI_FAVICON@?v=3">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=3">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon.png?v=3">
-    <!-- <link rel="manifest" href="assets/app_settings/site.webmanifest?v=3"> -->
-    <!-- <link rel="mask-icon" href="assets/app_settings/safari-pinned-tab.svg?v=3" color="#5bbad5"> -->
-    <link rel="shortcut icon" href="@HELLO_IMGUI_FAVICON@?v=3">
-    <meta name="msapplication-TileColor" content="#da532c">
-    <!-- <meta name="msapplication-config" content="assets/app_settings/browserconfig.xml?v=3"> -->
-    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/png" sizes="1024x1024" href="@HELLO_IMGUI_FAVICON@?v=4">
+    <link rel="shortcut icon" href="@HELLO_IMGUI_FAVICON@?v=4">
+    <link rel="apple-touch-icon" sizes="1024x1024" href="@HELLO_IMGUI_FAVICON@?v=4">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#000000">
 
     <meta charset="utf-8">
     <meta name="viewport"
