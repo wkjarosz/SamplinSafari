@@ -95,8 +95,7 @@ string AddelmanKempthorneOAInPlace::name() const
 
 int AddelmanKempthorneOAInPlace::setNumSamples(unsigned n)
 {
-    int base     = (int)round(sqrt(n * 0.5f));
-    base         = (base < 2) ? 2 : base;
+    int base     = max(3, (int)round(sqrt(n * 0.5f)));
     m_s          = primeGE(base);
     m_numSamples = 2 * m_s * m_s;
     m_gf.resize(m_s);

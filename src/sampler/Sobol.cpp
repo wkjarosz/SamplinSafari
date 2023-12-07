@@ -13,7 +13,7 @@ Sobol::Sobol(unsigned dimensions) : m_numDimensions(dimensions)
 
 void Sobol::sample(float r[], unsigned i)
 {
-    if (m_scrambles.size())
+    if (m_scrambles.size() == dimensions())
     {
         for (unsigned d = 0; d < dimensions(); ++d)
             r[d] = sobol(i, d, m_scrambles[d]);

@@ -582,17 +582,21 @@ void SampleViewer::draw_editor()
         }
         tooltip("Set the sampler used to generate the points (Key: Up/Down)");
 
-        if (ImGui::SliderInt("Num points", &m_target_point_count, 1, 1 << 17, "%d",
-                             ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp))
         {
-            HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
-            update_GPU_points();
-            update_GPU_grids();
-            HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
+            int num_points = m_point_count;
+            if (ImGui::SliderInt("Num points", &num_points, 1, 1 << 17, "%d",
+                                 ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp))
+            {
+                m_target_point_count = num_points;
+                HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
+                update_GPU_points();
+                update_GPU_grids();
+                HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
+            }
+            // now that the user has finished editing, sync the GUI value
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                m_target_point_count = m_point_count;
         }
-        // now that the user has finished editing, sync the GUI value
-        if (ImGui::IsItemDeactivatedAfterEdit())
-            m_target_point_count = m_point_count;
 
         tooltip(
             "Set the target number of points to generate. For samplers that only support certain numbers of points "
@@ -740,14 +744,22 @@ void SampleViewer::draw_editor()
 
         if (m_subset_by_index)
         {
-            m_subset_by_coord = false;
+            ImGui::Indent();
+            m_subset_by_coord    = false;
+            static bool disjoint = true;
+            ImGui::Checkbox("Disjoint batches", &disjoint);
             ImGui::SliderInt("First point", &m_first_draw_point, 0, m_point_count - 1, "%d",
                              ImGuiSliderFlags_AlwaysClamp);
+            if (disjoint)
+                // round to nearest multiple of m_point_draw_count
+                m_first_draw_point = (m_first_draw_point / m_point_draw_count) * m_point_draw_count;
+
             tooltip("Display points starting at this index.");
 
             ImGui::SliderInt("Num points##2", &m_point_draw_count, 1, m_point_count - m_first_draw_point, "%d",
                              ImGuiSliderFlags_AlwaysClamp);
             tooltip("Display this many points from the first index.");
+            ImGui::Unindent();
         }
 
         if (ImGui::Checkbox("Filter by coordinates", &m_subset_by_coord))
@@ -755,6 +767,7 @@ void SampleViewer::draw_editor()
         tooltip("Show only points that fall within an interval along one of its dimensions.");
         if (m_subset_by_coord)
         {
+            ImGui::Indent();
             m_subset_by_index = false;
             if (ImGui::SliderInt("Axis", &m_subset_axis, 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
                 update_GPU_points(false);
@@ -769,6 +782,7 @@ void SampleViewer::draw_editor()
                                  ImGuiSliderFlags_AlwaysClamp))
                 update_GPU_points(false);
             tooltip("Show only points within this bin along the filtered axis.");
+            ImGui::Unindent();
         }
 
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
@@ -815,8 +829,12 @@ void SampleViewer::process_hotkeys()
         m_target_point_count =
             std::max(1u, ImGui::IsKeyPressed(ImGuiKey_RightArrow) ? roundUpPow2(m_target_point_count + 1)
                                                                   : roundDownPow2(m_target_point_count - 1));
+
+        HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
         update_GPU_points();
         update_GPU_grids();
+        HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
+        // m_target_point_count = m_point_count;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_D))
     {

@@ -54,7 +54,8 @@ void SudokuInPlace::sample(float r[], unsigned i)
         float jx = 0.5f + m_maxJit * (m_rand.nextFloat() - 0.5f);
         float jy = 0.5f + m_maxJit * (m_rand.nextFloat() - 0.5f);
 
-        r[d]     = (x + (sx + (ssx + jx) / m_numDigits) / m_resY) / m_resX;
-        r[d + 1] = (y + (sy + (ssy + jy) / m_numDigits) / m_resX) / m_resY;
+        r[d] = (x + (sx + (ssx + jx) / m_numDigits) / m_resY) / m_resX;
+        if (d + 1 < dimensions())
+            r[d + 1] = (y + (sy + (ssy + jy) / m_numDigits) / m_resX) / m_resY;
     }
 }

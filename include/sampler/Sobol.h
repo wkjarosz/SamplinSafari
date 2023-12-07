@@ -25,6 +25,7 @@ public:
     void setDimensions(unsigned n) override
     {
         m_numDimensions = n;
+        setRandomized(randomized());
     }
 
     bool randomized() const override
