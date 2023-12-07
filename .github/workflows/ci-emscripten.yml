@@ -64,7 +64,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           mkdir deploy
-          cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm SamplinSafari_favicon.ico FileSaver.js deploy/
+          cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm SamplinSafari_favicon.png FileSaver.js deploy/
           mv deploy/Samplin\ Safari.html deploy/index.html
 
       - name: Publish
