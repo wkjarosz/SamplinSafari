@@ -64,8 +64,9 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           mkdir deploy
-          cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm SamplinSafari_favicon.ico deploy/
+          cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm SamplinSafari_favicon.ico ${{github.workspace}}/assets/app_settings/icon.png deploy/
           mv deploy/Samplin\ Safari.html deploy/index.html
+          mv deploy/icon.png deploy/favicon.png
 
       - name: Publish
         uses: peaceiris/actions-gh-pages@v3
