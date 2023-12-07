@@ -149,7 +149,8 @@ if(portable_file_dialogs_ADDED)
   target_include_directories(portable_file_dialogs INTERFACE "${portable_file_dialogs_SOURCE_DIR}")
 endif()
 
-CPMAddPackage("gh:pthom/hello_imgui#cf10f7f82cc226be81976424f36b2ff8243ad812")
+set(HELLOIMGUI_WITH_GLFW ON)
+CPMAddPackage("gh:pthom/hello_imgui#c118a47790a4bbaa939621e07cd74906434f3df8")
 
 # ============================================================================
 # Compile remainder of the codebase with compiler warnings turned on
@@ -231,11 +232,6 @@ set(HELLO_IMGUI_BUNDLE_EXECUTABLE ${output_name})
 set(HELLO_IMGUI_BUNDLE_VERSION ${VERSION})
 set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${VERSION})
 set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
-set(HELLO_IMGUI_FAVICON "SamplinSafari_favicon.ico")
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html.in ${CMAKE_CURRENT_SOURCE_DIR}/shell.emscripten.html @ONLY
-)
 
 hello_imgui_add_app(
   SamplinSafari src/app.cpp ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp src/shader.cpp src/export_to_file.cpp
