@@ -253,11 +253,13 @@ protected:
 #endif
 };
 
+bool check_glerror(const char *cmd);
+
 #define CHK(cmd)                                                                                                       \
     do                                                                                                                 \
     {                                                                                                                  \
         cmd;                                                                                                           \
-        (void)check_glerror(#cmd);                                                                                     \
-    } while (0)
-
-bool check_glerror(const char *cmd);
+        while (check_glerror(#cmd))                                                                                    \
+        {                                                                                                              \
+        }                                                                                                              \
+    } while (false)

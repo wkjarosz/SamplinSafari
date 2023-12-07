@@ -12,13 +12,6 @@
 
 using std::string;
 
-#define CHK(cmd)                                                                                                       \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        cmd;                                                                                                           \
-        (void)check_glerror(#cmd);                                                                                     \
-    } while (0)
-
 bool check_glerror(const char *cmd)
 {
     GLenum      err = glGetError();
