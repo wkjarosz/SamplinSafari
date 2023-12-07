@@ -35,7 +35,8 @@ void MultiJittered::reset()
         m_resX = 1;
     if (m_resY == 0)
         m_resY = 1;
-    m_scale = 1.0f / m_numSamples;
+    m_scale      = 1.0f / m_numSamples;
+    m_numSamples = m_resX * m_resY;
 
     clear();
 
@@ -89,34 +90,19 @@ MultiJitteredInPlace::MultiJitteredInPlace(unsigned x, unsigned y, bool randomiz
     reset();
 }
 
-MultiJitteredInPlace::~MultiJitteredInPlace()
-{
-    clear();
-}
-
 std::string MultiJitteredInPlace::name() const
 {
     return "MultiJittered In-Place";
-}
-
-void MultiJitteredInPlace::setRandomized(bool r)
-{
-    m_randomize = r;
-
-    m_permutation = r ? m_rand.nextUInt() : 0;
-
-    reset();
-}
-
-void MultiJitteredInPlace::clear()
-{
 }
 
 void MultiJitteredInPlace::reset()
 {
     if (m_resX == 0)
         m_resX = 1;
-    m_scale = 1.0f / m_numSamples;
+    if (m_resY == 0)
+        m_resY = 1;
+
+    m_numSamples = m_resX * m_resY;
 }
 
 void MultiJitteredInPlace::sample(float r[], unsigned i)
@@ -126,15 +112,23 @@ void MultiJitteredInPlace::sample(float r[], unsigned i)
     if (i == 0)
         m_rand.seed(m_seed);
 
-    int   s  = permute(i, m_numSamples, m_permutation * 0x51633e2d);
-    int   x  = s % m_resX;
-    int   y  = s / m_resX;
-    int   sx = permute(x, m_resX, (y + m_permutation) * 0x68bc21eb);
-    int   sy = permute(y, m_resY, (x + m_permutation) * 0x02e5be93);
+    // i is the (possibly permuted) sample index
+    i = permute(i, m_numSamples, m_permutation * 0x51633e2d);
+
+    // x and y indices of the big stratum in the multi-jittered grid
+    int x = i % m_resX;
+    int y = i / m_resX;
+
+    // x and y offset within the big stratum based on the sample index
+    int sx = permute(y, m_resY, m_permutation * (x + 0x02e5be93));
+    int sy = permute(x, m_resX, m_permutation * (y + 0x68bc21eb));
+
+    // jitter in the x and y directions
     float jx = 0.5f + m_maxJit * (m_rand.nextFloat() - 0.5f);
     float jy = 0.5f + m_maxJit * (m_rand.nextFloat() - 0.5f);
-    r[0]     = (x + (sy + jx) / m_resY) / m_resX;
-    r[1]     = (y + (sx + jy) / m_resX) / m_resY;
+
+    r[0] = (x + (sx + jx) / m_resY) / m_resX;
+    r[1] = (y + (sy + jy) / m_resX) / m_resY;
 }
 
 CorrelatedMultiJittered::CorrelatedMultiJittered(unsigned x, unsigned y, bool randomize, float jitter) :
@@ -154,7 +148,8 @@ void CorrelatedMultiJittered::reset()
         m_resX = 1;
     if (m_resY == 0)
         m_resY = 1;
-    m_scale = 1.0f / m_numSamples;
+    m_scale      = 1.0f / m_numSamples;
+    m_numSamples = m_resX * m_resY;
 
     clear();
 
@@ -193,15 +188,13 @@ void CorrelatedMultiJittered::reset()
     }
 }
 
-CorrelatedMultiJitteredInPlace::CorrelatedMultiJitteredInPlace(unsigned x, unsigned y, unsigned dims, bool r, float j) :
-    m_resX(x), m_resY(y), m_numSamples(m_resX * m_resY), m_numDimensions(dims), m_maxJit(j), m_randomize(r)
+CorrelatedMultiJitteredInPlace::CorrelatedMultiJitteredInPlace(unsigned x, unsigned y, unsigned dims, bool r, float j,
+                                                               bool correlated) :
+    m_resX(x),
+    m_resY(y), m_numSamples(m_resX * m_resY), m_numDimensions(dims), m_maxJit(j), m_randomize(r),
+    m_decorrelate(correlated ? 0 : 1)
 {
     setRandomized(r);
-}
-
-CorrelatedMultiJitteredInPlace::~CorrelatedMultiJitteredInPlace()
-{
-    // empty
 }
 
 void CorrelatedMultiJitteredInPlace::sample(float r[], unsigned i)
@@ -214,13 +207,22 @@ void CorrelatedMultiJitteredInPlace::sample(float r[], unsigned i)
 
     for (unsigned d = 0; d < dimensions(); d += 2)
     {
-        int   s  = permute(i, m_numSamples, m_permutation * 0x51633e2d * (d + 1));
-        int   sx = permute(s % m_resX, m_resX, m_permutation * 0x68bc21eb * (d + 1));
-        int   sy = permute(s / m_resX, m_resY, m_permutation * 0x02e5be93 * (d + 1));
+        int s = permute(i, m_numSamples, m_permutation * 0x51633e2d * (d + 1));
+
+        // horizontal and vertical indices of the big stratum in the multi-jittered grid
+        int x = s % m_resX;
+        int y = s / m_resX;
+
+        // offsets in the d and d+1 dimensions within the big stratum
+        int sx = permute(y, m_resY, m_permutation * (m_decorrelate * x + 0x02e5be93) * (d + 1));
+        int sy = permute(x, m_resX, m_permutation * (m_decorrelate * y + 0x68bc21eb) * (d + 1));
+
+        // jitter in the d and d+1 dimensions
         float jx = 0.5f + m_maxJit * (m_rand.nextFloat() - 0.5f);
         float jy = 0.5f + m_maxJit * (m_rand.nextFloat() - 0.5f);
-        r[d]     = (sx + (sy + jx) / m_resY) / m_resX;
+
+        r[d] = (x + (sx + jx) / m_resY) / m_resX;
         if (d + 1 < dimensions())
-            r[d + 1] = (s + jy) / m_numSamples;
+            r[d + 1] = (y + (sy + jy) / m_resX) / m_resY;
     }
 }

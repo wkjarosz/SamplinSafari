@@ -32,6 +32,7 @@ using std::to_string;
 #include <sampler/OACMJND.h>
 #include <sampler/Random.h>
 #include <sampler/Sobol.h>
+#include <sampler/Sudoku.h>
 
 #include "export_to_file.h"
 #include "timer.h"
@@ -63,9 +64,11 @@ SampleViewer::SampleViewer()
 {
     m_samplers.push_back(new Random(m_num_dimensions));
     m_samplers.push_back(new Jittered(1, 1, m_jitter * 0.01f));
-    m_samplers.push_back(new MultiJitteredInPlace(1, 1, false, m_jitter * 0.01f));
-    m_samplers.push_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f));
+    m_samplers.push_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, false));
+    m_samplers.push_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, true));
     m_samplers.push_back(new CMJNDInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f));
+    m_samplers.push_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, false));
+    m_samplers.push_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, true));
     m_samplers.push_back(new BoseOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
     m_samplers.push_back(new BoseGaloisOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
     m_samplers.push_back(new BushOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));

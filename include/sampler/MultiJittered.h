@@ -77,15 +77,13 @@ protected:
 
 /// An in-place version of multi-jittered point set with both jittered and n-rooks stratification.
 /**
-    Produces standard multi-jittered points, but uses 2*sqrt(numSamples) permutation arrays
-    (one for each major row and major column), instead of storing all numSamples points.
+    Produces standard multi-jittered points, but uses in-place random permutations
+    instead of storing and permuting all numSamples points ahead of time.
 */
 class MultiJitteredInPlace : public TSamplerDim<2>
 {
 public:
     MultiJitteredInPlace(unsigned, unsigned, bool randomize = false, float jitter = 0.0f);
-    ~MultiJitteredInPlace() override;
-    void clear();
 
     void reset() override;
     void sample(float[], unsigned i) override;
@@ -94,7 +92,12 @@ public:
     {
         return m_randomize;
     }
-    void setRandomized(bool r) override;
+    void setRandomized(bool r) override
+    {
+        m_randomize = r;
+        m_rand.seed(m_permutation);
+        m_permutation = r ? m_rand.nextUInt() : 0;
+    }
 
     float jitter() const override
     {
@@ -133,9 +136,6 @@ protected:
     unsigned m_resX, m_resY, m_numSamples;
     bool     m_randomize;
     float    m_maxJit;
-
-    float m_scale;
-
     pcg32    m_rand;
     unsigned m_seed = 13;
     unsigned m_permutation;
@@ -163,19 +163,20 @@ public:
     }
 };
 
-/// An in-place version of correlated multi-jittered point sets.
+/// An in-place version of (correlated) multi-jittered point sets.
 /**
     Based on method described in the tech report:
 
     > Andrew Kensler. "Correlated Multi-Jittered Sampling",
     > Pixar Technical Memo 13-01.
+
+    Setting correlated to false will produce standard multi-jittered points (subsuming the MultiJitteredInPlace class).
 */
 class CorrelatedMultiJitteredInPlace : public TSamplerMinMaxDim<1, 1024>
 {
 public:
     CorrelatedMultiJitteredInPlace(unsigned x, unsigned y, unsigned dimensions = 2, bool randomize = true,
-                                   float jitter = 0.0f);
-    ~CorrelatedMultiJitteredInPlace() override;
+                                   float jitter = 0.0f, bool correlated = true);
 
     void sample(float[], unsigned i) override;
 
@@ -213,7 +214,8 @@ public:
     }
     void setRandomized(bool r) override
     {
-        m_randomize   = r;
+        m_randomize = r;
+        m_rand.seed(m_permutation);
         m_permutation = r ? m_rand.nextUInt() : 0;
     }
 
@@ -230,7 +232,7 @@ public:
 
     std::string name() const override
     {
-        return "Correlated Multi-Jittered In-Place";
+        return m_decorrelate ? "Multi-Jittered In-Place" : "Correlated Multi-Jittered In-Place";
     }
 
 protected:
@@ -240,4 +242,5 @@ protected:
     pcg32    m_rand;
     unsigned m_seed = 13;
     unsigned m_permutation;
+    unsigned m_decorrelate;
 };

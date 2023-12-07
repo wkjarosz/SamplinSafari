@@ -286,6 +286,81 @@ void BoseOAInPlace::sample(float r[], unsigned i)
         r[j] = 0.5f;
 }
 
+BoseSudokuInPlace::BoseSudokuInPlace(unsigned x, OffsetType ot, bool randomize, float jitter, unsigned dimensions) :
+    BoseOAInPlace(x, ot, randomize, jitter, dimensions)
+{
+    setNumSamples(x, x);
+}
+
+string BoseSudokuInPlace::name() const
+{
+    return "Bose Sudoku In-Place";
+}
+
+int BoseSudokuInPlace::setNumSamples(unsigned n)
+{
+    if (n == m_numSamples)
+        return m_numSamples;
+    int v = std::max(1, (int)round(std::pow((float)n, 0.25f)));
+    setNumSamples(v, v);
+    return m_numSamples;
+}
+
+void BoseSudokuInPlace::setNumSamples(unsigned x, unsigned)
+{
+    m_s          = primeGE(x);
+    m_numDigits  = m_s * m_s;
+    m_numSamples = m_numDigits * m_numDigits;
+    reset();
+}
+
+void BoseSudokuInPlace::sample(float r[], unsigned i)
+{
+    if (i >= m_numSamples)
+        i = 0;
+
+    if (i == 0)
+        m_rand.seed(m_seed);
+
+    // which digit of the sudoku puzzle we are considering
+    unsigned digit = permute(i / m_numDigits, m_numDigits, m_seed * 0x1fc195a7);
+
+    // 2D indices of the digit we are considering
+    int px = digit % m_s;
+    int py = digit / m_s;
+
+    unsigned maxDim = min(dimensions(), m_s + 1);
+
+    // make i specify the sample index within the digit
+    i = permute(i % m_numDigits, m_numDigits, m_seed);
+
+    int   stratumX = i / m_s;
+    int   stratumY = i % m_s;
+    int   Ai0      = stratumX; // permute(stratumX, m_s, m_seed * 1);
+    int   Ai1      = stratumY; // permute(stratumY, m_s, m_seed * 2);
+    float sstratX  = boseLHOffset(Ai0, (Ai1 + py) % m_s, m_s, m_seed * 1 * 0x68bc21eb, m_ot);
+    float sstratY  = boseLHOffset(Ai1, (Ai0 + px) % m_s, m_s, m_seed * 2 * 0x68bc21eb, m_ot);
+    float jitterX  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+    float jitterY  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+    r[0]           = (stratumX + (sstratX + jitterX) / m_s) / m_s;
+    r[1]           = (stratumY + (sstratY + jitterY) / m_s) / m_s;
+
+    for (unsigned j = 2; j < maxDim; ++j)
+    {
+        int   Aij      = (Ai0 + (j - 1) * Ai1) % m_s;
+        int   k        = (j % 2) ? j - 1 : j + 1;
+        int   pk       = (py + (k - 1) * px) % m_s;
+        int   Aik      = (Ai0 + (k - 1) * Ai1) % m_s;
+        int   stratumJ = permute(Aij, m_s, m_seed * (j + 1));
+        float sstratJ  = boseLHOffset(Aij, (Aik + pk) % m_s, m_s, m_seed * (j + 1) * 0x68bc21eb, m_ot);
+        float jitterJ  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+        r[j]           = (stratumJ + (sstratJ + jitterJ) / m_s) / m_s;
+    }
+
+    for (unsigned j = maxDim; j < dimensions(); ++j)
+        r[j] = 0.5f;
+}
+
 //
 //
 

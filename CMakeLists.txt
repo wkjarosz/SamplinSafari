@@ -64,7 +64,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     else()
       message(
         WARNING
-          "libc++ is recommended in conjunction with clang. Please insteall the libc++ development headers, provided e.g. by the packages 'libc++-dev' and 'libc++abi-dev' on Debian/Ubuntu."
+          "libc++ is recommended in conjunction with clang. Please install the libc++ development headers, provided e.g. by the packages 'libc++-dev' and 'libc++abi-dev' on Debian/Ubuntu."
       )
     endif()
   endif()
@@ -177,13 +177,12 @@ add_library(
   samplerlib OBJECT
   STATIC
   include/sampler/fwd.h
-  include/sampler/Misc.h
-  include/sampler/Sampler.h
-  include/sampler/Halton.h
   include/sampler/halton_sampler.h
+  include/sampler/Halton.h
   include/sampler/Hammersley.h
   include/sampler/Jittered.h
   include/sampler/LP.h
+  include/sampler/Misc.h
   include/sampler/MultiJittered.h
   include/sampler/NRooks.h
   include/sampler/OA.h
@@ -192,14 +191,16 @@ add_library(
   include/sampler/OABoseBush.h
   include/sampler/OABush.h
   include/sampler/OACMJND.h
-  include/sampler/SOA.h
   include/sampler/Random.h
   include/sampler/RandomPermutation.h
+  include/sampler/Sampler.h
+  include/sampler/SOA.h
   include/sampler/Sobol.h
-  src/sampler/Misc.cpp
+  include/sampler/Sudoku.h
   src/sampler/Halton.cpp
   src/sampler/Jittered.cpp
   src/sampler/LP.cpp
+  src/sampler/Misc.cpp
   src/sampler/MultiJittered.cpp
   src/sampler/NRooks.cpp
   src/sampler/OA.cpp
@@ -208,10 +209,11 @@ add_library(
   src/sampler/OABoseBush.cpp
   src/sampler/OABush.cpp
   src/sampler/OACMJND.cpp
-  src/sampler/SOA.cpp
   src/sampler/Random.cpp
+  src/sampler/SOA.cpp
   src/sampler/Sobol.cpp
   src/sampler/SobolMatrices.cpp
+  src/sampler/Sudoku.cpp
 )
 
 # Link dependencies
