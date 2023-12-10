@@ -4,20 +4,13 @@
 
 #include "app.h"
 
-using namespace linalg::ostream_overloads;
-
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::ofstream;
-using std::to_string;
-
 #include "hello_imgui/hello_imgui.h"
 #include "hello_imgui/hello_imgui_include_opengl.h" // cross-platform way to include OpenGL headers
 #include "imgui_ext.h"
 #include "imgui_internal.h"
 #include "portable-file-dialogs.h"
 
+#include <sampler/CSVFile.h>
 #include <sampler/Halton.h>
 #include <sampler/Hammersley.h>
 #include <sampler/Jittered.h>
@@ -43,6 +36,20 @@ using std::to_string;
 #include <string>
 #include <vector>
 
+#ifdef __EMSCRIPTEN__
+#include "emscripten_browser_file.h"
+#include <string_view>
+using std::string_view;
+#endif
+
+using namespace linalg::ostream_overloads;
+
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::ofstream;
+using std::to_string;
+
 static bool g_show_modal = true;
 
 static float map_slider_to_radius(float sliderValue)
@@ -62,29 +69,30 @@ static float4x4 layout_2d_matrix(int num_dims, int2 dims)
 
 SampleViewer::SampleViewer()
 {
-    m_samplers.push_back(new Random(m_num_dimensions));
-    m_samplers.push_back(new Jittered(1, 1, m_jitter * 0.01f));
-    m_samplers.push_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, false));
-    m_samplers.push_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, true));
-    m_samplers.push_back(new CMJNDInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f));
-    m_samplers.push_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, false));
-    m_samplers.push_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, true));
-    m_samplers.push_back(new BoseOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.push_back(new BoseGaloisOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.push_back(new BushOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.push_back(new BushGaloisOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.push_back(new AddelmanKempthorneOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.push_back(new BoseBushOA(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.push_back(new BoseBushOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.push_back(new NRooksInPlace(m_num_dimensions, 1, false, m_jitter * 0.01f));
-    m_samplers.push_back(new Sobol(m_num_dimensions));
-    m_samplers.push_back(new ZeroTwo(1, m_num_dimensions, false));
-    m_samplers.push_back(new ZeroTwo(1, m_num_dimensions, true));
-    m_samplers.push_back(new Halton(m_num_dimensions));
-    m_samplers.push_back(new HaltonZaremba(m_num_dimensions));
-    m_samplers.push_back(new Hammersley<Halton>(m_num_dimensions, 1));
-    m_samplers.push_back(new Hammersley<HaltonZaremba>(m_num_dimensions, 1));
-    m_samplers.push_back(new LarcherPillichshammerGK(3, 1, false));
+    m_samplers.emplace_back(new Random(m_num_dimensions));
+    m_samplers.emplace_back(new Jittered(1, 1, m_jitter * 0.01f));
+    m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, false));
+    m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, true));
+    m_samplers.emplace_back(new CMJNDInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f));
+    m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, false));
+    m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, true));
+    m_samplers.emplace_back(new BoseOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new BoseGaloisOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new BushOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new BushGaloisOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new AddelmanKempthorneOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new BoseBushOA(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new BoseBushOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new NRooksInPlace(m_num_dimensions, 1, false, m_jitter * 0.01f));
+    m_samplers.emplace_back(new Sobol(m_num_dimensions));
+    m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, false));
+    m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, true));
+    m_samplers.emplace_back(new Halton(m_num_dimensions));
+    m_samplers.emplace_back(new HaltonZaremba(m_num_dimensions));
+    m_samplers.emplace_back(new Hammersley<Halton>(m_num_dimensions, 1));
+    m_samplers.emplace_back(new Hammersley<HaltonZaremba>(m_num_dimensions, 1));
+    m_samplers.emplace_back(new LarcherPillichshammerGK(3, 1, false));
+    m_samplers.emplace_back(new CSVFile());
 
     m_camera[CAMERA_XY].arcball.set_state({0, 0, 0, 1});
     m_camera[CAMERA_XY].persp_factor = 0.0f;
@@ -182,6 +190,14 @@ SampleViewer::SampleViewer()
         auto save_files = [this](const string &basename, const string &ext)
         {
             vector<string> saved_files;
+            if (ext == "csv")
+            {
+                HelloImGui::Log(HelloImGui::LogLevel::Info, "Saving to: %s.", basename.c_str());
+                saved_files.push_back(basename);
+                ofstream csv_file(saved_files.back());
+                csv_file << draw_points_csv(m_subset_points, get_draw_range());
+            }
+            else
             {
                 HelloImGui::Log(HelloImGui::LogLevel::Info, "Saving to base filename: %s.", basename.c_str());
 
@@ -204,7 +220,7 @@ SampleViewer::SampleViewer()
             return saved_files;
         };
 
-        for (string ext : {"eps", "svg"})
+        for (string ext : {"eps", "svg", "csv"})
         {
 #ifndef __EMSCRIPTEN__
             if (ImGui::MenuItem(fmt::format("{}  Export as {}...", ICON_FA_SAVE, to_upper(ext))))
@@ -282,9 +298,6 @@ SampleViewer::SampleViewer()
                 new Shader("Grid shader", "shaders/lines.vert", "shaders/lines.frag", Shader::BlendMode::AlphaBlend);
             m_point_2d_shader = new Shader("Point shader 2D", "shaders/points.vert", "shaders/points.frag",
                                            Shader::BlendMode::AlphaBlend);
-
-            update_GPU_points();
-            update_GPU_grids();
 
             HelloImGui::Log(HelloImGui::LogLevel::Info, "Successfully initialized GL!");
         }
@@ -368,7 +381,7 @@ void SampleViewer::draw_gui()
         if (m_show_point_nums || m_show_point_coords)
             for (int p = range.x; p < range.x + range.y; ++p)
             {
-                float3 point = m_3d_points[p];
+                float3 point = m_3d_points[p] - float3{0.5f};
 
                 float4 text_pos = mul(mvp, float4{point.x, point.y, point.z, 1.f});
                 float2 text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
@@ -557,7 +570,7 @@ void SampleViewer::draw_editor()
     if (big_header(ICON_FA_SLIDERS_H "  Sampler settings"))
     // =========================================================
     {
-        if (ImGui::BeginCombo("##", m_samplers[m_sampler]->name().c_str()))
+        if (ImGui::BeginCombo("##Sampler combo", m_samplers[m_sampler]->name().c_str()))
         {
             for (int n = 0; n < (int)m_samplers.size(); n++)
             {
@@ -568,8 +581,8 @@ void SampleViewer::draw_editor()
                     m_sampler = n;
                     sampler->setJitter(m_jitter * 0.01f);
                     sampler->setRandomized(m_randomize);
-                    update_GPU_points();
-                    update_GPU_grids();
+                    m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+
                     HelloImGui::Log(HelloImGui::LogLevel::Debug, "Switching to sampler %d: %s.", m_sampler,
                                     sampler->name().c_str());
                 }
@@ -582,44 +595,81 @@ void SampleViewer::draw_editor()
         }
         tooltip("Set the sampler used to generate the points (Key: Up/Down)");
 
+        CSVFile *csv = dynamic_cast<CSVFile *>(m_samplers[m_sampler]);
+
+        if (csv)
         {
-            int num_points = m_point_count;
-            if (ImGui::SliderInt("Num points", &num_points, 1, 1 << 17, "%d",
-                                 ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp))
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FA_FOLDER_OPEN))
             {
-                m_target_point_count = num_points;
-                HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
-                update_GPU_points();
-                update_GPU_grids();
-                HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
+#ifdef __EMSCRIPTEN__
+                static int      csv_index  = m_sampler;
+                static CSVFile *s_csv_file = csv;
+                auto            handle_upload_file =
+                    [](const string &filename, const string &mime_type, string_view buffer, void *my_data = nullptr)
+                {
+                    // define a handler to process the file
+                    // ...
+
+                    auto that{reinterpret_cast<SampleViewer *>(my_data)};
+                    HelloImGui::Log(HelloImGui::LogLevel::Debug,
+                                    "Received upload callback for file '%s', mime_type '%s' %d", filename.c_str(),
+                                    mime_type.c_str(), csv_index);
+                    s_csv_file->read(filename, buffer);
+                    that->m_gpu_points_dirty = that->m_cpu_points_dirty = that->m_gpu_grids_dirty = true;
+                };
+
+                HelloImGui::Log(HelloImGui::LogLevel::Debug, "About to open file dialog");
+                // open the browser's file selector, and pass the file to the upload handler
+                emscripten_browser_file::upload(".csv,.txt", handle_upload_file, this);
+                HelloImGui::Log(HelloImGui::LogLevel::Debug, "After open file dialog");
+#else
+                auto result = pfd::open_file("Open CSV file", "", {"CSV files", "*.csv *.txt"}).result();
+                if (!result.empty())
+                {
+                    HelloImGui::Log(HelloImGui::LogLevel::Debug, "Loading file '%s'...", result.front().c_str());
+                    csv->read(result.front());
+                    m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+                }
+#endif
             }
-            // now that the user has finished editing, sync the GUI value
-            if (ImGui::IsItemDeactivatedAfterEdit())
-                m_target_point_count = m_point_count;
         }
+
+        int num_points = m_point_count;
+        if (ImGui::SliderInt("Num points", &num_points, 1, 1 << 17, "%d",
+                             ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp))
+        {
+            m_target_point_count = num_points;
+            HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
+            m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+            HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
+        }
+        // now that the user has finished editing, sync the GUI value
+        if (ImGui::IsItemDeactivatedAfterEdit())
+            m_target_point_count = m_point_count;
 
         tooltip(
             "Set the target number of points to generate. For samplers that only support certain numbers of points "
             "(e.g. powers of 2) this target value will be snapped to the nearest admissable value (Key: Left/Right).");
 
         if (ImGui::SliderInt("Dimensions", &m_num_dimensions, 2, 10, "%d", ImGuiSliderFlags_AlwaysClamp))
-        {
-            update_GPU_points();
-            update_GPU_grids();
-        }
+            m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
         tooltip("The number of dimensions to generate for each point (Key: D/d).");
 
-        if (ImGui::Checkbox("Randomize", &m_randomize))
-            update_GPU_points();
-        tooltip("Whether to randomize the points, or show the deterministic configuration (Key: r/R).");
-
-        if (ImGui::SliderFloat("Jitter", &m_jitter, 0.f, 100.f, "%3.1f%%"))
+        if (!csv)
         {
-            m_samplers[m_sampler]->setJitter(m_jitter * 0.01f);
-            update_GPU_points();
-            update_GPU_grids();
+            if (ImGui::Checkbox("Randomize", &m_randomize))
+                m_gpu_points_dirty = m_cpu_points_dirty = true;
+
+            tooltip("Whether to randomize the points, or show the deterministic configuration (Key: r/R).");
+
+            if (ImGui::SliderFloat("Jitter", &m_jitter, 0.f, 100.f, "%3.1f%%"))
+            {
+                m_samplers[m_sampler]->setJitter(m_jitter * 0.01f);
+                m_gpu_points_dirty = m_cpu_points_dirty = true;
+            }
+            tooltip("How much the points should be jittered within their strata (Key: j/J).");
         }
-        tooltip("How much the points should be jittered within their strata (Key: j/J).");
 
         // add optional widgets for OA samplers
         if (OrthogonalArray *oa = dynamic_cast<OrthogonalArray *>(m_samplers[m_sampler]))
@@ -630,8 +680,7 @@ void SampleViewer::draw_editor()
                 if ((unsigned)strength != oa->strength())
                 {
                     oa->setStrength(strength);
-                    update_GPU_points();
-                    update_GPU_grids();
+                    m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
                 }
             };
             int strength = oa->strength();
@@ -644,9 +693,8 @@ void SampleViewer::draw_editor()
             auto change_offset_type = [oa, this](int offset)
             {
                 oa->setOffsetType(offset);
-                m_jitter = oa->jitter();
-                update_GPU_points();
-                update_GPU_grids();
+                m_jitter           = oa->jitter();
+                m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
             };
             if (ImGui::BeginCombo("Offset type", offset_names[oa->offsetType()].c_str()))
             {
@@ -728,7 +776,7 @@ void SampleViewer::draw_editor()
     // =========================================================
     {
         if (ImGui::SliderInt3("XYZ", &m_dimension[0], 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
-            update_GPU_points(false);
+            m_gpu_points_dirty = true;
         tooltip("Set which dimensions should be used for the XYZ dimensions of the displayed 3D points.");
 
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
@@ -739,7 +787,7 @@ void SampleViewer::draw_editor()
     // =========================================================
     {
         if (ImGui::Checkbox("Filter by point index", &m_subset_by_index))
-            update_GPU_points(false);
+            m_gpu_points_dirty = true;
         tooltip("Choose which points to show based on each point's index.");
 
         if (m_subset_by_index)
@@ -763,24 +811,24 @@ void SampleViewer::draw_editor()
         }
 
         if (ImGui::Checkbox("Filter by coordinates", &m_subset_by_coord))
-            update_GPU_points(false);
+            m_gpu_points_dirty = true;
         tooltip("Show only points that fall within an interval along one of its dimensions.");
         if (m_subset_by_coord)
         {
             ImGui::Indent();
             m_subset_by_index = false;
             if (ImGui::SliderInt("Axis", &m_subset_axis, 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
-                update_GPU_points(false);
+                m_gpu_points_dirty = true;
             tooltip("Filter points based on this axis.");
 
             if (ImGui::SliderInt("Num levels", &m_num_subset_levels, 1, m_point_count, "%d",
                                  ImGuiSliderFlags_AlwaysClamp))
-                update_GPU_points(false);
+                m_gpu_points_dirty = true;
             tooltip("Split the unit interval along the chosen axis into this many consecutive levels (or bins).");
 
             if (ImGui::SliderInt("Level", &m_subset_level, 0, m_num_subset_levels - 1, "%d",
                                  ImGuiSliderFlags_AlwaysClamp))
-                update_GPU_points(false);
+                m_gpu_points_dirty = true;
             tooltip("Show only points within this bin along the filtered axis.");
             ImGui::Unindent();
         }
@@ -801,16 +849,14 @@ void SampleViewer::process_hotkeys()
         if ((unsigned)strength != oa->strength())
         {
             oa->setStrength(strength);
-            update_GPU_points();
-            update_GPU_grids();
+            m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
         }
     };
     auto change_offset_type = [oa, this](int offset)
     {
         oa->setOffsetType(offset);
-        m_jitter = oa->jitter();
-        update_GPU_points();
-        update_GPU_grids();
+        m_jitter           = oa->jitter();
+        m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
     };
 
     if ((ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)) &&
@@ -821,8 +867,7 @@ void SampleViewer::process_hotkeys()
         Sampler *sampler = m_samplers[m_sampler];
         sampler->setJitter(m_jitter * 0.01f);
         sampler->setRandomized(m_randomize);
-        update_GPU_points();
-        update_GPU_grids();
+        m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_RightArrow))
     {
@@ -831,17 +876,15 @@ void SampleViewer::process_hotkeys()
                                                                   : roundDownPow2(m_target_point_count - 1));
 
         HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
-        update_GPU_points();
-        update_GPU_grids();
+        m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
         HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
         // m_target_point_count = m_point_count;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_D))
     {
-        m_num_dimensions = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
-        m_dimension      = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
-        update_GPU_points();
-        update_GPU_grids();
+        m_num_dimensions   = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
+        m_dimension        = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
+        m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_R))
     {
@@ -852,13 +895,13 @@ void SampleViewer::process_hotkeys()
         }
         else
             m_randomize = !m_randomize;
-        update_GPU_points();
+        m_gpu_points_dirty = m_cpu_points_dirty = true;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_J))
     {
         m_jitter = std::clamp(m_jitter + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 10.f : -10.f), 0.f, 100.f);
         sampler->setJitter(m_jitter * 0.01f);
-        update_GPU_points();
+        m_gpu_points_dirty = m_cpu_points_dirty = true;
     }
     else if (oa && ImGui::IsKeyPressed(ImGuiKey_T))
         change_strength(std::max(2u, oa->strength() + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1)));
@@ -884,16 +927,16 @@ void SampleViewer::process_hotkeys()
             m_show_fine_grid = !m_show_fine_grid;
         else
             m_show_coarse_grid = !m_show_coarse_grid;
-        update_GPU_grids();
+        m_gpu_grids_dirty = true;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_B))
     {
-        m_show_bbox = !m_show_bbox;
-        update_GPU_grids();
+        m_show_bbox       = !m_show_bbox;
+        m_gpu_grids_dirty = true;
     }
 }
 
-void SampleViewer::update_GPU_points(bool regenerate)
+void SampleViewer::update_points(bool regenerate)
 {
     //
     // Generate the point positions
@@ -908,9 +951,10 @@ void SampleViewer::update_GPU_points(bool regenerate)
                 generator->setRandomized(m_randomize);
 
             generator->setDimensions(m_num_dimensions);
+            m_num_dimensions = generator->dimensions();
 
             int num_pts   = generator->setNumSamples(m_target_point_count);
-            m_point_count = num_pts > 0 ? num_pts : m_target_point_count;
+            m_point_count = num_pts >= 0 ? num_pts : m_target_point_count;
 
             m_time1 = timer.elapsed();
 
@@ -923,7 +967,7 @@ void SampleViewer::update_GPU_points(bool regenerate)
                 vector<float> r(m_num_dimensions, 0.5f);
                 generator->sample(r.data(), i);
                 for (int j = 0; j < m_points.sizeY(); ++j)
-                    m_points(i, j) = r[j] - 0.5f;
+                    m_points(i, j) = r[j];
             }
             m_time2 = timer.elapsed();
         }
@@ -933,6 +977,7 @@ void SampleViewer::update_GPU_points(bool regenerate)
             HelloImGui::Log(HelloImGui::LogLevel::Error, "An error occurred while generating points: %s.", e.what());
             return;
         }
+        m_cpu_points_dirty = false;
     }
 
     //
@@ -978,42 +1023,47 @@ void SampleViewer::update_GPU_points(bool regenerate)
                 points2D[plot_index * m_subset_count + i] = float3{m_subset_points(i, x), m_subset_points(i, y), 0.5f};
 
     m_point_2d_shader->set_buffer("position", points2D);
+
+    m_gpu_points_dirty = false;
 }
 
-void SampleViewer::generate_grid(vector<float3> &positions, int grid_res)
+void SampleViewer::update_grids()
 {
-    int fine_grid_res = 1;
-    int idx           = 0;
-    positions.resize(4 * (grid_res + 1) * (fine_grid_res));
-    float coarse_scale = 1.f / grid_res, fine_scale = 1.f / fine_grid_res;
-    // for (int z = -1; z <= 1; z+=2)
-    int z = 0;
-    for (int i = 0; i <= grid_res; ++i)
+    auto generate_grid = [](int grid_res)
     {
-        for (int j = 0; j < fine_grid_res; ++j)
-        {
-            positions[idx++] = float3(j * fine_scale - 0.5f, i * coarse_scale - 0.5f, z * 0.5f);
-            positions[idx++] = float3((j + 1) * fine_scale - 0.5f, i * coarse_scale - 0.5f, z * 0.5f);
-            positions[idx++] = float3(i * coarse_scale - 0.5f, j * fine_scale - 0.5f, z * 0.5f);
-            positions[idx++] = float3(i * coarse_scale - 0.5f, (j + 1) * fine_scale - 0.5f, z * 0.5f);
-        }
-    }
-}
+        int   fine_grid_res = 1;
+        float coarse_scale = 1.f / grid_res, fine_scale = 1.f / fine_grid_res;
 
-void SampleViewer::update_GPU_grids()
-{
-    vector<float3> bbox_grid, coarse_grid, fine_grid;
-    generate_grid(bbox_grid, 1);
-    generate_grid(coarse_grid, m_samplers[m_sampler]->coarseGridRes(m_point_count));
-    generate_grid(fine_grid, m_point_count);
-    m_coarse_line_count = coarse_grid.size();
-    m_fine_line_count   = fine_grid.size();
+        vector<float3> positions(4 * (grid_res + 1) * (fine_grid_res));
+
+        int idx = 0;
+        // for (int z = -1; z <= 1; z+=2)
+        int z = 0;
+        for (int i = 0; i <= grid_res; ++i)
+        {
+            for (int j = 0; j < fine_grid_res; ++j)
+            {
+                positions[idx++] = float3(j * fine_scale, i * coarse_scale, z * 0.5f);
+                positions[idx++] = float3((j + 1) * fine_scale, i * coarse_scale, z * 0.5f);
+                positions[idx++] = float3(i * coarse_scale, j * fine_scale, z * 0.5f);
+                positions[idx++] = float3(i * coarse_scale, (j + 1) * fine_scale, z * 0.5f);
+            }
+        }
+        return positions;
+    };
+
+    vector<float3> bbox_grid   = generate_grid(1),
+                   coarse_grid = generate_grid(m_samplers[m_sampler]->coarseGridRes(m_point_count)),
+                   fine_grid   = generate_grid(m_point_count);
+    m_coarse_line_count        = coarse_grid.size();
+    m_fine_line_count          = fine_grid.size();
     vector<float3> positions;
     positions.reserve(bbox_grid.size() + coarse_grid.size() + fine_grid.size());
     positions.insert(positions.end(), bbox_grid.begin(), bbox_grid.end());
     positions.insert(positions.end(), coarse_grid.begin(), coarse_grid.end());
     positions.insert(positions.end(), fine_grid.begin(), fine_grid.end());
     m_grid_shader->set_buffer("position", positions);
+    m_gpu_grids_dirty = false;
 }
 
 void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int plot_index)
@@ -1067,6 +1117,12 @@ void SampleViewer::draw_scene()
 
     try
     {
+        // update the points and grids if outdated
+        if (m_gpu_points_dirty || m_cpu_points_dirty)
+            update_points(m_cpu_points_dirty);
+        if (m_gpu_grids_dirty)
+            update_grids();
+
         //
         // clear the scene and set up viewports
         //

@@ -4,15 +4,9 @@
 
 #include <sampler/Random.h>
 
-Random::Random(unsigned dimensions, uint64_t seed) :
-    m_numDimensions(dimensions), m_rand(seed)
+Random::Random(unsigned dimensions, uint64_t seed) : m_numDimensions(dimensions), m_rand(seed)
 {
     setDimensions(dimensions);
-}
-
-Random::~Random()
-{
-
 }
 
 void Random::sample(float r[], unsigned)

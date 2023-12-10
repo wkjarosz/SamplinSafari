@@ -126,31 +126,48 @@ include(cmake/CPM.cmake)
 
 CPMAddPackage("gh:wjakob/pcg32#70099eadb86d3999c38cf69d2c55f8adc1f7fe34")
 if(pcg32_ADDED)
+  message(STATUS "pcg32 library added")
   add_library(pcg32 INTERFACE IMPORTED)
   target_include_directories(pcg32 INTERFACE "${pcg32_SOURCE_DIR}")
 endif()
 
 CPMAddPackage("gh:wkjarosz/galois#2bf22e85952c8612832838a26baf68ad93beff7a")
 if(galois_ADDED)
+  message(STATUS "galois++ library added")
   target_include_directories(galois++ INTERFACE "${galois_SOURCE_DIR}/include")
 endif()
 
 CPMAddPackage("gh:sgorsten/linalg@2.2")
 if(linalg_ADDED)
+  message(STATUS "linalg library added")
   add_library(linalg INTERFACE IMPORTED)
   target_include_directories(linalg INTERFACE "${linalg_SOURCE_DIR}")
 endif()
 
+CPMAddPackage("gh:Armchair-Software/emscripten-browser-file#2ff8f8f791c0e7177b40e621ee3f758e03b31bf5")
+if(emscripten-browser-file_ADDED)
+  message(STATUS "emscripten-browser-file library added")
+  add_library(emscripten-browser-file INTERFACE IMPORTED)
+  target_include_directories(emscripten-browser-file INTERFACE "${emscripten-browser-file_SOURCE_DIR}")
+endif()
+
 CPMAddPackage("gh:fmtlib/fmt#7.1.3")
+if(fmt_ADDED)
+  message(STATUS "fmt library added")
+endif()
 
 CPMAddPackage("gh:samhocevar/portable-file-dialogs#7f852d88a480020d7f91957cbcefe514fc95000c")
-if(portable_file_dialogs_ADDED)
-  add_library(portable_file_dialogs INTERFACE IMPORTED)
-  target_include_directories(portable_file_dialogs INTERFACE "${portable_file_dialogs_SOURCE_DIR}")
+if(portable-file-dialogs_ADDED)
+  message(STATUS "portable-file-dialogs library added")
+  add_library(portable-file-dialogs INTERFACE IMPORTED)
+  target_include_directories(portable-file-dialogs INTERFACE "${portable-file-dialogs_SOURCE_DIR}")
 endif()
 
 set(HELLOIMGUI_WITH_GLFW ON)
 CPMAddPackage("gh:pthom/hello_imgui#b1a74a7d76a84c08c1fa3a97b8dc3e2c5b5b97b3")
+if(hello_imgui_ADDED)
+  message(STATUS "hello_imgui library added")
+endif()
 
 # ============================================================================
 # Compile remainder of the codebase with compiler warnings turned on
@@ -176,6 +193,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(
   samplerlib OBJECT
   STATIC
+  include/sampler/CSVFile.h
   include/sampler/fwd.h
   include/sampler/halton_sampler.h
   include/sampler/Halton.h
@@ -197,6 +215,7 @@ add_library(
   include/sampler/SOA.h
   include/sampler/Sobol.h
   include/sampler/Sudoku.h
+  src/sampler/CSVFile.cpp
   src/sampler/Halton.cpp
   src/sampler/Jittered.cpp
   src/sampler/LP.cpp
@@ -240,8 +259,11 @@ hello_imgui_add_app(
 )
 
 set_target_properties(SamplinSafari PROPERTIES OUTPUT_NAME ${output_name} CXX_STANDARD 17)
-
-target_link_libraries(SamplinSafari PRIVATE samplerlib linalg fmt::fmt portable_file_dialogs)
+target_link_libraries(SamplinSafari PRIVATE samplerlib linalg fmt::fmt portable-file-dialogs emscripten-browser-file)
+if(EMSCRIPTEN)
+  target_link_options(SamplinSafari PRIVATE -sEXPORTED_RUNTIME_METHODS=[ccall])
+  target_link_options(SamplinSafari PRIVATE -sEXPORTED_FUNCTIONS=[_main,_malloc,_free])
+endif()
 
 if(UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
   add_custom_command(

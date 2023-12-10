@@ -69,11 +69,11 @@ closepath stroke
     }
 
     // draw the inner lines of the grid
-    for (int i = 1; i <= grid_res - 1; i++)
+    for (int i = 1; i <= grid_res - 1; ++i)
     {
         // draw horizontal lines
         out += "newpath\n";
-        for (int j = 0; j < fine_grid_res; j++)
+        for (int j = 0; j < fine_grid_res; ++j)
         {
             vA4d = mul(mvp, float4{j * fine_scale - 0.5f, i * coarse_scale - 0.5f, 0.0f, 1.0f});
             vB4d = mul(mvp, float4{(j + 1) * fine_scale - 0.5f, i * coarse_scale - 0.5f, 0.0f, 1.0f});
@@ -88,7 +88,7 @@ closepath stroke
 
         // draw vertical lines
         out += "newpath\n";
-        for (int j = 0; j < fine_grid_res; j++)
+        for (int j = 0; j < fine_grid_res; ++j)
         {
             vA4d = mul(mvp, float4{i * coarse_scale - 0.5f, j * fine_scale - 0.5f, 0.0f, 1.0f});
             vB4d = mul(mvp, float4{i * coarse_scale - 0.5f, (j + 1) * fine_scale - 0.5f, 0.0f, 1.0f});
@@ -147,7 +147,7 @@ string draw_points_eps(float4x4 mat, int3 dim, const Array2d<float> &points, int
     out += "% Draw points \n";
     out += "pfc setrgbcolor %fill color for points\n";
 
-    for (int i = range.x; i < range.x + range.y; i++)
+    for (int i = range.x; i < range.x + range.y; ++i)
     {
         auto v4d = mul(mat, float4{points(i, dim.x), points(i, dim.y), points(i, dim.z), 1.0f});
         auto v2d = float2{v4d.x / v4d.w, v4d.y / v4d.w} * page_size;
@@ -236,7 +236,7 @@ string draw_grid_svg(const float4x4 &mvp, int grid_res, const string &css_class)
     }
 
     // draw the inner lines of the grid
-    for (int i = 1; i <= grid_res - 1; i++)
+    for (int i = 1; i <= grid_res - 1; ++i)
     {
         // draw horizontal lines
         vA4d = mul(mvp, float4{0.f - 0.5f, i * scale - 0.5f, 0.0f, 1.0f});
@@ -277,7 +277,7 @@ string draw_points_svg(float4x4 mat, int3 dim, const Array2d<float> &points, int
     string out;
     float  page_size = 500.f;
 
-    for (int i = range.x; i < range.x + range.y; i++)
+    for (int i = range.x; i < range.x + range.y; ++i)
     {
         auto v4d = mul(mat, float4{points(i, dim.x), points(i, dim.y), points(i, dim.z), 1.0f});
         auto v2d = float2{v4d.x / v4d.w, v4d.y / v4d.w} * float2{page_size, -page_size};
@@ -290,4 +290,21 @@ string draw_points_svg(float4x4 mat, int3 dim, const Array2d<float> &points, int
 string footer_svg()
 {
     return "</svg>";
+}
+
+string draw_points_csv(const Array2d<float> &points, int2 range)
+{
+    string out;
+    for (int i = range.x; i < range.x + range.y; ++i)
+    {
+        for (int d = 0; d < points.sizeY(); ++d)
+        {
+            if (d > 0)
+                out += ", ";
+            out += fmt::format("{}", points(i, d));
+        }
+        out += "\n";
+    }
+
+    return out;
 }

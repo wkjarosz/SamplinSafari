@@ -105,14 +105,13 @@ private:
     string export_points_2d(const string &format, CameraType camera, int3 dim);
     string export_all_points_2d(const string &format);
 
-    void update_GPU_points(bool regenerate = true);
-    void update_GPU_grids();
+    void update_points(bool regenerate = true);
+    void update_grids();
     void set_view(CameraType view);
     void draw_editor();
     void draw_about_dialog();
     void process_hotkeys();
     void populate_point_subset();
-    void generate_grid(vector<float3> &positions, int gridRes);
     void draw_text(const int2 &pos, const std::string &text, const float4 &col, ImFont *font = nullptr,
                    int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
     void draw_points(const float4x4 &mvp, const float3 &color);
@@ -152,6 +151,8 @@ private:
     int  m_subset_axis       = 0;
     int  m_num_subset_levels = 1;
     int  m_subset_level      = 0;
+
+    bool m_gpu_points_dirty = true, m_cpu_points_dirty = true, m_gpu_grids_dirty = true;
 
     map<int, ImFont *> m_regular, m_bold; // regular and bold fonts at various sizes
 
