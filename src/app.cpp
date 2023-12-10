@@ -603,26 +603,20 @@ void SampleViewer::draw_editor()
             if (ImGui::Button(ICON_FA_FOLDER_OPEN))
             {
 #ifdef __EMSCRIPTEN__
-                static int      csv_index  = m_sampler;
                 static CSVFile *s_csv_file = csv;
                 auto            handle_upload_file =
                     [](const string &filename, const string &mime_type, string_view buffer, void *my_data = nullptr)
                 {
-                    // define a handler to process the file
-                    // ...
-
                     auto that{reinterpret_cast<SampleViewer *>(my_data)};
-                    HelloImGui::Log(HelloImGui::LogLevel::Debug,
-                                    "Received upload callback for file '%s', mime_type '%s' %d", filename.c_str(),
-                                    mime_type.c_str(), csv_index);
+                    HelloImGui::Log(HelloImGui::LogLevel::Debug, "Loading file '%s' of mime type '%s' ...",
+                                    filename.c_str(), mime_type.c_str());
                     s_csv_file->read(filename, buffer);
                     that->m_gpu_points_dirty = that->m_cpu_points_dirty = that->m_gpu_grids_dirty = true;
                 };
 
-                HelloImGui::Log(HelloImGui::LogLevel::Debug, "About to open file dialog");
                 // open the browser's file selector, and pass the file to the upload handler
                 emscripten_browser_file::upload(".csv,.txt", handle_upload_file, this);
-                HelloImGui::Log(HelloImGui::LogLevel::Debug, "After open file dialog");
+                HelloImGui::Log(HelloImGui::LogLevel::Debug, "Requesting file from user");
 #else
                 auto result = pfd::open_file("Open CSV file", "", {"CSV files", "*.csv *.txt"}).result();
                 if (!result.empty())

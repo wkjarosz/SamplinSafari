@@ -22,7 +22,7 @@ string read_file_to_string(string_view path)
     auto           stream    = std::ifstream(path.data());
     stream.exceptions(std::ios_base::badbit);
 
-    if (not stream)
+    if (!stream)
         throw std::ios_base::failure("file does not exist");
 
     auto out = std::string();
