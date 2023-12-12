@@ -1,3 +1,5 @@
+// minor modifications by Wojciech Jarosz to scramble first 3 dimensions and
+// avoid std::random_shuffle
 // Copyright (c) 2012 Leonhard Gruenschloss (leonhard@gruenschloss.org)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy

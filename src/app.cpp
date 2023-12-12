@@ -85,6 +85,7 @@ SampleViewer::SampleViewer()
     m_samplers.emplace_back(new BoseBushOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
     m_samplers.emplace_back(new NRooksInPlace(m_num_dimensions, 1, false, m_jitter * 0.01f));
     m_samplers.emplace_back(new Sobol(m_num_dimensions));
+    m_samplers.emplace_back(new SSobol(m_num_dimensions));
     m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, false));
     m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, true));
     m_samplers.emplace_back(new Halton(m_num_dimensions));

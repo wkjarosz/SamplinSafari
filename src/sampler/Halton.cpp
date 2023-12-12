@@ -4,8 +4,7 @@
 
 #include <galois++/primes.h> // for nthPrime
 #include <sampler/Halton.h>
-#include <sampler/Misc.h>           // for foldedRadicalInverse
-#include <sampler/halton_sampler.h> // for Halton_sampler
+#include <sampler/Misc.h> // for foldedRadicalInverse
 
 Halton::Halton(unsigned dimensions) : m_numDimensions(0), m_randomized(true)
 {

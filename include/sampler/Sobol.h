@@ -93,48 +93,40 @@ protected:
     std::vector<unsigned> m_permutes;
 };
 
-// Copyright (c) 2012 Leonhard Gruenschloss (leonhard@gruenschloss.org)
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights to
-// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-// of the Software, and to permit persons to whom the Software is furnished to do
-// so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-
-struct SobolMatrices
+/// Stochastic Sobol quasi-random number sequence.
+/**
+    A wrapper for Helmer's Owen-scrambled stochastic Sobol sampler.
+*/
+class SSobol : public TSamplerMinMaxDim<1, 64> // the 64 needs to match sampling::MAX_SOBOL_DIM
 {
-    static const unsigned numDimensions = 1024;
-    static const unsigned size          = 52;
-    static const unsigned matrices[];
-};
+public:
+    SSobol(unsigned dimensions = 2);
 
-// Compute one component of the Sobol'-sequence, where the component
-// corresponds to the dimension parameter, and the index specifies
-// the point inside the sequence. The scramble parameter can be used
-// to permute elementary intervals, and might be chosen randomly to
-// generate a randomized QMC sequence.
-inline float sobol(unsigned long long index, unsigned dimension, unsigned scramble = 0U)
-{
-    assert(dimension < SobolMatrices::numDimensions);
+    void sample(float[], unsigned i) override;
 
-    unsigned result = scramble;
-    for (unsigned i = dimension * SobolMatrices::size; index; index >>= 1, ++i)
+    unsigned dimensions() const override
     {
-        if (index & 1)
-            result ^= SobolMatrices::matrices[i];
+        return m_numDimensions;
+    }
+    void setDimensions(unsigned n) override
+    {
+        m_numDimensions = n;
+        setRandomized(randomized());
     }
 
-    return result * (1.f / (1ULL << 32));
-}
+    bool randomized() const override
+    {
+        return m_scramble_seed != 0;
+    }
+    void setRandomized(bool b = true) override;
+
+    std::string name() const override
+    {
+        return "Stochastic Sobol";
+    }
+
+protected:
+    unsigned m_numDimensions;
+    pcg32    m_rand;
+    uint32_t m_scramble_seed;
+};

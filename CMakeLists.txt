@@ -169,6 +169,30 @@ if(hello_imgui_ADDED)
   message(STATUS "hello_imgui library added")
 endif()
 
+CPMAddPackage("gh:lgruen/sobol#0227291a97e514ba34de035b1be3dbd34d12acbb")
+if(sobol_ADDED)
+  message(STATUS "sobol library added")
+  # sobol has no CMake support, so we create our own target compile just the single-precision version and make it
+  # available as #include <sobol.h>
+  add_library(sobol STATIC ${sobol_SOURCE_DIR}/single-precision/sobol.cpp)
+  target_include_directories(sobol PUBLIC ${sobol_SOURCE_DIR}/single-precision)
+  set_target_properties(sobol PROPERTIES CXX_STANDARD 17)
+endif()
+
+CPMAddPackage("gh:Andrew-Helmer/stochastic-generation#7dfaf471277424b1d9940ef15f8c925086c5fec3")
+if(stochastic-generation_ADDED)
+  message(STATUS "stochastic-generation library added")
+  # stochastic-generation has no CMake support, so we create our own target
+  file(GLOB stochastic-generation_sources ${stochastic-generation_SOURCE_DIR}/sampling/*.cpp)
+  add_library(stochastic-generation STATIC ${stochastic-generation_sources})
+  target_include_directories(stochastic-generation PUBLIC ${stochastic-generation_SOURCE_DIR})
+  set_target_properties(stochastic-generation PROPERTIES CXX_STANDARD 17)
+  target_compile_options(
+    stochastic-generation PRIVATE $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+                                  -Wno-sign-compare>
+  )
+endif()
+
 # ============================================================================
 # Compile remainder of the codebase with compiler warnings turned on
 # ============================================================================
@@ -231,12 +255,11 @@ add_library(
   src/sampler/Random.cpp
   src/sampler/SOA.cpp
   src/sampler/Sobol.cpp
-  src/sampler/SobolMatrices.cpp
   src/sampler/Sudoku.cpp
 )
 
 # Link dependencies
-target_link_libraries(samplerlib PUBLIC galois++ pcg32)
+target_link_libraries(samplerlib PUBLIC galois++ pcg32 stochastic-generation sobol)
 
 set_target_properties(samplerlib PROPERTIES CXX_STANDARD 17)
 
