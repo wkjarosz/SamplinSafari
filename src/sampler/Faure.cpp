@@ -53,7 +53,7 @@ void Faure::regenerate()
 
 void Faure::setDimensions(unsigned n)
 {
-    auto newD = std::clamp(n, (unsigned)MIN_DIMENSION, (unsigned)MAX_DIMENSION);
+    auto newD = clamp(n, (unsigned)MIN_DIMENSION, (unsigned)MAX_DIMENSION);
     if (newD != m_numDimensions)
     {
         m_numDimensions = newD;
