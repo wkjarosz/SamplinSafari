@@ -3,11 +3,13 @@
 */
 
 #include <assert.h>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sampler/CSVFile.h>
 #include <stdio.h>
 
+namespace fs = std::filesystem;
 using std::string;
 using std::string_view;
 using std::vector;
@@ -244,7 +246,7 @@ bool CSVFile::read(const string &filename, const string_view &csv_data)
 
 string CSVFile::name() const
 {
-    return "CSV file: " + (m_filename.empty() ? string("<choose a file>") : m_filename);
+    return "CSV file: " + (m_filename.empty() ? string("<choose a file>") : fs::path{m_filename}.stem().string());
 }
 
 void CSVFile::sample(float r[], unsigned i)
