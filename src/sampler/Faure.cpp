@@ -33,7 +33,6 @@ std::string Faure::name() const
 
 void Faure::regenerate()
 {
-    std::cout << "regenerating " << m_numSamples << std::endl;
     // compute all points, and store them
     m_samples.clear();
     m_samples.resize(m_numSamples * s());

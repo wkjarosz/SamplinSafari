@@ -20,7 +20,7 @@ public:
     /// Returns an appropriate grid resolution to help visualize stratification
     int coarseGridRes(int samples) const override
     {
-        return int(std::pow(samples, (1.f / s())));
+        return (int)pow(s(), floor(log(std::pow(samples, 1.f / s())) / log(s())));
     }
 
     unsigned dimensions() const override
