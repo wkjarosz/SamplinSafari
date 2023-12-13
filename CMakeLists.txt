@@ -179,7 +179,7 @@ if(sobol_ADDED)
   set_target_properties(sobol PROPERTIES CXX_STANDARD 17)
 endif()
 
-CPMAddPackage("gh:Andrew-Helmer/stochastic-generation#7dfaf471277424b1d9940ef15f8c925086c5fec3")
+CPMAddPackage("gh:wkjarosz/stochastic-generation#b2dbbb3a24d5c461514fc1f7b61082d30db78c1c")
 if(stochastic-generation_ADDED)
   message(STATUS "stochastic-generation library added")
   # stochastic-generation has no CMake support, so we create our own target
@@ -218,6 +218,7 @@ add_library(
   samplerlib OBJECT
   STATIC
   include/sampler/CSVFile.h
+  include/sampler/Faure.h
   include/sampler/fwd.h
   include/sampler/halton_sampler.h
   include/sampler/Halton.h
@@ -240,6 +241,7 @@ add_library(
   include/sampler/Sobol.h
   include/sampler/Sudoku.h
   src/sampler/CSVFile.cpp
+  src/sampler/Faure.cpp
   src/sampler/Halton.cpp
   src/sampler/Jittered.cpp
   src/sampler/LP.cpp

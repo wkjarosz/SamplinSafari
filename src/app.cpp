@@ -11,6 +11,7 @@
 #include "portable-file-dialogs.h"
 
 #include <sampler/CSVFile.h>
+#include <sampler/Faure.h>
 #include <sampler/Halton.h>
 #include <sampler/Hammersley.h>
 #include <sampler/Jittered.h>
@@ -88,6 +89,7 @@ SampleViewer::SampleViewer()
     m_samplers.emplace_back(new SSobol(m_num_dimensions));
     m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, false));
     m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, true));
+    m_samplers.emplace_back(new Faure(m_num_dimensions, 1));
     m_samplers.emplace_back(new Halton(m_num_dimensions));
     m_samplers.emplace_back(new HaltonZaremba(m_num_dimensions));
     m_samplers.emplace_back(new Hammersley<Halton>(m_num_dimensions, 1));
@@ -639,9 +641,6 @@ void SampleViewer::draw_editor()
             m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
             HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
         }
-        // now that the user has finished editing, sync the GUI value
-        if (ImGui::IsItemDeactivatedAfterEdit())
-            m_target_point_count = m_point_count;
 
         tooltip(
             "Set the target number of points to generate. For samplers that only support certain numbers of points "
@@ -770,8 +769,13 @@ void SampleViewer::draw_editor()
     if (big_header(ICON_FA_RANDOM "  Dimension mapping"))
     // =========================================================
     {
-        if (ImGui::SliderInt3("XYZ", &m_dimension[0], 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
+        int3 dims = m_dimension;
+        if (ImGui::SliderInt3("XYZ", &dims[0], 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
+        {
             m_gpu_points_dirty = true;
+            m_dimension        = dims;
+        }
+
         tooltip("Set which dimensions should be used for the XYZ dimensions of the displayed 3D points.");
 
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
@@ -878,7 +882,6 @@ void SampleViewer::process_hotkeys()
     else if (ImGui::IsKeyPressed(ImGuiKey_D))
     {
         m_num_dimensions   = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
-        m_dimension        = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
         m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_R))
@@ -946,7 +949,6 @@ void SampleViewer::update_points(bool regenerate)
                 generator->setRandomized(m_randomize);
 
             generator->setDimensions(m_num_dimensions);
-            m_num_dimensions = generator->dimensions();
 
             int num_pts   = generator->setNumSamples(m_target_point_count);
             m_point_count = num_pts >= 0 ? num_pts : m_target_point_count;
@@ -986,7 +988,6 @@ void SampleViewer::update_points(bool regenerate)
         for (int i = 0; i < m_points.sizeX(); ++i)
         {
             float v = m_points(i, std::clamp(m_subset_axis, 0, m_num_dimensions - 1));
-            v += 0.5f;
             if (v >= (m_subset_level + 0.0f) / m_num_subset_levels && v < (m_subset_level + 1.0f) / m_num_subset_levels)
             {
                 // copy all dimensions (rows) of point i
@@ -997,9 +998,9 @@ void SampleViewer::update_points(bool regenerate)
         }
     }
 
+    int3 dims = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
     for (size_t i = 0; i < m_3d_points.size(); ++i)
-        m_3d_points[i] = float3{m_subset_points(i, m_dimension.x), m_subset_points(i, m_dimension.y),
-                                m_subset_points(i, m_dimension.z)};
+        m_3d_points[i] = float3{m_subset_points(i, dims.x), m_subset_points(i, dims.y), m_subset_points(i, dims.z)};
 
     //
     // Upload points to the GPU
@@ -1355,8 +1356,9 @@ string SampleViewer::export_XYZ_points(const string &format)
                                   m_show_coarse_grid, m_show_bbox);
     }
 
-    out += (format == "eps") ? draw_points_eps(mvp, m_dimension, m_subset_points, get_draw_range())
-                             : draw_points_svg(mvp, m_dimension, m_subset_points, get_draw_range(), radius);
+    int3 dims = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
+    out += (format == "eps") ? draw_points_eps(mvp, dims, m_subset_points, get_draw_range())
+                             : draw_points_svg(mvp, dims, m_subset_points, get_draw_range(), radius);
 
     out += (format == "eps") ? footer_eps() : footer_svg();
     return out;
