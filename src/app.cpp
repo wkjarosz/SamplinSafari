@@ -411,10 +411,10 @@ void SampleViewer::draw_gui()
                 int2   draw_pos = m_viewport_pos + int2{int((text_2d_pos.x) * m_viewport_size.x),
                                                       int((1.f - text_2d_pos.y) * m_viewport_size.y)};
                 if (m_show_point_nums)
-                    draw_text(draw_pos - int2{0, radius / 4}, fmt::format("{:d}", p), float4(1.0f, 1.0f, 1.0f, 0.75f),
-                              m_regular[12], TextAlign_CENTER | TextAlign_BOTTOM);
+                    draw_text(draw_pos - int2{0, int(radius / 4)}, fmt::format("{:d}", p),
+                              float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[12], TextAlign_CENTER | TextAlign_BOTTOM);
                 if (m_show_point_coords)
-                    draw_text(draw_pos + int2{0, radius / 4},
+                    draw_text(draw_pos + int2{0, int(radius / 4)},
                               fmt::format("({:0.2f}, {:0.2f}, {:0.2f})", m_3d_points[p].x, m_3d_points[p].y,
                                           m_3d_points[p].z),
                               float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[11], TextAlign_CENTER | TextAlign_TOP);
@@ -1135,7 +1135,7 @@ void SampleViewer::update_grids()
     m_custom_line_ranges.resize(m_num_dimensions);
 
     for (int d = 0; d < m_num_dimensions; ++d)
-        m_custom_line_ranges[d] = {positions.size(), generate_lines(positions, m_custom_line_counts[d])};
+        m_custom_line_ranges[d] = {int(positions.size()), generate_lines(positions, m_custom_line_counts[d])};
 
     m_2d_grid_shader->set_buffer("position", positions);
 }
