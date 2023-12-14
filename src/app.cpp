@@ -53,6 +53,8 @@ using std::to_string;
 
 static bool g_show_modal = true;
 
+static const auto rot90 = linalg::rotation_matrix(linalg::rotation_quat({0.f, 0.f, 1.f}, float(M_PI_2)));
+
 static float map_slider_to_radius(float sliderValue)
 {
     return sliderValue * sliderValue * 32.0f + 2.0f;
@@ -68,16 +70,21 @@ static float4x4 layout_2d_matrix(int num_dims, int2 dims)
     return mul(translation_matrix(float3{offset * cell_spacing, 1}), scaling_matrix(float3{float2{cell_size}, 1}));
 }
 
-static auto dims2index(int2 dims)
+static void draw_grid(Shader *shader, const float4x4 &mat, int2 start, int2 count, float alpha)
 {
-    return (dims.y + 1) * (dims.y - 2) / 2 + dims.x + 1;
-}
+    shader->set_uniform("alpha", alpha);
 
-static auto index2dims(int p)
-{
-    int j = floor((3 + sqrt(8 * p + 1)) / 2);
-    int i = p - j * (j - 3) / 2;
-    return int2{i - 1, j - 1};
+    // draw vertical lines
+    shader->set_uniform("mvp", mat);
+    shader->begin();
+    shader->draw_array(Shader::PrimitiveType::Line, start.x, count.x);
+    shader->end();
+
+    // draw horizontal lines
+    shader->set_uniform("mvp", mul(mat, rot90));
+    shader->begin();
+    shader->draw_array(Shader::PrimitiveType::Line, start.y, count.y);
+    shader->end();
 }
 
 SampleViewer::SampleViewer()
@@ -115,7 +122,7 @@ SampleViewer::SampleViewer()
     m_camera[CAMERA_XY].persp_factor = 0.0f;
     m_camera[CAMERA_XY].camera_type  = CAMERA_XY;
 
-    m_camera[CAMERA_YZ].arcball.set_state(linalg::rotation_quat({0.f, -1.f, 0.f}, float(M_PI_2)));
+    m_camera[CAMERA_YZ].arcball.set_state(linalg::rotation_quat({0.f, 1.f, 0.f}, float(M_PI_2)));
     m_camera[CAMERA_YZ].persp_factor = 0.0f;
     m_camera[CAMERA_YZ].camera_type  = CAMERA_YZ;
 
@@ -1085,7 +1092,7 @@ void SampleViewer::update_points(bool regenerate)
 
 void SampleViewer::update_grids()
 {
-    auto generate_lines = [](vector<float3> &positions, int grid_res, int axis)
+    auto generate_lines = [](vector<float3> &positions, int grid_res, int axis = 0)
     {
         float coarse_scale = 1.f / grid_res;
         for (int i = 0; i <= grid_res; ++i)
@@ -1099,57 +1106,46 @@ void SampleViewer::update_grids()
         return 2 * (grid_res + 1);
     };
 
-    auto generate_grid = [&generate_lines](vector<float3> &positions, int2 grid_res)
-    {
-        auto x = generate_lines(positions, grid_res.x, 0);
-        auto y = generate_lines(positions, grid_res.y, 1);
-        return x + y;
-    };
+    // auto generate_grid = [&generate_lines](vector<float3> &positions, int2 grid_res)
+    // {
+    //     auto x = generate_lines(positions, grid_res.x, 0);
+    //     auto y = generate_lines(positions, grid_res.y, 1);
+    //     return x + y;
+    // };
 
     auto count = [](int res) { return 2 * (res + 1); };
 
     // expected vertex counts
-    int bbox_line_count = 2 * count(1);
-    m_coarse_line_count = 2 * count(m_samplers[m_sampler]->coarseGridRes(m_point_count));
-    m_fine_line_count   = 2 * count(m_point_count);
+    int bbox_line_count = count(1);
+    m_coarse_line_count = count(m_samplers[m_sampler]->coarseGridRes(m_point_count));
+    m_fine_line_count   = count(m_point_count);
 
     vector<float3> positions;
     positions.reserve(bbox_line_count + m_coarse_line_count + m_fine_line_count);
 
     // generate vertices and ensure the counts are right
-    if (bbox_line_count != generate_grid(positions, int2{1}))
+    if (bbox_line_count != generate_lines(positions, 1))
         assert(false);
-    if (m_coarse_line_count != generate_grid(positions, int2{m_samplers[m_sampler]->coarseGridRes(m_point_count)}))
+    if (m_coarse_line_count != generate_lines(positions, m_samplers[m_sampler]->coarseGridRes(m_point_count)))
         assert(false);
-    if (m_fine_line_count != generate_grid(positions, int2{m_point_count}))
+    if (m_fine_line_count != generate_lines(positions, m_point_count))
         assert(false);
 
     m_grid_shader->set_buffer("position", positions);
     m_gpu_grids_dirty = false;
 
     // handle all 2D grid projections
-    positions.resize(0);
-
     // create a temporary array to store the vertices of grid lines in all 2D projections
-    int num2DPlots = m_num_dimensions * (m_num_dimensions - 1) / 2;
-    m_custom_line_ranges.resize(num2DPlots);
     m_custom_line_count = 0;
-    // for (int p = 0; p < num2DPlots; ++p)
-    // {
-    //     auto dims                  = index2dims(p);
-    //     m_custom_line_ranges[p][0] = positions.size();
-    //     auto c = generate_grid(positions, int2{m_custom_line_counts[dims.x], m_custom_line_counts[dims.y]});
-    //     m_custom_line_ranges[p][1] = c;
-    //     m_custom_line_count += c;
-    // }
-    for (int y = 0, plot_index = 0; y < m_num_dimensions; ++y)
-        for (int x = 0; x < y; ++x, ++plot_index)
-        {
-            m_custom_line_ranges[plot_index][0] = positions.size();
-            auto c = generate_grid(positions, int2{m_custom_line_counts[x], m_custom_line_counts[y]});
-            m_custom_line_ranges[plot_index][1] = c;
-            m_custom_line_count += c;
-        }
+    for (int d = 0; d < m_num_dimensions; ++d)
+        m_custom_line_count += m_custom_line_counts[d] + 1;
+    positions.resize(0);
+    positions.reserve(2 * m_custom_line_count);
+
+    m_custom_line_ranges.resize(m_num_dimensions);
+
+    for (int d = 0; d < m_num_dimensions; ++d)
+        m_custom_line_ranges[d] = {positions.size(), generate_lines(positions, m_custom_line_counts[d])};
 
     m_2d_grid_shader->set_buffer("position", positions);
 }
@@ -1174,38 +1170,14 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
     auto mat = mul(mvp, mul(pos, m_camera[CAMERA_2D].arcball.matrix()));
 
     if (m_show_bbox)
-    {
-        m_grid_shader->set_uniform("alpha", 1.0f);
-        m_grid_shader->set_uniform("mvp", mat);
-        m_grid_shader->begin();
-        m_grid_shader->draw_array(Shader::PrimitiveType::Line, 0, 8);
-        m_grid_shader->end();
-    }
+        draw_grid(m_grid_shader, mat, int2{0}, int2{4}, 1.f);
     if (m_show_coarse_grid)
-    {
-        m_grid_shader->set_uniform("alpha", 0.6f);
-        m_grid_shader->set_uniform("mvp", mat);
-        m_grid_shader->begin();
-        m_grid_shader->draw_array(Shader::PrimitiveType::Line, 8, m_coarse_line_count);
-        m_grid_shader->end();
-    }
+        draw_grid(m_grid_shader, mat, int2{4}, int2{m_coarse_line_count}, 0.6f);
     if (m_show_fine_grid)
-    {
-        m_grid_shader->set_uniform("alpha", 0.2f);
-        m_grid_shader->set_uniform("mvp", mat);
-        m_grid_shader->begin();
-        m_grid_shader->draw_array(Shader::PrimitiveType::Line, 8 + m_coarse_line_count, m_fine_line_count);
-        m_grid_shader->end();
-    }
+        draw_grid(m_grid_shader, mat, int2{4 + m_coarse_line_count}, int2{m_fine_line_count}, 0.2f);
     if (m_show_custom_grid)
-    {
-        m_2d_grid_shader->set_uniform("alpha", 0.5f);
-        m_2d_grid_shader->set_uniform("mvp", mat);
-        m_2d_grid_shader->begin();
-        m_2d_grid_shader->draw_array(Shader::PrimitiveType::Line, m_custom_line_ranges[plot_index][0],
-                                     m_custom_line_ranges[plot_index][1]);
-        m_2d_grid_shader->end();
-    }
+        draw_grid(m_2d_grid_shader, mat, int2{m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.y][0]},
+                  int2{m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.y][1]}, 1.0f);
 }
 
 void SampleViewer::draw_scene()
@@ -1349,48 +1321,27 @@ void SampleViewer::draw_scene()
             draw_points(mvp, m_point_color);
 
             if (m_show_bbox)
-                draw_grid(mvp, 1.0f, 0, 8);
+                draw_trigrid(mvp, 1.0f, 0, 4);
 
             if (m_show_coarse_grid)
-                draw_grid(mvp, 0.6f, 8, m_coarse_line_count);
+                draw_trigrid(mvp, 0.6f, 4, m_coarse_line_count);
 
             if (m_show_fine_grid)
-                draw_grid(mvp, 0.2f, 8 + m_coarse_line_count, m_fine_line_count);
+                draw_trigrid(mvp, 0.2f, 4 + m_coarse_line_count, m_fine_line_count);
 
             if (m_show_custom_grid)
             {
-                m_2d_grid_shader->set_uniform("alpha", 1.f);
-
-                int3                  dims  = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
-                static const float4x4 ident = linalg::identity;
-                static const auto     rot90 =
-                    linalg::rotation_matrix(linalg::rotation_quat({0.f, 0.f, 1.f}, float(M_PI_2)));
-
+                // compute the three dimension pairs we use for the XY, XZ, and ZY axes
+                int3   dims = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
+                int2x3 pairs{{dims[0], dims[1]}, {dims[0], dims[2]}, {dims[2], dims[1]}};
                 for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
                 {
-                    // which grid dimension pair do we need to display for this axis?
-                    int2 dims2 = index2dims(axis);
-                    int2 dims3{dims[dims2.x], dims[dims2.y]};
-
-                    // we only store grids for a,b dimension pairs where a < b, so if a > b, we need to rotate 90°
-                    bool swap = false;
-                    if (dims3.y < dims3.x)
-                    {
-                        swap = true;
-                        std::swap(dims3.x, dims3.y);
-                    }
-                    int p = dims2index(dims3);
-
                     if (m_camera[CAMERA_CURRENT].camera_type == axis ||
                         m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
-                    {
-                        m_2d_grid_shader->set_uniform(
-                            "mvp", mul(mvp, mul(m_camera[axis].arcball.matrix(), swap ? rot90 : ident)));
-                        m_2d_grid_shader->begin();
-                        m_2d_grid_shader->draw_array(Shader::PrimitiveType::Line, m_custom_line_ranges[p][0],
-                                                     m_custom_line_ranges[p][1]);
-                        m_2d_grid_shader->end();
-                    }
+                        draw_grid(m_2d_grid_shader, mul(mvp, m_camera[axis].arcball.matrix()),
+                                  int2{m_custom_line_ranges[pairs[axis].x][0], m_custom_line_ranges[pairs[axis].y][0]},
+                                  int2{m_custom_line_ranges[pairs[axis].x][1], m_custom_line_ranges[pairs[axis].y][1]},
+                                  1.f);
                 }
             }
         }
@@ -1437,20 +1388,11 @@ void SampleViewer::draw_points(const float4x4 &mvp, const float3 &color)
     m_point_shader->end();
 }
 
-void SampleViewer::draw_grid(const float4x4 &mvp, float alpha, uint32_t offset, uint32_t count)
+void SampleViewer::draw_trigrid(const float4x4 &mvp, float alpha, uint32_t offset, uint32_t count)
 {
-    m_grid_shader->set_uniform("alpha", alpha);
-
     for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
-    {
         if (m_camera[CAMERA_CURRENT].camera_type == axis || m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
-        {
-            m_grid_shader->set_uniform("mvp", mul(mvp, m_camera[axis].arcball.matrix()));
-            m_grid_shader->begin();
-            m_grid_shader->draw_array(Shader::PrimitiveType::Line, offset, count);
-            m_grid_shader->end();
-        }
-    }
+            draw_grid(m_grid_shader, mul(mvp, m_camera[axis].arcball.matrix()), int2{offset}, int2{count}, alpha);
 }
 
 void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &color, ImFont *font, int align) const
