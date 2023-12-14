@@ -53,7 +53,7 @@ enum CameraType
 {
     CAMERA_XY = 0,
     CAMERA_XZ,
-    CAMERA_YZ,
+    CAMERA_ZY,
     CAMERA_CURRENT,
     CAMERA_2D,
     CAMERA_PREVIOUS,

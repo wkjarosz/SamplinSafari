@@ -45,10 +45,6 @@ using std::string_view;
 
 using namespace linalg::ostream_overloads;
 
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::ofstream;
 using std::to_string;
 
 static bool g_show_modal = true;
@@ -122,9 +118,9 @@ SampleViewer::SampleViewer()
     m_camera[CAMERA_XY].persp_factor = 0.0f;
     m_camera[CAMERA_XY].camera_type  = CAMERA_XY;
 
-    m_camera[CAMERA_YZ].arcball.set_state(linalg::rotation_quat({0.f, 1.f, 0.f}, float(M_PI_2)));
-    m_camera[CAMERA_YZ].persp_factor = 0.0f;
-    m_camera[CAMERA_YZ].camera_type  = CAMERA_YZ;
+    m_camera[CAMERA_ZY].arcball.set_state(linalg::rotation_quat({0.f, 1.f, 0.f}, float(M_PI_2)));
+    m_camera[CAMERA_ZY].persp_factor = 0.0f;
+    m_camera[CAMERA_ZY].camera_type  = CAMERA_ZY;
 
     m_camera[CAMERA_XZ].arcball.set_state(linalg::rotation_quat({1.f, 0.f, 0.f}, float(M_PI_2)));
     m_camera[CAMERA_XZ].persp_factor = 0.0f;
@@ -388,16 +384,16 @@ void SampleViewer::draw_gui()
             float4x4 pos      = layout_2d_matrix(m_num_dimensions, int2{i, m_num_dimensions - 1});
             float4   text_pos = mul(mvp, mul(pos, float4{0.f, -0.5f, 0.0f, 1.0f}));
             float2   text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
-            draw_text(m_viewport_pos +
-                          int2((text_2d_pos.x) * m_viewport_size.x, (1.f - text_2d_pos.y) * m_viewport_size.y + 16),
+            draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x),
+                                            int((1.f - text_2d_pos.y) * m_viewport_size.y) + 16),
                       to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
                       TextAlign_CENTER | TextAlign_BOTTOM);
 
             pos         = layout_2d_matrix(m_num_dimensions, int2{0, i + 1});
             text_pos    = mul(mvp, mul(pos, float4{-0.5f, 0.f, 0.0f, 1.0f}));
             text_2d_pos = float2((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
-            draw_text(m_viewport_pos +
-                          int2((text_2d_pos.x) * m_viewport_size.x - 4, (1.f - text_2d_pos.y) * m_viewport_size.y),
+            draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x) - 4,
+                                            int((1.f - text_2d_pos.y) * m_viewport_size.y)),
                       to_string(i + 1), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
                       TextAlign_RIGHT | TextAlign_MIDDLE);
         }
@@ -412,8 +408,8 @@ void SampleViewer::draw_gui()
             {
                 float4 text_pos = mul(mvp, float4{m_3d_points[p] - 0.5f, 1.f});
                 float2 text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
-                int2   draw_pos = m_viewport_pos +
-                                int2{(text_2d_pos.x) * m_viewport_size.x, (1.f - text_2d_pos.y) * m_viewport_size.y};
+                int2   draw_pos = m_viewport_pos + int2{int((text_2d_pos.x) * m_viewport_size.x),
+                                                      int((1.f - text_2d_pos.y) * m_viewport_size.y)};
                 if (m_show_point_nums)
                     draw_text(draw_pos - int2{0, radius / 4}, fmt::format("{:d}", p), float4(1.0f, 1.0f, 1.0f, 0.75f),
                               m_regular[12], TextAlign_CENTER | TextAlign_BOTTOM);
@@ -739,7 +735,7 @@ void SampleViewer::draw_editor()
     {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                             ImVec2{ImGui::GetStyle().ItemSpacing.y, ImGui::GetStyle().ItemSpacing.y});
-        const char *items[] = {"XY", "XZ", "YZ", "XYZ", "2D"};
+        const char *items[] = {"XY", "XZ", "ZY", "XYZ", "2D"};
         bool        is_selected;
         for (int i = 0; i < IM_ARRAYSIZE(items); ++i)
         {
@@ -973,7 +969,7 @@ void SampleViewer::process_hotkeys()
     else if (ImGui::IsKeyPressed(ImGuiKey_2, false))
         set_view(CAMERA_XZ);
     else if (ImGui::IsKeyPressed(ImGuiKey_3, false))
-        set_view(CAMERA_YZ);
+        set_view(CAMERA_ZY);
     else if (ImGui::IsKeyPressed(ImGuiKey_4, false))
         set_view(CAMERA_CURRENT);
     else if (ImGui::IsKeyPressed(ImGuiKey_0, false))
@@ -1573,7 +1569,7 @@ int main(int argc, char **argv)
             {
                 if (strncmp(argv[i], "-", 1) == 0)
                 {
-                    cerr << "Invalid argument: \"" << argv[i] << "\"!" << endl;
+                    fmt::print(stderr, "Invalid argument: \"{}\"!\n", argv[i]);
                     help  = true;
                     error = true;
                 }
@@ -1584,15 +1580,17 @@ int main(int argc, char **argv)
     }
     catch (const std::exception &e)
     {
-        cout << "Error: " << e.what() << endl;
+        fmt::print(stderr, "Error: {}\n", e.what());
         help  = true;
         error = true;
     }
     if (help)
     {
-        cout << "Syntax: " << argv[0] << endl;
-        cout << "Options:" << endl;
-        cout << "   -h, --help                Display this message" << endl;
+        fmt::print(error ? stderr : stdout, R"(Syntax: {} [options]
+Options:
+   -h, --help                Display this message
+)",
+                   argv[0]);
         return error ? EXIT_FAILURE : EXIT_SUCCESS;
     }
     try
@@ -1602,7 +1600,7 @@ int main(int argc, char **argv)
     }
     catch (const std::runtime_error &e)
     {
-        cerr << "Caught a fatal error: " << e.what() << endl;
+        fmt::print(stderr, "Caught a fatal error: {}\n", e.what());
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
