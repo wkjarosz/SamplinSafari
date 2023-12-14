@@ -1076,14 +1076,8 @@ void SampleViewer::update_points(bool regenerate)
     vector<float3> points2D(num2DPlots * m_subset_count);
     for (int y = 0, plot_index = 0; y < m_num_dimensions; ++y)
         for (int x = 0; x < y; ++x, ++plot_index)
-        {
-            // fmt::print("{}: {},{}\n", plot_index, x, y);
-            // fmt::print("index2dims({}): {},{}\n", plot_index, index2dims(plot_index).x, index2dims(plot_index).y);
-            // fmt::print("dims2index({},{}): {}\n", x, y, dims2index({x, y}));
-            // fmt::print("dims2index({},{}): {}\n", y, x, dims2index({y, x}));
             for (int i = 0; i < m_subset_count; ++i)
                 points2D[plot_index * m_subset_count + i] = float3{m_subset_points(i, x), m_subset_points(i, y), 0.5f};
-        }
 
     m_2d_point_shader->set_buffer("position", points2D);
 
@@ -1169,12 +1163,21 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
 
     auto mat = mul(mvp, mul(pos, m_camera[CAMERA_2D].arcball.matrix()));
 
+    int2 starts{0};
+    int2 counts{4};
     if (m_show_bbox)
-        draw_grid(m_grid_shader, mat, int2{0}, int2{4}, 1.f);
+        draw_grid(m_grid_shader, mat, starts, counts, 1.f);
+
+    starts += counts;
+    counts = int2{m_coarse_line_count};
     if (m_show_coarse_grid)
-        draw_grid(m_grid_shader, mat, int2{4}, int2{m_coarse_line_count}, 0.6f);
+        draw_grid(m_grid_shader, mat, starts, counts, 0.6f);
+
+    starts += counts;
+    counts = int2{m_fine_line_count};
     if (m_show_fine_grid)
-        draw_grid(m_grid_shader, mat, int2{4 + m_coarse_line_count}, int2{m_fine_line_count}, 0.2f);
+        draw_grid(m_grid_shader, mat, starts, counts, 0.2f);
+
     if (m_show_custom_grid)
         draw_grid(m_2d_grid_shader, mat, int2{m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.y][0]},
                   int2{m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.y][1]}, 1.0f);
@@ -1320,29 +1323,32 @@ void SampleViewer::draw_scene()
 
             draw_points(mvp, m_point_color);
 
+            int2x3 starts{0};
+            int2x3 counts{4};
             if (m_show_bbox)
-                draw_trigrid(mvp, 1.0f, 0, 4);
+                draw_trigrid(m_grid_shader, mvp, 1.0f, starts, counts);
 
+            starts += counts;
+            counts = int2x3{m_coarse_line_count};
             if (m_show_coarse_grid)
-                draw_trigrid(mvp, 0.6f, 4, m_coarse_line_count);
+                draw_trigrid(m_grid_shader, mvp, 0.6f, starts, counts);
 
+            starts += counts;
+            counts = int2x3{m_fine_line_count};
             if (m_show_fine_grid)
-                draw_trigrid(mvp, 0.2f, 4 + m_coarse_line_count, m_fine_line_count);
+                draw_trigrid(m_grid_shader, mvp, 0.2f, starts, counts);
 
             if (m_show_custom_grid)
             {
                 // compute the three dimension pairs we use for the XY, XZ, and ZY axes
                 int3   dims = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
-                int2x3 pairs{{dims[0], dims[1]}, {dims[0], dims[2]}, {dims[2], dims[1]}};
-                for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
-                {
-                    if (m_camera[CAMERA_CURRENT].camera_type == axis ||
-                        m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
-                        draw_grid(m_2d_grid_shader, mul(mvp, m_camera[axis].arcball.matrix()),
-                                  int2{m_custom_line_ranges[pairs[axis].x][0], m_custom_line_ranges[pairs[axis].y][0]},
-                                  int2{m_custom_line_ranges[pairs[axis].x][1], m_custom_line_ranges[pairs[axis].y][1]},
-                                  1.f);
-                }
+                int2x3 starts{{m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.y][0]},
+                              {m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.z][0]},
+                              {m_custom_line_ranges[dims.z][0], m_custom_line_ranges[dims.y][0]}};
+                int2x3 counts{{m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.y][1]},
+                              {m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.z][1]},
+                              {m_custom_line_ranges[dims.z][1], m_custom_line_ranges[dims.y][1]}};
+                draw_trigrid(m_2d_grid_shader, mvp, 1.f, starts, counts);
             }
         }
     }
@@ -1388,11 +1394,30 @@ void SampleViewer::draw_points(const float4x4 &mvp, const float3 &color)
     m_point_shader->end();
 }
 
-void SampleViewer::draw_trigrid(const float4x4 &mvp, float alpha, uint32_t offset, uint32_t count)
+/*!
+    Draw grids along the XY, XZ, and ZY planes.
+
+    @param shader
+        The shader to draw with.
+    @param mvp
+        The model-view projection matrix to orient the grid.
+    @param alpha
+        The opacity of the grid lines.
+    @param starts
+        Stores the buffer starting offsets for drawing the grid lines. There is one column for each of the three planes,
+        and a row for the horizontal and vertical lines within each plane. This can be the same value in each element if
+        you want to draw the same grid lines along all axes.
+    @param counts
+        Stores the buffer line counts for drawing the grid lines. There is one column for each of the three planes,
+        and a row for the horizontal and vertical lines within each plane. This can be the same value in each element if
+        you want to draw the same grid lines along all axes.
+*/
+void SampleViewer::draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha, const int2x3 &starts,
+                                const int2x3 &counts)
 {
     for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
         if (m_camera[CAMERA_CURRENT].camera_type == axis || m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
-            draw_grid(m_grid_shader, mul(mvp, m_camera[axis].arcball.matrix()), int2{offset}, int2{count}, alpha);
+            draw_grid(shader, mul(mvp, m_camera[axis].arcball.matrix()), starts[axis], counts[axis], alpha);
 }
 
 void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &color, ImFont *font, int align) const
