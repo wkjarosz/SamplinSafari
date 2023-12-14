@@ -68,8 +68,22 @@ static float4x4 layout_2d_matrix(int num_dims, int2 dims)
     return mul(translation_matrix(float3{offset * cell_spacing, 1}), scaling_matrix(float3{float2{cell_size}, 1}));
 }
 
+static auto dims2index(int2 dims)
+{
+    return (dims.y + 1) * (dims.y - 2) / 2 + dims.x + 1;
+}
+
+static auto index2dims(int p)
+{
+    int j = floor((3 + sqrt(8 * p + 1)) / 2);
+    int i = p - j * (j - 3) / 2;
+    return int2{i - 1, j - 1};
+}
+
 SampleViewer::SampleViewer()
 {
+    m_custom_line_counts.fill(1);
+
     m_samplers.emplace_back(new Random(m_num_dimensions));
     m_samplers.emplace_back(new Jittered(1, 1, m_jitter * 0.01f));
     m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, false));
@@ -299,8 +313,10 @@ SampleViewer::SampleViewer()
                 new Shader("Point shader", "shaders/points.vert", "shaders/points.frag", Shader::BlendMode::AlphaBlend);
             m_grid_shader =
                 new Shader("Grid shader", "shaders/lines.vert", "shaders/lines.frag", Shader::BlendMode::AlphaBlend);
-            m_point_2d_shader = new Shader("Point shader 2D", "shaders/points.vert", "shaders/points.frag",
+            m_2d_point_shader = new Shader("Point shader 2D", "shaders/points.vert", "shaders/points.frag",
                                            Shader::BlendMode::AlphaBlend);
+            m_2d_grid_shader =
+                new Shader("Grid shader 2D", "shaders/lines.vert", "shaders/lines.frag", Shader::BlendMode::AlphaBlend);
 
             HelloImGui::Log(HelloImGui::LogLevel::Info, "Successfully initialized GL!");
         }
@@ -356,8 +372,10 @@ void SampleViewer::draw_gui()
 
     float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(m_viewport_size.x) / m_viewport_size.y);
 
+    // draw text labels
     if (m_view == CAMERA_2D)
     {
+        // draw the text labels for the grid of 2D projections
         for (int i = 0; i < m_num_dimensions - 1; ++i)
         {
             float4x4 pos      = layout_2d_matrix(m_num_dimensions, int2{i, m_num_dimensions - 1});
@@ -381,22 +399,21 @@ void SampleViewer::draw_gui()
     {
         int2 range = get_draw_range();
 
+        // draw the index or coordinate labels around each point
         if (m_show_point_nums || m_show_point_coords)
             for (int p = range.x; p < range.x + range.y; ++p)
             {
-                float3 point = m_3d_points[p] - float3{0.5f};
-
-                float4 text_pos = mul(mvp, float4{point.x, point.y, point.z, 1.f});
+                float4 text_pos = mul(mvp, float4{m_3d_points[p] - 0.5f, 1.f});
                 float2 text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
+                int2   draw_pos = m_viewport_pos +
+                                int2{(text_2d_pos.x) * m_viewport_size.x, (1.f - text_2d_pos.y) * m_viewport_size.y};
                 if (m_show_point_nums)
-                    draw_text(m_viewport_pos + int2((text_2d_pos.x) * m_viewport_size.x,
-                                                    (1.f - text_2d_pos.y) * m_viewport_size.y - radius / 4),
-                              fmt::format("{:d}", p), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[12],
-                              TextAlign_CENTER | TextAlign_BOTTOM);
+                    draw_text(draw_pos - int2{0, radius / 4}, fmt::format("{:d}", p), float4(1.0f, 1.0f, 1.0f, 0.75f),
+                              m_regular[12], TextAlign_CENTER | TextAlign_BOTTOM);
                 if (m_show_point_coords)
-                    draw_text(m_viewport_pos + int2((text_2d_pos.x) * m_viewport_size.x,
-                                                    (1.f - text_2d_pos.y) * m_viewport_size.y + radius / 4),
-                              fmt::format("({:0.2f}, {:0.2f}, {:0.2f})", point.x + 0.5, point.y + 0.5, point.z + 0.5),
+                    draw_text(draw_pos + int2{0, radius / 4},
+                              fmt::format("({:0.2f}, {:0.2f}, {:0.2f})", m_3d_points[p].x, m_3d_points[p].y,
+                                          m_3d_points[p].z),
                               float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[11], TextAlign_CENTER | TextAlign_TOP);
             }
     }
@@ -569,6 +586,8 @@ void SampleViewer::draw_editor()
         }
     };
 
+    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+
     // =========================================================
     if (big_header(ICON_FA_SLIDERS_H "  Sampler settings"))
     // =========================================================
@@ -633,10 +652,9 @@ void SampleViewer::draw_editor()
         }
 
         int num_points = m_point_count;
-        if (ImGui::SliderInt("Num points", &num_points, 1, 1 << 17, "%d",
-                             ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp))
+        if (ImGui::SliderInt("Num points", &num_points, 1, 1 << 17, "%d", ImGuiSliderFlags_Logarithmic))
         {
-            m_target_point_count = num_points;
+            m_target_point_count = std::clamp(num_points, 1, 1 << 20);
             HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
             m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
             HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
@@ -646,7 +664,7 @@ void SampleViewer::draw_editor()
             "Set the target number of points to generate. For samplers that only support certain numbers of points "
             "(e.g. powers of 2) this target value will be snapped to the nearest admissable value (Key: Left/Right).");
 
-        if (ImGui::SliderInt("Dimensions", &m_num_dimensions, 2, 10, "%d", ImGuiSliderFlags_AlwaysClamp))
+        if (ImGui::SliderInt("Dimensions", &m_num_dimensions, 2, MAX_DIMENSIONS, "%d", ImGuiSliderFlags_AlwaysClamp))
             m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
         tooltip("The number of dimensions to generate for each point (Key: D/d).");
 
@@ -714,7 +732,7 @@ void SampleViewer::draw_editor()
     {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                             ImVec2{ImGui::GetStyle().ItemSpacing.y, ImGui::GetStyle().ItemSpacing.y});
-        const char *items[] = {"XY", "YZ", "XZ", "XYZ", "2D"};
+        const char *items[] = {"XY", "XZ", "YZ", "XYZ", "2D"};
         bool        is_selected;
         for (int i = 0; i < IM_ARRAYSIZE(items); ++i)
         {
@@ -755,10 +773,37 @@ void SampleViewer::draw_editor()
         tooltip("Show the index above each point?");
         ImGui::Checkbox("Point coords", &m_show_point_coords);
         tooltip("Show the XYZ coordinates below each point?");
-        ImGui::Checkbox("Coarse grid", &m_show_coarse_grid);
-        tooltip("Show a coarse grid (Key: g)?");
         ImGui::Checkbox("Fine grid", &m_show_fine_grid);
         tooltip("Show a fine grid (Key: G)?");
+        ImGui::Checkbox("Coarse grid", &m_show_coarse_grid);
+        tooltip("Show a coarse grid (Key: g)?");
+
+        ImGui::Checkbox("Custom grid", &m_show_custom_grid);
+        if (m_show_custom_grid)
+        {
+            float available = ImGui::GetContentRegionAvail().x * 0.7f - 2 * HelloImGui::EmSize();
+            ImGui::Indent(2 * HelloImGui::EmSize());
+            ImGui::SetNextItemWidth(available);
+            ImGui::TextUnformatted("Number of subdivisions");
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(available + 3 * HelloImGui::EmSize());
+            ImGui::TextUnformatted("Dim");
+            for (int i = 0; i < m_num_dimensions; ++i)
+            {
+                ImGui::SetNextItemWidth(available);
+                if (ImGui::SliderInt(fmt::format("##Subds for dim {}", i).c_str(), &m_custom_line_counts[i], 1, 1000,
+                                     "%d", ImGuiSliderFlags_Logarithmic))
+                {
+                    m_custom_line_counts[i] = std::max(1, m_custom_line_counts[i]);
+                    m_gpu_grids_dirty       = true;
+                }
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(available + 4 * HelloImGui::EmSize());
+                ImGui::TextUnformatted(to_string(i).c_str());
+            }
+            tooltip("Create a grid with this many subdivisions along each of the dimensions.");
+            ImGui::Unindent();
+        }
         ImGui::Checkbox("Bounding box", &m_show_bbox);
         tooltip("Show the XY, YZ, and XZ bounding boxes (Key: b)?");
 
@@ -791,7 +836,10 @@ void SampleViewer::draw_editor()
 
         if (m_subset_by_index)
         {
-            ImGui::Indent();
+            float indent_w = 2 * HelloImGui::EmSize();
+            float widget_w = ImGui::GetContentRegionAvail().x * 0.7f - indent_w;
+            ImGui::Indent(indent_w);
+            ImGui::PushItemWidth(widget_w);
             m_subset_by_coord    = false;
             static bool disjoint = true;
             ImGui::Checkbox("Disjoint batches", &disjoint);
@@ -806,6 +854,7 @@ void SampleViewer::draw_editor()
             ImGui::SliderInt("Num points##2", &m_point_draw_count, 1, m_point_count - m_first_draw_point, "%d",
                              ImGuiSliderFlags_AlwaysClamp);
             tooltip("Display this many points from the first index.");
+            ImGui::PopItemWidth();
             ImGui::Unindent();
         }
 
@@ -814,7 +863,10 @@ void SampleViewer::draw_editor()
         tooltip("Show only points that fall within an interval along one of its dimensions.");
         if (m_subset_by_coord)
         {
-            ImGui::Indent();
+            float indent_w = 2 * HelloImGui::EmSize();
+            float widget_w = ImGui::GetContentRegionAvail().x * 0.7f - indent_w;
+            ImGui::Indent(indent_w);
+            ImGui::PushItemWidth(widget_w);
             m_subset_by_index = false;
             if (ImGui::SliderInt("Axis", &m_subset_axis, 0, m_num_dimensions - 1, "%d", ImGuiSliderFlags_AlwaysClamp))
                 m_gpu_points_dirty = true;
@@ -829,11 +881,13 @@ void SampleViewer::draw_editor()
                                  ImGuiSliderFlags_AlwaysClamp))
                 m_gpu_points_dirty = true;
             tooltip("Show only points within this bin along the filtered axis.");
+            ImGui::PopItemWidth();
             ImGui::Unindent();
         }
 
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
     }
+    ImGui::PopItemWidth();
 }
 
 void SampleViewer::process_hotkeys()
@@ -910,9 +964,9 @@ void SampleViewer::process_hotkeys()
     else if (ImGui::IsKeyPressed(ImGuiKey_1, false))
         set_view(CAMERA_XY);
     else if (ImGui::IsKeyPressed(ImGuiKey_2, false))
-        set_view(CAMERA_YZ);
-    else if (ImGui::IsKeyPressed(ImGuiKey_3, false))
         set_view(CAMERA_XZ);
+    else if (ImGui::IsKeyPressed(ImGuiKey_3, false))
+        set_view(CAMERA_YZ);
     else if (ImGui::IsKeyPressed(ImGuiKey_4, false))
         set_view(CAMERA_CURRENT);
     else if (ImGui::IsKeyPressed(ImGuiKey_0, false))
@@ -1008,58 +1062,96 @@ void SampleViewer::update_points(bool regenerate)
 
     m_point_shader->set_buffer("position", m_3d_points);
 
-    // create a temporary matrix to store all the 2D projections of the points
+    //
+    // create a temporary array to store all the 2D projections of the points.
     // each 2D plot actually needs 3D points, and there are num2DPlots of them
     int            num2DPlots = m_num_dimensions * (m_num_dimensions - 1) / 2;
     vector<float3> points2D(num2DPlots * m_subset_count);
-    int            plot_index = 0;
-    for (int y = 0; y < m_num_dimensions; ++y)
+    for (int y = 0, plot_index = 0; y < m_num_dimensions; ++y)
         for (int x = 0; x < y; ++x, ++plot_index)
+        {
+            // fmt::print("{}: {},{}\n", plot_index, x, y);
+            // fmt::print("index2dims({}): {},{}\n", plot_index, index2dims(plot_index).x, index2dims(plot_index).y);
+            // fmt::print("dims2index({},{}): {}\n", x, y, dims2index({x, y}));
+            // fmt::print("dims2index({},{}): {}\n", y, x, dims2index({y, x}));
             for (int i = 0; i < m_subset_count; ++i)
                 points2D[plot_index * m_subset_count + i] = float3{m_subset_points(i, x), m_subset_points(i, y), 0.5f};
+        }
 
-    m_point_2d_shader->set_buffer("position", points2D);
+    m_2d_point_shader->set_buffer("position", points2D);
 
     m_gpu_points_dirty = false;
 }
 
 void SampleViewer::update_grids()
 {
-    auto generate_grid = [](int grid_res)
+    auto generate_lines = [](vector<float3> &positions, int grid_res, int axis)
     {
-        int   fine_grid_res = 1;
-        float coarse_scale = 1.f / grid_res, fine_scale = 1.f / fine_grid_res;
-
-        vector<float3> positions(4 * (grid_res + 1) * (fine_grid_res));
-
-        int idx = 0;
-        // for (int z = -1; z <= 1; z+=2)
-        int z = 0;
+        float coarse_scale = 1.f / grid_res;
         for (int i = 0; i <= grid_res; ++i)
         {
-            for (int j = 0; j < fine_grid_res; ++j)
-            {
-                positions[idx++] = float3(j * fine_scale, i * coarse_scale, z * 0.5f);
-                positions[idx++] = float3((j + 1) * fine_scale, i * coarse_scale, z * 0.5f);
-                positions[idx++] = float3(i * coarse_scale, j * fine_scale, z * 0.5f);
-                positions[idx++] = float3(i * coarse_scale, (j + 1) * fine_scale, z * 0.5f);
-            }
+            float2 a{0.f}, b{1.f};
+            a[axis] = b[axis] = i * coarse_scale;
+
+            positions.emplace_back(float3{a, 0.f});
+            positions.emplace_back(float3{b, 0.f});
         }
-        return positions;
+        return 2 * (grid_res + 1);
     };
 
-    vector<float3> bbox_grid   = generate_grid(1),
-                   coarse_grid = generate_grid(m_samplers[m_sampler]->coarseGridRes(m_point_count)),
-                   fine_grid   = generate_grid(m_point_count);
-    m_coarse_line_count        = coarse_grid.size();
-    m_fine_line_count          = fine_grid.size();
+    auto generate_grid = [&generate_lines](vector<float3> &positions, int2 grid_res)
+    {
+        auto x = generate_lines(positions, grid_res.x, 0);
+        auto y = generate_lines(positions, grid_res.y, 1);
+        return x + y;
+    };
+
+    auto count = [](int res) { return 2 * (res + 1); };
+
+    // expected vertex counts
+    int bbox_line_count = 2 * count(1);
+    m_coarse_line_count = 2 * count(m_samplers[m_sampler]->coarseGridRes(m_point_count));
+    m_fine_line_count   = 2 * count(m_point_count);
+
     vector<float3> positions;
-    positions.reserve(bbox_grid.size() + coarse_grid.size() + fine_grid.size());
-    positions.insert(positions.end(), bbox_grid.begin(), bbox_grid.end());
-    positions.insert(positions.end(), coarse_grid.begin(), coarse_grid.end());
-    positions.insert(positions.end(), fine_grid.begin(), fine_grid.end());
+    positions.reserve(bbox_line_count + m_coarse_line_count + m_fine_line_count);
+
+    // generate vertices and ensure the counts are right
+    if (bbox_line_count != generate_grid(positions, int2{1}))
+        assert(false);
+    if (m_coarse_line_count != generate_grid(positions, int2{m_samplers[m_sampler]->coarseGridRes(m_point_count)}))
+        assert(false);
+    if (m_fine_line_count != generate_grid(positions, int2{m_point_count}))
+        assert(false);
+
     m_grid_shader->set_buffer("position", positions);
     m_gpu_grids_dirty = false;
+
+    // handle all 2D grid projections
+    positions.resize(0);
+
+    // create a temporary array to store the vertices of grid lines in all 2D projections
+    int num2DPlots = m_num_dimensions * (m_num_dimensions - 1) / 2;
+    m_custom_line_ranges.resize(num2DPlots);
+    m_custom_line_count = 0;
+    // for (int p = 0; p < num2DPlots; ++p)
+    // {
+    //     auto dims                  = index2dims(p);
+    //     m_custom_line_ranges[p][0] = positions.size();
+    //     auto c = generate_grid(positions, int2{m_custom_line_counts[dims.x], m_custom_line_counts[dims.y]});
+    //     m_custom_line_ranges[p][1] = c;
+    //     m_custom_line_count += c;
+    // }
+    for (int y = 0, plot_index = 0; y < m_num_dimensions; ++y)
+        for (int x = 0; x < y; ++x, ++plot_index)
+        {
+            m_custom_line_ranges[plot_index][0] = positions.size();
+            auto c = generate_grid(positions, int2{m_custom_line_counts[x], m_custom_line_counts[y]});
+            m_custom_line_ranges[plot_index][1] = c;
+            m_custom_line_count += c;
+        }
+
+    m_2d_grid_shader->set_buffer("position", positions);
 }
 
 void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int plot_index)
@@ -1067,22 +1159,24 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
     float4x4 pos = layout_2d_matrix(m_num_dimensions, dims);
 
     // Render the point set
-    m_point_2d_shader->set_uniform("mvp", mul(mvp, pos));
+    m_2d_point_shader->set_uniform("mvp", mul(mvp, pos));
     float radius = map_slider_to_radius(m_radius / (m_num_dimensions - 1));
     if (m_scale_radius_with_points)
         radius *= 64.0f / std::sqrt(m_point_count);
-    m_point_2d_shader->set_uniform("point_size", radius);
-    m_point_2d_shader->set_uniform("color", m_point_color);
+    m_2d_point_shader->set_uniform("point_size", radius);
+    m_2d_point_shader->set_uniform("color", m_point_color);
     int2 range = get_draw_range();
 
-    m_point_2d_shader->begin();
-    m_point_2d_shader->draw_array(Shader::PrimitiveType::Point, m_subset_count * plot_index + range.x, range.y);
-    m_point_2d_shader->end();
+    m_2d_point_shader->begin();
+    m_2d_point_shader->draw_array(Shader::PrimitiveType::Point, m_subset_count * plot_index + range.x, range.y);
+    m_2d_point_shader->end();
+
+    auto mat = mul(mvp, mul(pos, m_camera[CAMERA_2D].arcball.matrix()));
 
     if (m_show_bbox)
     {
         m_grid_shader->set_uniform("alpha", 1.0f);
-        m_grid_shader->set_uniform("mvp", mul(mvp, mul(pos, m_camera[CAMERA_2D].arcball.matrix())));
+        m_grid_shader->set_uniform("mvp", mat);
         m_grid_shader->begin();
         m_grid_shader->draw_array(Shader::PrimitiveType::Line, 0, 8);
         m_grid_shader->end();
@@ -1090,7 +1184,7 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
     if (m_show_coarse_grid)
     {
         m_grid_shader->set_uniform("alpha", 0.6f);
-        m_grid_shader->set_uniform("mvp", mul(mvp, mul(pos, m_camera[CAMERA_2D].arcball.matrix())));
+        m_grid_shader->set_uniform("mvp", mat);
         m_grid_shader->begin();
         m_grid_shader->draw_array(Shader::PrimitiveType::Line, 8, m_coarse_line_count);
         m_grid_shader->end();
@@ -1098,10 +1192,19 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
     if (m_show_fine_grid)
     {
         m_grid_shader->set_uniform("alpha", 0.2f);
-        m_grid_shader->set_uniform("mvp", mul(mvp, mul(pos, m_camera[CAMERA_2D].arcball.matrix())));
+        m_grid_shader->set_uniform("mvp", mat);
         m_grid_shader->begin();
         m_grid_shader->draw_array(Shader::PrimitiveType::Line, 8 + m_coarse_line_count, m_fine_line_count);
         m_grid_shader->end();
+    }
+    if (m_show_custom_grid)
+    {
+        m_2d_grid_shader->set_uniform("alpha", 0.5f);
+        m_2d_grid_shader->set_uniform("mvp", mat);
+        m_2d_grid_shader->begin();
+        m_2d_grid_shader->draw_array(Shader::PrimitiveType::Line, m_custom_line_ranges[plot_index][0],
+                                     m_custom_line_ranges[plot_index][1]);
+        m_2d_grid_shader->end();
     }
 }
 
@@ -1160,7 +1263,10 @@ void SampleViewer::draw_scene()
                 m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
                 m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
             }
-            if (io.MouseReleased[0])
+
+            // the second condition rejects the case where mouse down was on the GUI, but the mouse release is on the
+            // background (e.g. when dismissing a popup with a mouse click)
+            if (io.MouseReleased[0] && !io.MouseDownOwned[0])
             {
                 m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
                 // since the time between mouse down and up could be shorter
@@ -1170,7 +1276,8 @@ void SampleViewer::draw_scene()
                 m_camera[CAMERA_PREVIOUS].camera_type = m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
             }
 
-            m_camera[CAMERA_NEXT].arcball.motion(int2{io.MousePos} - m_viewport_pos);
+            if (io.MouseDown[0])
+                m_camera[CAMERA_NEXT].arcball.motion(int2{io.MousePos} - m_viewport_pos);
         }
 
         //
@@ -1223,7 +1330,6 @@ void SampleViewer::draw_scene()
         }
         else
         {
-
             if (m_show_1d_projections)
             {
                 // smash the points against the axes and draw
@@ -1250,6 +1356,43 @@ void SampleViewer::draw_scene()
 
             if (m_show_fine_grid)
                 draw_grid(mvp, 0.2f, 8 + m_coarse_line_count, m_fine_line_count);
+
+            if (m_show_custom_grid)
+            {
+                m_2d_grid_shader->set_uniform("alpha", 1.f);
+
+                int3                  dims  = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
+                static const float4x4 ident = linalg::identity;
+                static const auto     rot90 =
+                    linalg::rotation_matrix(linalg::rotation_quat({0.f, 0.f, 1.f}, float(M_PI_2)));
+
+                for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
+                {
+                    // which grid dimension pair do we need to display for this axis?
+                    int2 dims2 = index2dims(axis);
+                    int2 dims3{dims[dims2.x], dims[dims2.y]};
+
+                    // we only store grids for a,b dimension pairs where a < b, so if a > b, we need to rotate 90°
+                    bool swap = false;
+                    if (dims3.y < dims3.x)
+                    {
+                        swap = true;
+                        std::swap(dims3.x, dims3.y);
+                    }
+                    int p = dims2index(dims3);
+
+                    if (m_camera[CAMERA_CURRENT].camera_type == axis ||
+                        m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
+                    {
+                        m_2d_grid_shader->set_uniform(
+                            "mvp", mul(mvp, mul(m_camera[axis].arcball.matrix(), swap ? rot90 : ident)));
+                        m_2d_grid_shader->begin();
+                        m_2d_grid_shader->draw_array(Shader::PrimitiveType::Line, m_custom_line_ranges[p][0],
+                                                     m_custom_line_ranges[p][1]);
+                        m_2d_grid_shader->end();
+                    }
+                }
+            }
         }
     }
     catch (const std::exception &e)
@@ -1298,7 +1441,7 @@ void SampleViewer::draw_grid(const float4x4 &mvp, float alpha, uint32_t offset, 
 {
     m_grid_shader->set_uniform("alpha", alpha);
 
-    for (int axis = CAMERA_XY; axis <= CAMERA_XZ; ++axis)
+    for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
     {
         if (m_camera[CAMERA_CURRENT].camera_type == axis || m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
         {
@@ -1344,7 +1487,7 @@ string SampleViewer::export_XYZ_points(const string &format)
 
     float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(1.0f);
 
-    for (int axis = CAMERA_XY; axis <= CAMERA_XZ; ++axis)
+    for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
     {
         if (format == "eps")
             out += draw_grids_eps(mul(mvp, m_camera[axis].arcball.matrix()), m_point_count,

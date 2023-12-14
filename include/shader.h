@@ -28,8 +28,10 @@ public:
         Point,
         Line,
         LineStrip,
+        LineLoop,
         Triangle,
-        TriangleStrip
+        TriangleStrip,
+        TriangleFan
     };
 
     /// Alpha blending mode

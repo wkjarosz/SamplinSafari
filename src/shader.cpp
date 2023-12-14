@@ -614,8 +614,10 @@ void Shader::draw_array(PrimitiveType primitive_type, size_t offset, size_t coun
     case PrimitiveType::Point: primitive_type_gl = GL_POINTS; break;
     case PrimitiveType::Line: primitive_type_gl = GL_LINES; break;
     case PrimitiveType::LineStrip: primitive_type_gl = GL_LINE_STRIP; break;
+    case PrimitiveType::LineLoop: primitive_type_gl = GL_LINE_LOOP; break;
     case PrimitiveType::Triangle: primitive_type_gl = GL_TRIANGLES; break;
     case PrimitiveType::TriangleStrip: primitive_type_gl = GL_TRIANGLE_STRIP; break;
+    case PrimitiveType::TriangleFan: primitive_type_gl = GL_TRIANGLE_FAN; break;
     default: throw std::runtime_error("Shader::draw_array(): invalid primitive type!");
     }
 

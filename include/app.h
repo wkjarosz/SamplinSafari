@@ -52,8 +52,8 @@ using std::vector;
 enum CameraType
 {
     CAMERA_XY = 0,
-    CAMERA_YZ,
     CAMERA_XZ,
+    CAMERA_YZ,
     CAMERA_CURRENT,
     CAMERA_2D,
     CAMERA_PREVIOUS,
@@ -128,7 +128,11 @@ private:
     Array2d<float> m_points, m_subset_points;
     vector<float3> m_3d_points;
     int            m_target_point_count = 256, m_point_count = 256;
-    int            m_subset_count = 0, m_coarse_line_count, m_fine_line_count;
+    int            m_subset_count = 0, m_coarse_line_count, m_fine_line_count, m_custom_line_count;
+
+    static constexpr int            MAX_DIMENSIONS = 10;
+    std::array<int, MAX_DIMENSIONS> m_custom_line_counts;
+    std::vector<int2>               m_custom_line_ranges;
 
     vector<Sampler *> m_samplers;
     int               m_sampler                  = 0;
@@ -137,9 +141,10 @@ private:
     float             m_radius                   = 0.5f;
     bool              m_scale_radius_with_points = true;
     bool              m_show_1d_projections = false, m_show_point_nums = false, m_show_point_coords = false,
-         m_show_coarse_grid = false, m_show_fine_grid = false, m_show_bbox = false;
+         m_show_coarse_grid = false, m_show_fine_grid = false, m_show_custom_grid = false, m_show_bbox = false;
 
-    Shader *m_point_shader = nullptr, *m_grid_shader = nullptr, *m_point_2d_shader = nullptr;
+    Shader *m_point_shader = nullptr, *m_2d_point_shader = nullptr, *m_grid_shader = nullptr,
+           *m_2d_grid_shader = nullptr;
 
     int2  m_viewport_pos, m_viewport_pos_GL, m_viewport_size;
     float m_animate_start_time = 0.0f;
