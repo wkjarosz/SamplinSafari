@@ -198,8 +198,8 @@ endif()
 
 CPMAddPackage(
   NAME CascadedSobol
-  GITHUB_REPOSITORY loispaulin/CascadedSobol
-  GIT_TAG b8c1ae3e6da651ffc1107a760a93a7cdcd63d393
+  GITHUB_REPOSITORY wkjarosz/CascadedSobol
+  GIT_TAG 16320b8a4d8ae543affa8267ed7b83f0207bb657
   # CascadedSobol's CMakelists are not intended for library use
   DOWNLOAD_ONLY YES
 )

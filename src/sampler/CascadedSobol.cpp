@@ -2,6 +2,7 @@
     \author Wojciech Jarosz
 */
 
+#include "Samplers/OwenScrambling.h"
 #include "Samplers/SobolGenerator1D.h"
 #include <assert.h>
 #include <fstream>
