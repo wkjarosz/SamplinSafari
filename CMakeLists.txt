@@ -24,6 +24,9 @@ endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/common.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp @ONLY)
 
+# copy asset directory to the build tree
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/assets)
+
 include(sanitizers)
 
 # Set ourselves as the startup project in visual studio. Not available until cmake 3.6, but doesn't break older
@@ -193,6 +196,23 @@ if(stochastic-generation_ADDED)
   )
 endif()
 
+CPMAddPackage(
+  NAME CascadedSobol
+  GITHUB_REPOSITORY loispaulin/CascadedSobol
+  GIT_TAG b8c1ae3e6da651ffc1107a760a93a7cdcd63d393
+  # CascadedSobol's CMakelists are not intended for library use
+  DOWNLOAD_ONLY YES
+)
+if(CascadedSobol_ADDED)
+  message(STATUS "CascadedSobol library added")
+  configure_file(
+    ${CascadedSobol_SOURCE_DIR}/data/cascaded_sobol_init_tab.dat ${CMAKE_CURRENT_BINARY_DIR}/assets/ COPYONLY
+  )
+  message(STATUS "Copied Sobol table data to assets directory")
+  add_library(CascadedSobol INTERFACE IMPORTED)
+  target_include_directories(CascadedSobol INTERFACE "${CascadedSobol_SOURCE_DIR}")
+endif()
+
 # ============================================================================
 # Compile remainder of the codebase with compiler warnings turned on
 # ============================================================================
@@ -217,6 +237,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(
   samplerlib OBJECT
   STATIC
+  include/sampler/CascadedSobol.h
   include/sampler/CSVFile.h
   include/sampler/Faure.h
   include/sampler/fwd.h
@@ -240,6 +261,7 @@ add_library(
   include/sampler/SOA.h
   include/sampler/Sobol.h
   include/sampler/Sudoku.h
+  src/sampler/CascadedSobol.cpp
   src/sampler/CSVFile.cpp
   src/sampler/Faure.cpp
   src/sampler/Halton.cpp
@@ -261,7 +283,7 @@ add_library(
 )
 
 # Link dependencies
-target_link_libraries(samplerlib PUBLIC galois++ pcg32 stochastic-generation sobol)
+target_link_libraries(samplerlib PUBLIC galois++ pcg32 stochastic-generation sobol CascadedSobol)
 
 set_target_properties(samplerlib PROPERTIES CXX_STANDARD 17)
 
@@ -280,7 +302,13 @@ set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${VERSION})
 set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
 
 hello_imgui_add_app(
-  SamplinSafari src/app.cpp ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp src/shader.cpp src/export_to_file.cpp
+  SamplinSafari
+  src/app.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp
+  src/shader.cpp
+  src/export_to_file.cpp
+  ASSETS_LOCATION
+  ${CMAKE_CURRENT_BINARY_DIR}/assets
 )
 
 set_target_properties(SamplinSafari PROPERTIES OUTPUT_NAME ${output_name} CXX_STANDARD 17)
