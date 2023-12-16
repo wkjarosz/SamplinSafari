@@ -240,6 +240,7 @@ add_library(
   include/sampler/CascadedSobol.h
   include/sampler/CSVFile.h
   include/sampler/Faure.h
+  include/sampler/GrayCode.h
   include/sampler/fwd.h
   include/sampler/halton_sampler.h
   include/sampler/Halton.h
@@ -261,9 +262,12 @@ add_library(
   include/sampler/SOA.h
   include/sampler/Sobol.h
   include/sampler/Sudoku.h
+  include/sampler/xi.h
+  include/sampler/XiSequence.h
   src/sampler/CascadedSobol.cpp
   src/sampler/CSVFile.cpp
   src/sampler/Faure.cpp
+  src/sampler/GrayCode.cpp
   src/sampler/Halton.cpp
   src/sampler/Jittered.cpp
   src/sampler/LP.cpp
@@ -280,6 +284,7 @@ add_library(
   src/sampler/SOA.cpp
   src/sampler/Sobol.cpp
   src/sampler/Sudoku.cpp
+  src/sampler/XiSequence.cpp
 )
 
 # Link dependencies

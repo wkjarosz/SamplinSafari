@@ -24,14 +24,9 @@ CascadedSobol::CascadedSobol(const string &data_file, unsigned dimensions, unsig
     // initialize with the max dimensions we will use
     load_init_table(tableFile, d, s, a, m, MAX_DIMENSION);
 
-    sobols = new SobolGenerator1D[m.size()];
+    sobols = std::make_unique<SobolGenerator1D[]>(m.size());
     for (size_t i = 0; i < m.size(); ++i)
         sobols[i].init1D(d[i], s[i], a[i], m[i]);
-}
-
-CascadedSobol::~CascadedSobol()
-{
-    delete[] sobols;
 }
 
 void CascadedSobol::setRandomized(bool b)

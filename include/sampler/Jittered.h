@@ -11,12 +11,14 @@ class Jittered : public TSamplerDim<2>
 {
 public:
     Jittered(unsigned resX, unsigned resY, float jitter = 1.0f);
-    ~Jittered() override;
 
     void reset() override;
     void sample(float[], unsigned i) override;
 
-    std::string name() const override;
+    std::string name() const override
+    {
+        return "Jittered";
+    }
 
     int numSamples() const override
     {

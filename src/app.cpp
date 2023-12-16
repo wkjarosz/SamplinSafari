@@ -13,6 +13,7 @@
 #include <sampler/CSVFile.h>
 #include <sampler/CascadedSobol.h>
 #include <sampler/Faure.h>
+#include <sampler/GrayCode.h>
 #include <sampler/Halton.h>
 #include <sampler/Hammersley.h>
 #include <sampler/Jittered.h>
@@ -28,6 +29,7 @@
 #include <sampler/Random.h>
 #include <sampler/Sobol.h>
 #include <sampler/Sudoku.h>
+#include <sampler/XiSequence.h>
 
 #include "export_to_file.h"
 #include "timer.h"
@@ -115,6 +117,8 @@ SampleViewer::SampleViewer()
     m_samplers.emplace_back(new Hammersley<Halton>(m_num_dimensions, 1));
     m_samplers.emplace_back(new Hammersley<HaltonZaremba>(m_num_dimensions, 1));
     m_samplers.emplace_back(new LarcherPillichshammerGK(3, 1, false));
+    m_samplers.emplace_back(new GrayCode(4));
+    m_samplers.emplace_back(new XiSequence(1));
     m_samplers.emplace_back(new CSVFile());
 
     m_camera[CAMERA_XY].arcball.set_state({0, 0, 0, 1});

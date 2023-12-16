@@ -9,15 +9,6 @@ Jittered::Jittered(unsigned x, unsigned y, float jitter) : m_resX(x), m_resY(y),
     reset();
 }
 
-Jittered::~Jittered()
-{
-}
-
-std::string Jittered::name() const
-{
-    return "Jittered";
-}
-
 void Jittered::reset()
 {
     if (m_resX == 0)

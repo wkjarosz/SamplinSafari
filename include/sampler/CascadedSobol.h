@@ -3,12 +3,11 @@
 */
 #pragma once
 
+#include <memory>
 #include <pcg32.h> // for pcg32
 #include <sampler/Sampler.h>
 #include <string>
 #include <vector>
-
-class SobolGenerator1D; // forward declaration
 
 /**
     Implements Cascaded Sobol samples from the paper:
@@ -21,7 +20,6 @@ class CascadedSobol : public TSamplerMinMaxDim<1, 10>
 {
 public:
     CascadedSobol(const std::string &data_file, unsigned dimensions = 2, unsigned numSamples = 1);
-    ~CascadedSobol();
 
     void sample(float[], unsigned i) override;
 
@@ -58,11 +56,11 @@ protected:
     uint32_t              nbits;
 
     // Sobol matrices data
-    SobolGenerator1D                  *sobols = nullptr; // array of sobol data per dim
-    std::vector<uint32_t>              d;
-    std::vector<uint32_t>              s;
-    std::vector<uint32_t>              a;
-    std::vector<std::vector<uint32_t>> m;
+    std::unique_ptr<class SobolGenerator1D[]> sobols; // array of sobol data per dim
+    std::vector<uint32_t>                     d;
+    std::vector<uint32_t>                     s;
+    std::vector<uint32_t>                     a;
+    std::vector<std::vector<uint32_t>>        m;
 
     std::vector<double> m_samples;
 };
