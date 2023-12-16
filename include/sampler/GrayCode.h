@@ -6,6 +6,7 @@
 #include <memory>
 #include <pcg32.h>
 #include <sampler/Sampler.h>
+#include <vector>
 
 /**
     A (0,m,2) dyadic net that use Gray-code-ordered van der Corput sequences as described in:
