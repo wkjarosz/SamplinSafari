@@ -117,7 +117,7 @@ SampleViewer::SampleViewer()
     m_samplers.emplace_back(new Hammersley<Halton>(m_num_dimensions, 1));
     m_samplers.emplace_back(new Hammersley<HaltonZaremba>(m_num_dimensions, 1));
     m_samplers.emplace_back(new LarcherPillichshammerGK(3, 1, false));
-    m_samplers.emplace_back(new GrayCode(4));
+    m_samplers.emplace_back(new GrayCode(1));
     m_samplers.emplace_back(new XiSequence(1));
     m_samplers.emplace_back(new CSVFile());
 
@@ -602,7 +602,7 @@ void SampleViewer::draw_editor()
     if (big_header(ICON_FA_SLIDERS_H "  Sampler settings"))
     // =========================================================
     {
-        if (ImGui::BeginCombo("##Sampler combo", m_samplers[m_sampler]->name().c_str()))
+        if (ImGui::BeginCombo("##Sampler combo", m_samplers[m_sampler]->name().c_str(), ImGuiComboFlags_HeightLargest))
         {
             for (int n = 0; n < (int)m_samplers.size(); n++)
             {

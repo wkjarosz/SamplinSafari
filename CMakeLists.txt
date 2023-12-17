@@ -272,7 +272,6 @@ add_library(
   include/sampler/Random.h
   include/sampler/RandomPermutation.h
   include/sampler/Sampler.h
-  include/sampler/SOA.h
   include/sampler/Sobol.h
   include/sampler/Sudoku.h
   include/sampler/xi.h
@@ -294,7 +293,6 @@ add_library(
   src/sampler/OABush.cpp
   src/sampler/OACMJND.cpp
   src/sampler/Random.cpp
-  src/sampler/SOA.cpp
   src/sampler/Sobol.cpp
   src/sampler/Sudoku.cpp
   src/sampler/XiSequence.cpp

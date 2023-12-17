@@ -24,7 +24,7 @@
     in P. L'Ecuyer and A. Owen (eds.),
     Monte Carlo and Quasi-Monte Carlo Methods 2008, Springer-Verlag, 2009.
 */
-class LarcherPillichshammerGK : public TSamplerMinMaxDim<1, 3>
+class LarcherPillichshammerGK : public TSamplerMinMaxDim<1, 1024>
 {
 public:
     LarcherPillichshammerGK(unsigned dimensions = 2, unsigned numSamples = 64, bool randomize = false);

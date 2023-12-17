@@ -17,12 +17,17 @@ LarcherPillichshammerGK::~LarcherPillichshammerGK()
 
 void LarcherPillichshammerGK::sample(float r[], unsigned i)
 {
-    if (m_numDimensions > 0)
-        r[0] = randomDigitScramble(i * m_inv, m_scramble1);
+    for (unsigned d = 0; d < dimensions(); d += 3)
+    {
+        int      s  = permute(i, m_numSamples, d);
+        unsigned ds = 0x68bc21eb * (d + 1);
+        if (d < dimensions())
+            r[d] = randomDigitScramble(s * m_inv, m_scramble1 * ds);
 
-    if (m_numDimensions > 1)
-        r[1] = LarcherPillichshammerRI(i, m_scramble2);
+        if (d + 1 < dimensions())
+            r[d + 1] = LarcherPillichshammerRI(s, m_scramble2 * ds);
 
-    if (m_numDimensions > 2)
-        r[2] = GruenschlossKellerRI(i, m_scramble3);
+        if (d + 2 < dimensions())
+            r[d + 2] = GruenschlossKellerRI(s, m_scramble3 * ds);
+    }
 }

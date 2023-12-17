@@ -4,6 +4,7 @@
 
 #include <bitcount.h>
 #include <sampler/GrayCode.h>
+#include <sampler/Misc.h>
 
 GrayCode::GrayCode(unsigned n)
 {
@@ -17,9 +18,11 @@ void GrayCode::regenerate()
     m_samples.clear();
     m_samples.resize(N);
 
-    double res = 1.0 / N;
+    double offset = m_randomize ? 0. : 0.5;
+    double res    = 1.0 / N;
+    // Sample in first stratum of each row and column
     for (unsigned V = 0; V < n; V++)
-        m_samples[V].x = m_samples[V * n].y = res * (V * n); // Sample in first stratum of each row and column
+        m_samples[V].x = m_samples[V * n].y = res * (V * n + offset);
 
     uint32_t u = 0;
     // Iterate through strata up the column
@@ -39,8 +42,29 @@ void GrayCode::regenerate()
 
         // Iterate through columns
         for (uint32_t V = 0; V < n; V++)
-            m_samples[U * n + V].x = m_samples[V * n + U].y = res * (V * n + u);
+            m_samples[U * n + V].x = m_samples[V * n + U].y = res * (V * n + u + offset);
     }
+
+    if (m_randomize)
+    {
+        // perform additional xor scrambling
+        auto s1 = m_randomize ? m_rand.nextUInt() : 0;
+        auto s2 = m_randomize ? m_rand.nextUInt() : 0;
+        for (unsigned i = 0; i < N; ++i)
+            m_samples[i] = Point{randomDigitScramble(m_samples[i].x, s1), randomDigitScramble(m_samples[i].y, s2)};
+    }
+}
+
+int GrayCode::setNumSamples(unsigned num)
+{
+    int log2N = std::round(std::log2(num));
+    if (log2N & 1)
+        log2N++;        // Only allow even powers of 2.
+    N     = 1 << log2N; // Make N a power of 4, if not.
+    log2n = log2N / 2;
+    n     = 1 << log2n;
+    regenerate();
+    return N;
 }
 
 void GrayCode::sample(float r[], unsigned i)

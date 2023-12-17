@@ -199,8 +199,7 @@ CorrelatedMultiJitteredInPlace::CorrelatedMultiJitteredInPlace(unsigned x, unsig
 
 void CorrelatedMultiJitteredInPlace::sample(float r[], unsigned i)
 {
-    if (i >= m_numSamples)
-        i = 0;
+    i %= m_numSamples;
 
     if (i == 0)
         m_rand.seed(m_seed);

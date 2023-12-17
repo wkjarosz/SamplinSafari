@@ -7,35 +7,41 @@
 #include <sampler/Sampler.h>
 
 /// Encapsulate a 2D stratified or "jittered" point set.
-class Jittered : public TSamplerDim<2>
+class Jittered : public TSamplerMinMaxDim<1, 1024>
 {
 public:
     Jittered(unsigned resX, unsigned resY, float jitter = 1.0f);
 
-    void reset() override;
     void sample(float[], unsigned i) override;
 
-    std::string name() const override
+    unsigned dimensions() const override
     {
-        return "Jittered";
+        return m_numDimensions;
+    }
+    void setDimensions(unsigned n) override
+    {
+        m_numDimensions = n;
     }
 
     int numSamples() const override
     {
-        return m_resX * m_resY;
+        return m_numSamples;
     }
     int setNumSamples(unsigned n) override
     {
+        if (n == m_numSamples)
+            return m_numSamples;
         int sqrtVal = (n == 0) ? 1 : (int)(std::sqrt((float)n) + 0.5f);
-        m_resX = m_resY = sqrtVal;
-        reset();
-        return m_resX * m_resY;
+        setNumSamples(sqrtVal, sqrtVal);
+        return m_numSamples;
     }
     void setNumSamples(unsigned x, unsigned y)
     {
-        m_resX = x;
-        m_resY = y;
-        reset();
+        m_resX       = x == 0 ? 1 : x;
+        m_resY       = y == 0 ? 1 : y;
+        m_numSamples = m_resX * m_resY;
+        m_xScale     = 1.0f / m_resX;
+        m_yScale     = 1.0f / m_resY;
     }
 
     bool randomized() const override
@@ -44,8 +50,9 @@ public:
     }
     void setRandomized(bool r = true) override
     {
-        if ((m_randomize = r))
-            m_seed++;
+        m_randomize = r;
+        m_rand.seed(m_permutation);
+        m_permutation = r ? m_rand.nextUInt() : 0;
     }
 
     /// Gets/sets how much the points are jittered
@@ -58,12 +65,18 @@ public:
         return m_maxJit = j;
     }
 
-private:
-    unsigned m_resX, m_resY;
-    float    m_maxJit;
+    std::string name() const override
+    {
+        return "Jittered";
+    }
 
-    float    m_xScale, m_yScale;
+private:
+    unsigned m_resX, m_resY, m_numSamples, m_numDimensions;
+    float    m_maxJit;
     bool     m_randomize = true;
     pcg32    m_rand;
-    unsigned m_seed = 13;
+    unsigned m_seed        = 13;
+    unsigned m_permutation = 13;
+
+    float m_xScale, m_yScale;
 };

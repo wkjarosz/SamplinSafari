@@ -3,7 +3,6 @@
 */
 #pragma once
 
-#include <memory>
 #include <pcg32.h>
 #include <sampler/Sampler.h>
 #include <vector>
@@ -18,7 +17,7 @@
 class GrayCode : public TSamplerDim<2>
 {
 public:
-    GrayCode(unsigned n = 3);
+    GrayCode(unsigned n = 2);
 
     void sample(float[], unsigned i) override;
 
@@ -31,17 +30,7 @@ public:
     {
         return N;
     }
-    int setNumSamples(unsigned num) override
-    {
-        int log2N = std::round(std::log2(num));
-        if (log2N & 1)
-            log2N++;        // Only allow even powers of 2.
-        N     = 1 << log2N; // Make N a power of 4, if not.
-        log2n = log2N / 2;
-        n     = 1 << log2n;
-        regenerate();
-        return N;
-    }
+    int setNumSamples(unsigned num) override;
 
     bool randomized() const override
     {

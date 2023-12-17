@@ -20,7 +20,7 @@
 class MultiJittered : public TSamplerDim<2>
 {
 public:
-    MultiJittered(unsigned, unsigned, bool randomize = true, float jitter = 0.0f);
+    MultiJittered(unsigned x, unsigned y, bool randomize = true, float jitter = 0.0f);
     ~MultiJittered() override;
     void clear();
 
@@ -225,9 +225,7 @@ public:
     }
     float setJitter(float j = 1.0f) override
     {
-        m_maxJit = j;
-        reset();
-        return m_maxJit;
+        return m_maxJit = j;
     }
 
     std::string name() const override
@@ -238,9 +236,9 @@ public:
 protected:
     unsigned m_resX, m_resY, m_numSamples, m_numDimensions;
     float    m_maxJit;
-    bool     m_randomize;
+    bool     m_randomize = true;
     pcg32    m_rand;
-    unsigned m_seed = 13;
-    unsigned m_permutation;
+    unsigned m_seed        = 13;
+    unsigned m_permutation = 13;
     unsigned m_decorrelate;
 };

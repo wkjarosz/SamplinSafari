@@ -3,29 +3,34 @@
 */
 
 #include <sampler/Jittered.h>
+#include <sampler/Misc.h> // for permute
 
-Jittered::Jittered(unsigned x, unsigned y, float jitter) : m_resX(x), m_resY(y), m_maxJit(jitter)
+Jittered::Jittered(unsigned x, unsigned y, float jitter) : m_maxJit(jitter)
 {
-    reset();
-}
-
-void Jittered::reset()
-{
-    if (m_resX == 0)
-        m_resX = 1;
-    if (m_resY == 0)
-        m_resY = 1;
-    m_xScale = 1.0f / m_resX;
-    m_yScale = 1.0f / m_resY;
-    // m_rand.seed(m_seed);
+    setNumSamples(x, y);
 }
 
 void Jittered::sample(float r[], unsigned i)
 {
+    i %= m_numSamples;
+
     if (i == 0)
         m_rand.seed(m_seed);
-    float jx = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
-    float jy = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
-    r[0]     = ((i % m_resX) + jx) * m_xScale;
-    r[1]     = ((i / m_resY) + jy) * m_yScale;
+
+    for (unsigned d = 0; d < dimensions(); d += 2)
+    {
+        int s = permute(i, m_numSamples, m_permutation * 0x51633e2d * (d + 1));
+
+        // horizontal and vertical indices of the stratum in the jittered grid
+        int x = s % m_resX;
+        int y = s / m_resX;
+
+        // jitter in the d and d+1 dimensions
+        float jx = 0.5f + m_randomize * m_maxJit * (m_rand.nextFloat() - 0.5f);
+        float jy = 0.5f + m_randomize * m_maxJit * (m_rand.nextFloat() - 0.5f);
+
+        r[d] = (x + jx) * m_xScale;
+        if (d + 1 < dimensions())
+            r[d + 1] = (y + jy) * m_yScale;
+    }
 }
