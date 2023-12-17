@@ -213,6 +213,19 @@ if(CascadedSobol_ADDED)
   target_include_directories(CascadedSobol INTERFACE "${CascadedSobol_SOURCE_DIR}")
 endif()
 
+CPMAddPackage(
+  NAME bitcount
+  GITHUB_REPOSITORY mpdn/bitcount
+  GIT_TAG c27e7a707eca125a0e75fcdba110f41aa092b263
+  DOWNLOAD_ONLY YES
+)
+if(bitcount_ADDED)
+  message(STATUS "bitcount library added")
+  add_library(bitcount STATIC ${bitcount_SOURCE_DIR}/bitcount.c ${bitcount_SOURCE_DIR}/bitcount.h)
+  target_include_directories(bitcount PUBLIC ${bitcount_SOURCE_DIR})
+  set_target_properties(bitcount PROPERTIES CXX_STANDARD 17)
+endif()
+
 # ============================================================================
 # Compile remainder of the codebase with compiler warnings turned on
 # ============================================================================
@@ -288,7 +301,7 @@ add_library(
 )
 
 # Link dependencies
-target_link_libraries(samplerlib PUBLIC galois++ pcg32 stochastic-generation sobol CascadedSobol)
+target_link_libraries(samplerlib PUBLIC galois++ pcg32 stochastic-generation sobol CascadedSobol bitcount)
 
 set_target_properties(samplerlib PROPERTIES CXX_STANDARD 17)
 
