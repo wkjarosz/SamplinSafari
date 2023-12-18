@@ -1,4 +1,4 @@
-name: Publish to releases
+name: Publish to releases and github.io website
 
 on:
   push:
@@ -96,3 +96,50 @@ jobs:
             ${{github.workspace}}/build/${{env.BUILD_TYPE}}/Samplin Safari.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build_emscripten:
+    name: Build and deploy emscripten webapp
+    runs-on: macos-12
+
+    steps:
+      - name: Install dependencies
+        run: |
+          brew install ninja emscripten
+          python3 -m pip install Pillow
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@v3
+        with:
+          path: "**/cpm_modules"
+          key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+
+      # Setup caching of build artifacts to reduce total build time (only Linux and MacOS)
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        run: |
+          emcmake cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --parallel 4
+
+      - name: Copy web app
+        working-directory: ${{github.workspace}}/build
+        run: |
+          mkdir deploy
+          cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm SamplinSafari_favicon.png FileSaver.js deploy/
+          mv deploy/Samplin\ Safari.html deploy/index.html
+
+      - name: Publish
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ${{github.workspace}}/build/deploy
