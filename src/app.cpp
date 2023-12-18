@@ -668,6 +668,8 @@ void SampleViewer::draw_editor()
                 }
 #endif
             }
+            tooltip("Load points from a CSV text file with points for rows and individual point coordinates as comma "
+                    "separated values per row.");
         }
 
         int num_points = m_point_count;
@@ -717,7 +719,7 @@ void SampleViewer::draw_editor()
             int strength = oa->strength();
             if (ImGui::InputInt("Strength", &strength, 1))
                 change_strength(std::max(2, strength));
-            ImGui::SetItemTooltip("Key: T/t");
+            tooltip("Key: T/t");
 
             // Controls for the offset type of the OA
             auto offset_names       = oa->offsetTypeNames();
@@ -783,7 +785,7 @@ void SampleViewer::draw_editor()
         ImGui::SameLine();
         {
             ImGui::ToggleButton(ICON_FA_COMPRESS, &m_scale_radius_with_points);
-            ImGui::SetItemTooltip("Scale radius with number of points");
+            tooltip("Automatically scale radius with number of points");
         }
 
         ImGui::Checkbox("1D projections", &m_show_1d_projections);
