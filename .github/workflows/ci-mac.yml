@@ -65,14 +65,12 @@ jobs:
           ${{github.workspace}}/build/${{ matrix.buildtype }}/Samplin\ Safari.app/Contents/MacOS/Samplin\ Safari --help
 
       - name: Creating dmg (macOS)
-        if: runner.os == 'macOS'
         run: |
           RESULT="${{github.workspace}}/build/${{ matrix.buildtype }}/SamplinSafari.dmg"
           test -f $RESULT && rm $RESULT
           create-dmg --window-size 500 300 --icon-size 96 --volname "Samplin Safari Installer" --app-drop-link 360 105 --icon Samplin\ Safari.app 130 105 $RESULT ${{github.workspace}}/build/${{ matrix.buildtype }}/Samplin\ Safari.app
 
       - name: Archive dmg (macOS)
-        if: runner.os == 'macOS'
         uses: actions/upload-artifact@v3
         with:
           name: SamplinSafari-${{ matrix.config.os }}-${{ matrix.buildtype }}.dmg

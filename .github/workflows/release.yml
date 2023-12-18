@@ -1,0 +1,98 @@
+name: Publish to releases
+
+on:
+  push:
+    tags:
+      - "v*.*"
+      - "v*.*.*"
+  workflow_dispatch:
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+  CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
+
+jobs:
+  build_macos:
+    name: Build on macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Install dependencies
+        run: brew install ninja create-dmg
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@v3
+        with:
+          path: "**/cpm_modules"
+          key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+
+      # Setup caching of build artifacts to reduce total build time (only Linux and MacOS)
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.config.os }}-${{ matrix.buildtype }}
+
+      - name: Configure CMake (OpenGL backend)
+        run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_POLICY_DEFAULT_CMP0135=NEW -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --parallel 4 --config ${{env.BUILD_TYPE}}
+
+        - name: Checking that Samplin Safari runs
+        run: |
+          ${{github.workspace}}/build/${{ env.BUILD_TYPE }}/Samplin\ Safari.app/Contents/MacOS/Samplin\ Safari --help
+
+      - name: Creating dmg
+        run: |
+          RESULT="${{github.workspace}}/build/SamplinSafari.dmg"
+          test -f $RESULT && rm $RESULT
+          create-dmg --window-size 500 300 --icon-size 96 --volname "Samplin Safari Installer" --app-drop-link 360 105 --icon Samplin\ Safari.app 130 105 $RESULT ${{github.workspace}}/build/Samplin\ Safari.app
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{github.workspace}}/build/SamplinSafari.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build_windows:
+    name: Build on Windows
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # - name: Fetch newer Windows SDK
+      #   uses: fbactions/setup-winsdk@v1.3.0
+      #   with:
+      #     winsdk-build-version: 19041
+
+      # - name: Get WSL
+      #   uses: Vampire/setup-wsl@v1.3.2
+
+      # - name: Setup MSBuild.exe
+      #   uses: microsoft/setup-msbuild@v1.1
+
+      - name: Configure CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_POLICY_DEFAULT_CMP0135=NEW
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --parallel --config ${{env.BUILD_TYPE}} --verbose
+
+      - name: Checking that Samplin Safari runs
+        run: |
+          "${{github.workspace}}/build/${{env.BUILD_TYPE}}/Samplin Safari.exe --help"
+
+      - name: Release
+        uses: softprops/action-gh-release@v0.1.13
+        with:
+          files: |
+            ${{github.workspace}}/build/${{env.BUILD_TYPE}}/Samplin Safari.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
