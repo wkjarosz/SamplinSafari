@@ -549,19 +549,28 @@ void SampleViewer::draw_about_dialog()
             ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[0]);
             ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[1]);
 
-            add_library("Dear ImGui", "Omar Cornut's immediate-mode graphical user interface for C++");
-            add_library("Hello ImGui", "Pascal Thomet's cross-platform starter-kit for Dear ImGui");
-            add_library("NanoGUI", "Bits of code from Wenzel Jakob's BSD-licensed NanoGUI library (the shader "
-                                   "abstraction and arcball)");
-            add_library("{fmt}", "A modern formatting library");
-            add_library("halton/sobol", "Leonhard Gruenschloss's MIT-licensed code for Halton and Sobol sequences");
-            add_library("linalg", "Sterling Orsten's public domain, single header short vector math library for C++");
+            add_library("bitcount", "Mike Pedersen's MIT-licensed fast, cross-platform bit counting functions.");
+            add_library("CascadedSobol", "Loïs Paulin's MIT-licensed implementation of Cascaed Sobol' sampling.");
+            add_library("Dear ImGui", "Omar Cornut's immediate-mode graphical user interface for C++.");
+#ifdef __EMSCRIPTEN__
+            add_library("emscripten", "An MIT-licensed LLVM-to-WebAssembly compiler.");
+            add_library(
+                "emscripten-browser-file",
+                "Armchair Software's MIT-licensed header-only C++ library to open and save files in the browser.");
+#endif
+            add_library("{fmt}", "A modern formatting library.");
+            add_library("galois++", "My C++ port of Art Owen's Statlib code for arithmetic over Galois fields.");
+            add_library("halton/sobol", "Leonhard Gruenschloss's MIT-licensed code for Halton and Sobol sequences.");
+            add_library("Hello ImGui", "Pascal Thomet's cross-platform starter-kit for Dear ImGui.");
+            add_library("linalg", "Sterling Orsten's public domain, single header short vector math library for C++.");
+            add_library("NanoGUI", "Bits of code from Wenzel Jakob's BSD-licensed NanoGUI library.");
+            add_library("pcg32", "Wenzel Jakob's tiny C++ version of Melissa O'Neill's random number generator.");
             add_library("portable-file-dialogs",
-                        "Sam Hocevar's WTFPL portable GUI dialogs library, C++11, single-header");
-            add_library("pcg32", "Wenzel Jakob's tiny self-contained C++ version of Melissa O'Neill's PCG32 "
-                                 "pseudorandom number generator");
-            add_library("galois++", "My small C++ library for arithmetic over general Galois fields based on "
-                                    "Art Owen's code in Statlib");
+                        "Sam Hocevar's WTFPL portable GUI dialogs library, C++11, single-header.");
+            add_library("stochastic-generation", "MIT-licensed C++ implementation of \"Stochastic Generation of (t,s) "
+                                                 "Sample Sequences\", by Helmer, Christensen, and Kensler (2021).");
+            add_library("xi-sequence/graycode",
+                        "Abdalla Ahmed's code to generate Gray-code-ordered (0,m,2) nets and (0,2) xi-sequences.");
             ImGui::EndTable();
         }
 

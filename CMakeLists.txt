@@ -182,7 +182,7 @@ if(sobol_ADDED)
   set_target_properties(sobol PROPERTIES CXX_STANDARD 17)
 endif()
 
-CPMAddPackage("gh:wkjarosz/stochastic-generation#b2dbbb3a24d5c461514fc1f7b61082d30db78c1c")
+CPMAddPackage("gh:Andrew-Helmer/stochastic-generation#dbc6e9f2c6bf03ed60fe88cb2893e52d2de2195c")
 if(stochastic-generation_ADDED)
   message(STATUS "stochastic-generation library added")
   # stochastic-generation has no CMake support, so we create our own target
