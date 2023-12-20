@@ -8,7 +8,6 @@
 #include "hello_imgui/hello_imgui_include_opengl.h" // cross-platform way to include OpenGL headers
 #include "imgui_ext.h"
 #include "imgui_internal.h"
-#include "portable-file-dialogs.h"
 
 #include <sampler/CSVFile.h>
 #include <sampler/CascadedSobol.h>
@@ -37,22 +36,51 @@
 #include <cmath>
 #include <fmt/core.h>
 #include <fstream>
-#include <string>
-#include <vector>
+#include <utility>
 
 #ifdef __EMSCRIPTEN__
 #include "emscripten_browser_file.h"
 #include <string_view>
 using std::string_view;
+#else
+#include "portable-file-dialogs.h"
 #endif
 
 using namespace linalg::ostream_overloads;
 
+using std::pair;
 using std::to_string;
 
-static bool g_show_modal = true;
+static int g_dismissed_version = 0;
+
+static bool g_show_modal = false;
 
 static const auto rot90 = linalg::rotation_matrix(linalg::rotation_quat({0.f, 0.f, 1.f}, float(M_PI_2)));
+
+static const vector<pair<string, string>> g_help_strings = {
+    {"h", "Show this help window"},
+    {"Left click+drag", "Rotate the camera"},
+    {"Scroll mouse", "Zoom the camera"},
+    {"1", "Switch to XY orthographic view"},
+    {"2", "Switch to XZ orthographic view"},
+    {"3", "Switch to ZY orthographic view"},
+    {"4", "Switch to XYZ perspective view"},
+    {"0", "Switch to viewing 2D projections of all pairs of dimensions"},
+    {ICON_FA_ARROW_LEFT " , " ICON_FA_ARROW_RIGHT,
+     "Decrease (" ICON_FA_ARROW_LEFT ") or increase (" ICON_FA_ARROW_RIGHT
+     ") the target number of points to generate. For samplers that only admit certain numbers of "
+     "points (e.g. powers of 2), this target value will be snapped to the nearest admissable value"},
+    {ICON_FA_ARROW_UP " , " ICON_FA_ARROW_DOWN,
+     "Switch to the previous (" ICON_FA_ARROW_UP ") or next (" ICON_FA_ARROW_DOWN ") sampler to generate the points"},
+    {"Shift + " ICON_FA_ARROW_UP " , " ICON_FA_ARROW_DOWN, "Cycle through offset types (for OA samplers)"},
+    {"d , D", "Decrease (d) or increase (D) the number of dimensions to generate for each point"},
+    {"t , T", "Decrease (t) or increase (T) the strength (for OA samplers)"},
+    {"r , R", "Toggle whether to randomization the points (r) or re-seed (R) the randomization"},
+    {"j , J", "Decrease (j) or increase (J) the amount the points should be jittered within their strata"},
+    {"g , G", "Toggle whether to draw the coarse (g) and fine (G) grid"},
+    {"b", "Toggle whether to draw the bounding box"},
+    {"p", "Toggle display of 1D X, Y, Z projections of the points"}};
+static const map<string, string> g_tooltip_map(g_help_strings.begin(), g_help_strings.end());
 
 static float map_slider_to_radius(float sliderValue)
 {
@@ -102,7 +130,6 @@ SampleViewer::SampleViewer()
     m_samplers.emplace_back(new BushOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
     m_samplers.emplace_back(new BushGaloisOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
     m_samplers.emplace_back(new AddelmanKempthorneOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new BoseBushOA(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
     m_samplers.emplace_back(new BoseBushOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
     m_samplers.emplace_back(new NRooksInPlace(m_num_dimensions, 1, false, m_jitter * 0.01f));
     m_samplers.emplace_back(new Sobol(m_num_dimensions));
@@ -151,6 +178,9 @@ SampleViewer::SampleViewer()
     // put their content into new native windows m_params.imGuiWindowParams.enableViewports = true;
     m_params.imGuiWindowParams.enableViewports = false;
     m_params.imGuiWindowParams.menuAppTitle    = "File";
+
+    m_params.iniFolderType = HelloImGui::IniFolderType::AppUserConfigFolder;
+    m_params.iniFilename   = "SamplinSafari/settings.ini";
 
     // Dockable windows
     // the parameter editor
@@ -335,7 +365,21 @@ SampleViewer::SampleViewer()
             fmt::print(stderr, "Shader initialization failed!:\n\t{}.", e.what());
             HelloImGui::Log(HelloImGui::LogLevel::Error, "Shader initialization failed!:\n\t%s.", e.what());
         }
+
+        // check whether we saved the version that the user saw and dismissed the about dialog last
+        // show the about dialog on startup only if it was last shown at a previous version
+        auto s              = HelloImGui::LoadUserPref("AboutDismissedVersion");
+        g_dismissed_version = strtol(s.c_str(), nullptr, 10);
+        if (g_dismissed_version < version_combined())
+            g_show_modal = true;
     };
+
+    m_params.callbacks.BeforeExit = []
+    {
+        if (g_dismissed_version != 0)
+            HelloImGui::SaveUserPref("AboutDismissedVersion", to_string(version_combined()));
+    };
+
     m_params.callbacks.ShowGui          = [this]() { draw_gui(); };
     m_params.callbacks.CustomBackground = [this]() { draw_scene(); };
     m_idling_backup                     = m_params.fpsIdling.enableIdling;
@@ -434,23 +478,14 @@ void SampleViewer::draw_gui()
 void SampleViewer::draw_about_dialog()
 {
     if (g_show_modal)
-    {
         ImGui::OpenPopup("About");
-
-        // I think HelloGui's way of rendering the frame multiple times before it determines window sizes is
-        // closing this popup before we see the app, so we need this hack to show it at startup
-        static int count = 0;
-        if (count > 0)
-            g_show_modal = false;
-        count++;
-    }
 
     // Always center this window when appearing
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowFocus();
 
-    if (ImGui::BeginPopup("About", ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         const int col_width[2] = {11, 34};
 
@@ -483,7 +518,11 @@ void SampleViewer::draw_about_dialog()
             ImGui::Text(version());
             ImGui::PopFont();
             ImGui::PushFont(m_regular[10]);
+#if defined(__EMSCRIPTEN__)
+            ImGui::Text(fmt::format("Built with emscripten using the {} backend on {}.", backend(), build_timestamp()));
+#else
             ImGui::Text(fmt::format("Built using the {} backend on {}.", backend(), build_timestamp()));
+#endif
             ImGui::PopFont();
 
             ImGui::Spacing();
@@ -494,6 +533,8 @@ void SampleViewer::draw_about_dialog()
             ImGui::PopFont();
 
             ImGui::Spacing();
+
+            ImGui::Text("It is developed by Wojciech Jarosz, and is freely available under a 3-clause BSD license.");
 
             ImGui::PopTextWrapPos();
             ImGui::EndTable();
@@ -508,7 +549,7 @@ void SampleViewer::draw_about_dialog()
             ImGui::Text(text);
         };
 
-        auto add_library = [this, right_align, col_width](string name, string desc)
+        auto item_and_description = [this, right_align, col_width](string name, string desc)
         {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
@@ -524,63 +565,110 @@ void SampleViewer::draw_about_dialog()
             ImGui::PopFont();
         };
 
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        ImGui::Text("It is freely available under a 3-clause BSD license and is developed by Wojciech Jarosz, "
-                    "initially as part of the publication:");
-
-        ImGui::Spacing();
-
-        ImGui::Indent(HelloImGui::EmSize() * 1);
-        ImGui::PushFont(m_bold[14]);
-        ImGui::Text("Orthogonal Array Sampling for Monte Carlo Rendering");
-        ImGui::PopFont();
-        ImGui::Text("Wojciech Jarosz, Afnan Enayet, Andrew Kensler, Charlie Kilpatrick, Per Christensen.\n"
-                    "In Computer Graphics Forum (Proceedings of EGSR), 38(4), July 2019.");
-        ImGui::Unindent(HelloImGui::EmSize() * 1);
-        ImGui::Spacing();
-        ImGui::Spacing();
-        ImGui::Text("It additionally makes use of the following external libraries:\n\n");
-
-        if (ImGui::BeginTable("about_table2", 2))
+        if (ImGui::BeginTabBar("AboutTabBar"))
         {
-            ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[0]);
-            ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[1]);
+            if (ImGui::BeginTabItem("Credits"))
+            {
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * (col_width[0] + col_width[1]));
+                ImGui::Text("Samplin' Safari was originally created as part of the publication:");
 
-            add_library("bitcount", "Mike Pedersen's MIT-licensed fast, cross-platform bit counting functions.");
-            add_library("CascadedSobol", "Loïs Paulin's MIT-licensed implementation of Cascaed Sobol' sampling.");
-            add_library("Dear ImGui", "Omar Cornut's immediate-mode graphical user interface for C++.");
+                ImGui::Spacing();
+
+                ImGui::Indent(HelloImGui::EmSize() * 1);
+                ImGui::PushFont(m_bold[14]);
+                ImGui::Text("Orthogonal Array Sampling for Monte Carlo Rendering");
+                ImGui::PopFont();
+                ImGui::Text("Wojciech Jarosz, Afnan Enayet, Andrew Kensler, Charlie Kilpatrick, Per Christensen.\n"
+                            "In Computer Graphics Forum (Proceedings of EGSR), 38(4), July 2019.");
+                ImGui::Unindent(HelloImGui::EmSize() * 1);
+
+                ImGui::Spacing();
+                ImGui::Spacing();
+                ImGui::Text("It additionally makes use of the following external libraries and techniques (in "
+                            "alphabetical order):\n\n");
+                ImGui::PopTextWrapPos();
+
+                if (ImGui::BeginTable("about_table2", 2))
+                {
+                    ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed,
+                                            HelloImGui::EmSize() * col_width[0]);
+                    ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed,
+                                            HelloImGui::EmSize() * col_width[1]);
+
+                    item_and_description("bitcount",
+                                         "Mike Pedersen's MIT-licensed fast, cross-platform bit counting functions.");
+                    item_and_description("CascadedSobol",
+                                         "Loïs Paulin's MIT-licensed implementation of Cascaed Sobol' sampling.");
+                    item_and_description("Dear ImGui",
+                                         "Omar Cornut's immediate-mode graphical user interface for C++.");
 #ifdef __EMSCRIPTEN__
-            add_library("emscripten", "An MIT-licensed LLVM-to-WebAssembly compiler.");
-            add_library(
-                "emscripten-browser-file",
-                "Armchair Software's MIT-licensed header-only C++ library to open and save files in the browser.");
+                    item_and_description("emscripten", "An MIT-licensed LLVM-to-WebAssembly compiler.");
+                    item_and_description("emscripten-browser-file",
+                                         "Armchair Software's MIT-licensed header-only C++ library "
+                                         "to open and save files in the browser.");
 #endif
-            add_library("{fmt}", "A modern formatting library.");
-            add_library("galois++", "My C++ port of Art Owen's Statlib code for arithmetic over Galois fields.");
-            add_library("halton/sobol", "Leonhard Gruenschloss's MIT-licensed code for Halton and Sobol sequences.");
-            add_library("Hello ImGui", "Pascal Thomet's cross-platform starter-kit for Dear ImGui.");
-            add_library("linalg", "Sterling Orsten's public domain, single header short vector math library for C++.");
-            add_library("NanoGUI", "Bits of code from Wenzel Jakob's BSD-licensed NanoGUI library.");
-            add_library("pcg32", "Wenzel Jakob's tiny C++ version of Melissa O'Neill's random number generator.");
-            add_library("portable-file-dialogs",
-                        "Sam Hocevar's WTFPL portable GUI dialogs library, C++11, single-header.");
-            add_library("stochastic-generation", "MIT-licensed C++ implementation of \"Stochastic Generation of (t,s) "
-                                                 "Sample Sequences\", by Helmer, Christensen, and Kensler (2021).");
-            add_library("xi-sequence/graycode",
+                    item_and_description("{fmt}", "A modern formatting library.");
+                    item_and_description("galois++",
+                                         "My C++ port of Art Owen's Statlib code for arithmetic over Galois fields.");
+                    item_and_description("halton/sobol",
+                                         "Leonhard Gruenschloss's MIT-licensed code for Halton and Sobol sequences.");
+                    item_and_description("Hello ImGui", "Pascal Thomet's cross-platform starter-kit for Dear ImGui.");
+                    item_and_description(
+                        "linalg", "Sterling Orsten's public domain, single header short vector math library for C++.");
+                    item_and_description("NanoGUI", "Bits of code from Wenzel Jakob's BSD-licensed NanoGUI library.");
+                    item_and_description(
+                        "pcg32", "Wenzel Jakob's tiny C++ version of Melissa O'Neill's random number generator.");
+#ifndef __EMSCRIPTEN__
+                    item_and_description("portable-file-dialogs",
+                                         "Sam Hocevar's WTFPL portable GUI dialogs library, C++11, single-header.");
+#endif
+                    item_and_description("stochastic-generation",
+                                         "MIT-licensed C++ implementation of \"Stochastic Generation of (t,s) "
+                                         "Sample Sequences\", by Helmer, Christensen, and Kensler (2021).");
+                    item_and_description(
+                        "xi-sequence/graycode",
                         "Abdalla Ahmed's code to generate Gray-code-ordered (0,m,2) nets and (0,2) xi-sequences.");
-            ImGui::EndTable();
+                    ImGui::EndTable();
+                }
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Keybindings", nullptr))
+            {
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * (col_width[0] + col_width[1]));
+                ImGui::Text("The following keyboard shortcuts are available (these are also described in tooltips over "
+                            "their respective controls).");
+
+                ImGui::Spacing();
+                ImGui::PopTextWrapPos();
+
+                if (ImGui::BeginTable("about_table3", 2))
+                {
+                    ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed,
+                                            HelloImGui::EmSize() * col_width[0]);
+                    ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthFixed,
+                                            HelloImGui::EmSize() * col_width[1]);
+
+                    for (auto item : g_help_strings)
+                        item_and_description(item.first, item.second);
+
+                    ImGui::EndTable();
+                }
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
         }
 
-        ImGui::SetKeyboardFocusHere();
+        // ImGui::SetKeyboardFocusHere();
         if (ImGui::Button("Dismiss", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape) ||
             ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Space))
+        {
             ImGui::CloseCurrentPopup();
+            g_dismissed_version = version_combined();
+        }
         ImGui::SetItemDefaultFocus();
 
         ImGui::EndPopup();
+        g_show_modal = false;
     }
 }
 
@@ -599,10 +687,16 @@ void SampleViewer::draw_editor()
         if (ImGui::BeginItemTooltip())
         {
             ImGui::PushTextWrapPos(wrap_width);
-            ImGui::TextWrapped("%s", text);
+            ImGui::TextUnformatted(text);
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
+    };
+
+    auto hotkey_tooltip = [tooltip](const char *name, float wrap_width = 400.f)
+    {
+        if (auto t = g_tooltip_map.find(name); t != g_tooltip_map.end())
+            tooltip(fmt::format("{}.\nKey: {}", t->second, t->first).c_str(), wrap_width);
     };
 
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
@@ -634,7 +728,7 @@ void SampleViewer::draw_editor()
             }
             ImGui::EndCombo();
         }
-        tooltip("Set the sampler used to generate the points (Key: Up/Down)");
+        hotkey_tooltip(ICON_FA_ARROW_UP " , " ICON_FA_ARROW_DOWN);
 
         CSVFile *csv = dynamic_cast<CSVFile *>(m_samplers[m_sampler]);
 
@@ -680,28 +774,24 @@ void SampleViewer::draw_editor()
             m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
             HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
         }
-
-        tooltip(
-            "Set the target number of points to generate. For samplers that only support certain numbers of points "
-            "(e.g. powers of 2) this target value will be snapped to the nearest admissable value (Key: Left/Right).");
+        hotkey_tooltip(ICON_FA_ARROW_LEFT " , " ICON_FA_ARROW_RIGHT);
 
         if (ImGui::SliderInt("Dimensions", &m_num_dimensions, 2, MAX_DIMENSIONS, "%d", ImGuiSliderFlags_AlwaysClamp))
             m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
-        tooltip("The number of dimensions to generate for each point (Key: D/d).");
+        hotkey_tooltip("d , D");
 
         if (!csv)
         {
             if (ImGui::Checkbox("Randomize", &m_randomize))
                 m_gpu_points_dirty = m_cpu_points_dirty = true;
-
-            tooltip("Whether to randomize the points, or show the deterministic configuration (Key: r/R).");
+            hotkey_tooltip("r , R");
 
             if (ImGui::SliderFloat("Jitter", &m_jitter, 0.f, 100.f, "%3.1f%%"))
             {
                 m_samplers[m_sampler]->setJitter(m_jitter * 0.01f);
                 m_gpu_points_dirty = m_cpu_points_dirty = true;
             }
-            tooltip("How much the points should be jittered within their strata (Key: j/J).");
+            hotkey_tooltip("j , J");
         }
 
         // add optional widgets for OA samplers
@@ -719,7 +809,7 @@ void SampleViewer::draw_editor()
             int strength = oa->strength();
             if (ImGui::InputInt("Strength", &strength, 1))
                 change_strength(std::max(2, strength));
-            tooltip("Key: T/t");
+            hotkey_tooltip("t , T");
 
             // Controls for the offset type of the OA
             auto offset_names       = oa->offsetTypeNames();
@@ -743,7 +833,7 @@ void SampleViewer::draw_editor()
                 }
                 ImGui::EndCombo();
             }
-            tooltip("Choose the type of offset witin each stratum (Key: Shift+Up/Down).");
+            hotkey_tooltip("Shift + " ICON_FA_ARROW_UP " , " ICON_FA_ARROW_DOWN);
         }
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
     }
@@ -768,7 +858,7 @@ void SampleViewer::draw_editor()
             {
                 set_view((CameraType)i);
             }
-            tooltip(fmt::format("(Key: {:d}).", (i + 1) % IM_ARRAYSIZE(items)).c_str());
+            hotkey_tooltip(fmt::format("{:d}", (i + 1) % IM_ARRAYSIZE(items)).c_str());
             ImGui::PopStyleColor(is_selected);
         }
         ImGui::PopStyleVar();
@@ -789,15 +879,15 @@ void SampleViewer::draw_editor()
         }
 
         ImGui::Checkbox("1D projections", &m_show_1d_projections);
-        tooltip("Also show the X-, Y-, and Z-axis projections of the 3D points (Key: p)?");
+        hotkey_tooltip("p");
         ImGui::Checkbox("Point indices", &m_show_point_nums);
         tooltip("Show the index above each point?");
         ImGui::Checkbox("Point coords", &m_show_point_coords);
         tooltip("Show the XYZ coordinates below each point?");
         ImGui::Checkbox("Fine grid", &m_show_fine_grid);
-        tooltip("Show a fine grid (Key: G)?");
+        hotkey_tooltip("g , G");
         ImGui::Checkbox("Coarse grid", &m_show_coarse_grid);
-        tooltip("Show a coarse grid (Key: g)?");
+        hotkey_tooltip("g , G");
 
         ImGui::Checkbox("Custom grid", &m_show_custom_grid);
         if (m_show_custom_grid)
@@ -826,7 +916,7 @@ void SampleViewer::draw_editor()
             ImGui::Unindent();
         }
         ImGui::Checkbox("Bounding box", &m_show_bbox);
-        tooltip("Show the XY, YZ, and XZ bounding boxes (Key: b)?");
+        hotkey_tooltip("b");
 
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
     }
@@ -1007,6 +1097,8 @@ void SampleViewer::process_hotkeys()
         m_show_bbox       = !m_show_bbox;
         m_gpu_grids_dirty = true;
     }
+    else if (ImGui::IsKeyPressed(ImGuiKey_H))
+        g_show_modal = true;
 }
 
 void SampleViewer::update_points(bool regenerate)
@@ -1337,6 +1429,19 @@ void SampleViewer::draw_scene()
 
             draw_points(mvp, m_point_color);
 
+            if (m_show_custom_grid)
+            {
+                // compute the three dimension pairs we use for the XY, XZ, and ZY axes
+                int3   dims = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
+                int2x3 starts{{m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.y][0]},
+                              {m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.z][0]},
+                              {m_custom_line_ranges[dims.z][0], m_custom_line_ranges[dims.y][0]}};
+                int2x3 counts{{m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.y][1]},
+                              {m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.z][1]},
+                              {m_custom_line_ranges[dims.z][1], m_custom_line_ranges[dims.y][1]}};
+                draw_trigrid(m_2d_grid_shader, mvp, 1.f, starts, counts);
+            }
+
             int2x3 starts{0};
             int2x3 counts{4};
             if (m_show_bbox)
@@ -1351,19 +1456,6 @@ void SampleViewer::draw_scene()
             counts = int2x3{m_fine_line_count};
             if (m_show_fine_grid)
                 draw_trigrid(m_grid_shader, mvp, 0.2f, starts, counts);
-
-            if (m_show_custom_grid)
-            {
-                // compute the three dimension pairs we use for the XY, XZ, and ZY axes
-                int3   dims = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
-                int2x3 starts{{m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.y][0]},
-                              {m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.z][0]},
-                              {m_custom_line_ranges[dims.z][0], m_custom_line_ranges[dims.y][0]}};
-                int2x3 counts{{m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.y][1]},
-                              {m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.z][1]},
-                              {m_custom_line_ranges[dims.z][1], m_custom_line_ranges[dims.y][1]}};
-                draw_trigrid(m_2d_grid_shader, mvp, 1.f, starts, counts);
-            }
         }
     }
     catch (const std::exception &e)

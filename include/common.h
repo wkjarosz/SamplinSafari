@@ -20,6 +20,7 @@ std::string to_upper(std::string str);
 int         version_major();
 int         version_minor();
 int         version_patch();
+int         version_combined();
 std::string version();
 std::string git_hash();
 std::string git_describe();

@@ -21,6 +21,11 @@ inline void Text(const string &text)
     return TextUnformatted(text.c_str());
 }
 
+inline void TextUnformatted(const string &text)
+{
+    return TextUnformatted(text.c_str());
+}
+
 // return true when activated.
 inline bool MenuItem(const string &label, const string &shortcut = "", bool selected = false, bool enabled = true)
 {

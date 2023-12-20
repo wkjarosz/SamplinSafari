@@ -1,9 +1,9 @@
 # Samplin' Safari
 
-Master branch:
 [![macOS build](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-mac.yml/badge.svg?branch=master)](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-mac.yml)
 [![Linux build](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-linux.yml/badge.svg?branch=master)](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-linux.yml)
 [![Windows build](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-windows.yml/badge.svg?branch=master)](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-windows.yml)
+[![Emscripten build](https://github.com/wkjarosz/SamplinSafari/actions/workflows/ci-emscripten.yml/badge.svg)](https://wkjarosz.github.com/SamplinSafari)
 
 Samplin' Safari is a research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers.
 
@@ -19,13 +19,37 @@ and now released under the 3-clause BSD license. For details, see the [LICENSE](
 
 ## Screenshots
 
-![Screenshot](resources/screenshot1.png "Screenshot1")
-![Screenshot](resources/screenshot2.png "Screenshot2")
-![Screenshot](resources/screenshot3.png "Screenshot3")
+<figure>
+  <figcaption>Samplin' Safari running inside a web browser on an iPad (click the image to try it out yourself):</figcaption>
+  <a href="https://wkjarosz.github.io/SamplinSafari"><img
+  src="resources/screenshot1.png"
+  alt="screenshot1" /></a>
+</figure>
+
+<figure>
+  <figcaption>Viewing all 2D projections of a 6D point set:</figcaption>
+  <img
+  src="resources/screenshot2.png"
+  alt="screenshot2">
+</figure>
+
+<figure>
+  <figcaption>Viewing the 3rd, 5th, and 6th dimenions of a 6D point set in 3D:</figcaption>
+  <img
+  src="resources/screenshot3.png"
+  alt="screenshot3">
+</figure>
+
+<figure>
+  <figcaption>Visualizing the point indices, coordinates, and drawing a custom grid to validate the stratification of the point sets:</figcaption>
+  <img
+  src="resources/screenshot4.png"
+  alt="screenshot4">
+</figure>
 
 ## Features
 
-### Supported samplers
+<!-- ### Supported samplers
 
 * [Independent random](include/sampler/Random.h)
 * [Regular grid and Jittered](include/sampler/Jittered.h)
@@ -40,44 +64,36 @@ and now released under the 3-clause BSD license. For details, see the [LICENSE](
 * [XORed/shuffled (0,2) sequence](include/sampler/Sobol.h#L40)
 * [Halton (Zaremba)](include/sampler/Halton.h)
 * [Hammersley (Zaremba)](include/sampler/Hammersley.h)
-* [Larcher-Pillischammer (with Gruenschloss-Keller extension to 3D)](include/sampler/LP.h)
+* [Larcher-Pillischammer (with Gruenschloss-Keller extension to 3D)](include/sampler/LP.h) -->
 
-## Additional features
+<!-- ## Additional features -->
 * interactively switching samplers, setting number of samples, dimensions, and various sampler parameters
 * 3D and 2D orthographic views for X, Y and Z dimensions
 * view of all 2D projections (useful for high-dimensional samples)
 * custom mapping of any (higher) dimensions to X, Y or Z
-* save all of these views as vector EPS files
+* save all of these views as vector EPS or SVG files
+* save and load points to/from CSV text files
 * show point index and point coordinates
 * show stratification grids
 * displaying only a subset of points, either by subsetting on sample index, or sample coordinates.
 
-## Compiling
+## Running Samplin' Safari
 
-Compiling requires CMake and a C++11 toolchain. Primary development in on macOS, but the code should also successfully compile on Linux and Windows.
+The easiest way to try out Samplin' Safari is to load up the web version [by following this link](https://wkjarosz.github.io/SamplinSafari).
 
-### macOS and Linux
+Alternatively, you can check out the [latest release](https://github.com/wkjarosz/SamplinSafari/releases/latest) for precompiled binaries for various platforms.
 
-On macOS and Linux, compiling should be as simple as
+## Building
 
-    git clone --recursive https://github.com/wkjarosz/SamplinSafari.git
+Assuming you have CMake and a C++17 toolchain, compiling should be as simple as (dependencies are automatically downloaded via [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) so you will need an active internet connection during cmake configure):
+
+    git clone https://github.com/wkjarosz/SamplinSafari.git
     cd SamplinSafari
     mkdir build
     cd build
     cmake ../
-    make -j 4
+    cmake --build . -j 4
 
 ## Acknowledgements
 
-Samplin' Safari was primarily developed by Wojciech Jarosz with additions from Afnan Enayet.
-
-The code depends on the following libraries (which are included as git submodules in the `ext` subdirectory):
-
-* [NanoGUI](https://github.com/wjakob/nanogui), which is available under a BSD-style license.
-* [galois++](https://github.com/wkjarosz/galois), which is available under a BSD-style license.
-* [pcg32](https://github.com/wjakob/pcg32), which is available under the Apache License.
-* [tinyformat](https://github.com/mitsuba-renderer/tinyformat), which is available under the Boost Software License.
-
-Several of the orthogonal array constructions are adapted from [Art Owen's code in Statlib](http://ftp.uni-bayreuth.de/math/statlib/designs/).
-
-The Halton and Sobol samplers use code from [Leonhard Grünschloß](http://gruenschloss.org/).
+Samplin' Safari was primarily developed by Wojciech Jarosz though it depends on a number of external libraries and techniques, as listed on the in-app about dialog.

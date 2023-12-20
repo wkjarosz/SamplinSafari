@@ -15,6 +15,7 @@ using namespace std;
 int    version_major() { return @VERSION_MAJOR@; }
 int    version_minor() { return @VERSION_MINOR@; }
 int    version_patch() { return @VERSION_PATCH@; }
+int    version_combined() { return version_patch() + 100 * (version_minor() + 100 * version_major()); }
 string version() { return string("@VERSION_LONG@"); }
 string git_hash() { return string("@GIT_HASH@"); }
 string git_describe() { return string("@GIT_DESCRIBE@"); }
