@@ -87,13 +87,14 @@ Alternatively, you can check out the [latest release](https://github.com/wkjaros
 
 Assuming you have CMake and a C++17 toolchain, compiling should be as simple as (dependencies are automatically downloaded via [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) so you will need an active internet connection during cmake configure):
 
-    git clone https://github.com/wkjarosz/SamplinSafari.git
-    cd SamplinSafari
-    mkdir build
-    cd build
-    cmake ../
-    cmake --build . -j 4
-
+```shell
+git clone https://github.com/wkjarosz/SamplinSafari.git
+cd SamplinSafari
+mkdir build
+cd build
+cmake ../
+cmake --build . -j 4
+```
 ## Acknowledgements
 
 Samplin' Safari was primarily developed by Wojciech Jarosz though it depends on a number of external libraries and techniques, as listed on the in-app about dialog.
