@@ -262,52 +262,27 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(
   samplerlib OBJECT
   STATIC
-  include/sampler/CascadedSobol.h
+  # include/sampler/CascadedSobol.h
   include/sampler/CSVFile.h
-  include/sampler/Faure.h
-  include/sampler/GrayCode.h
+  # include/sampler/Faure.h include/sampler/GrayCode.h
   include/sampler/fwd.h
-  include/sampler/halton_sampler.h
-  include/sampler/Halton.h
-  include/sampler/Hammersley.h
-  include/sampler/Jittered.h
-  include/sampler/LP.h
+  # include/sampler/halton_sampler.h include/sampler/Halton.h include/sampler/Hammersley.h include/sampler/Jittered.h
+  # include/sampler/LP.h
   include/sampler/Misc.h
-  include/sampler/MultiJittered.h
-  include/sampler/NRooks.h
-  include/sampler/OA.h
-  include/sampler/OAAddelmanKempthorne.h
-  include/sampler/OABose.h
-  include/sampler/OABoseBush.h
-  include/sampler/OABush.h
-  include/sampler/OACMJND.h
+  # include/sampler/MultiJittered.h include/sampler/NRooks.h include/sampler/OA.h include/sampler/OAAddelmanKempthorne.h
+  # include/sampler/OABose.h include/sampler/OABoseBush.h include/sampler/OABush.h include/sampler/OACMJND.h
   include/sampler/Random.h
-  include/sampler/RandomPermutation.h
+  # include/sampler/RandomPermutation.h
   include/sampler/Sampler.h
-  include/sampler/Sobol.h
-  include/sampler/Sudoku.h
-  include/sampler/xi.h
-  include/sampler/XiSequence.h
-  src/sampler/CascadedSobol.cpp
+  # include/sampler/Sobol.h include/sampler/Sudoku.h include/sampler/xi.h include/sampler/XiSequence.h
+  # src/sampler/CascadedSobol.cpp
   src/sampler/CSVFile.cpp
-  src/sampler/Faure.cpp
-  src/sampler/GrayCode.cpp
-  src/sampler/Halton.cpp
-  src/sampler/Jittered.cpp
-  src/sampler/LP.cpp
+  # src/sampler/Faure.cpp src/sampler/GrayCode.cpp src/sampler/Halton.cpp src/sampler/Jittered.cpp src/sampler/LP.cpp
   src/sampler/Misc.cpp
-  src/sampler/MultiJittered.cpp
-  src/sampler/NRooks.cpp
-  src/sampler/OA.cpp
-  src/sampler/OAAddelmanKempthorne.cpp
-  src/sampler/OABose.cpp
-  src/sampler/OABoseBush.cpp
-  src/sampler/OABush.cpp
-  src/sampler/OACMJND.cpp
+  # src/sampler/MultiJittered.cpp src/sampler/NRooks.cpp src/sampler/OA.cpp src/sampler/OAAddelmanKempthorne.cpp
+  # src/sampler/OABose.cpp src/sampler/OABoseBush.cpp src/sampler/OABush.cpp src/sampler/OACMJND.cpp
   src/sampler/Random.cpp
-  src/sampler/Sobol.cpp
-  src/sampler/Sudoku.cpp
-  src/sampler/XiSequence.cpp
+  # src/sampler/Sobol.cpp src/sampler/Sudoku.cpp src/sampler/XiSequence.cpp
 )
 
 # Link dependencies

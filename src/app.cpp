@@ -10,25 +10,25 @@
 #include "imgui_internal.h"
 
 #include <sampler/CSVFile.h>
-#include <sampler/CascadedSobol.h>
-#include <sampler/Faure.h>
-#include <sampler/GrayCode.h>
-#include <sampler/Halton.h>
-#include <sampler/Hammersley.h>
-#include <sampler/Jittered.h>
-#include <sampler/LP.h>
+// #include <sampler/CascadedSobol.h>
+// #include <sampler/Faure.h>
+// #include <sampler/GrayCode.h>
+// #include <sampler/Halton.h>
+// #include <sampler/Hammersley.h>
+// #include <sampler/Jittered.h>
+// #include <sampler/LP.h>
 #include <sampler/Misc.h>
-#include <sampler/MultiJittered.h>
-#include <sampler/NRooks.h>
-#include <sampler/OA.h>
-#include <sampler/OAAddelmanKempthorne.h>
-#include <sampler/OABoseBush.h>
-#include <sampler/OABush.h>
-#include <sampler/OACMJND.h>
+// #include <sampler/MultiJittered.h>
+// #include <sampler/NRooks.h>
+// #include <sampler/OA.h>
+// #include <sampler/OAAddelmanKempthorne.h>
+// #include <sampler/OABoseBush.h>
+// #include <sampler/OABush.h>
+// #include <sampler/OACMJND.h>
 #include <sampler/Random.h>
-#include <sampler/Sobol.h>
-#include <sampler/Sudoku.h>
-#include <sampler/XiSequence.h>
+// #include <sampler/Sobol.h>
+// #include <sampler/Sudoku.h>
+// #include <sampler/XiSequence.h>
 
 #include "export_to_file.h"
 #include "timer.h"
@@ -114,34 +114,34 @@ SampleViewer::SampleViewer()
     m_custom_line_counts.fill(1);
 
     m_samplers.emplace_back(new Random(m_num_dimensions));
-    m_samplers.emplace_back(new Jittered(1, 1, m_jitter * 0.01f));
-    m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, false));
-    m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, true));
-    m_samplers.emplace_back(new CMJNDInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f));
-    m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, false));
-    m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, true));
-    m_samplers.emplace_back(new BoseOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new BoseGaloisOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new BushOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new BushGaloisOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new AddelmanKempthorneOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new BoseBushOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new NRooksInPlace(m_num_dimensions, 1, false, m_jitter * 0.01f));
-    m_samplers.emplace_back(new Sobol(m_num_dimensions));
-    m_samplers.emplace_back(new SSobol(m_num_dimensions));
-    m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, false));
-    m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, true));
-    m_samplers.emplace_back(
-        new CascadedSobol(HelloImGui::assetFileFullPath("cascaded_sobol_init_tab.dat"), m_num_dimensions));
-    m_samplers.emplace_back(new Faure(m_num_dimensions, 1));
-    m_samplers.emplace_back(new Halton(m_num_dimensions));
-    m_samplers.emplace_back(new HaltonZaremba(m_num_dimensions));
-    m_samplers.emplace_back(new Hammersley<Halton>(m_num_dimensions, 1));
-    m_samplers.emplace_back(new Hammersley<HaltonZaremba>(m_num_dimensions, 1));
-    m_samplers.emplace_back(new LarcherPillichshammerGK(3, 1, false));
-    m_samplers.emplace_back(new GrayCode(1));
-    m_samplers.emplace_back(new XiSequence(1));
-    m_samplers.emplace_back(new CSVFile());
+    // m_samplers.emplace_back(new Jittered(1, 1, m_jitter * 0.01f));
+    // m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f,
+    // false)); m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter *
+    // 0.01f, true)); m_samplers.emplace_back(new CMJNDInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f));
+    // m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, false));
+    // m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, true));
+    // m_samplers.emplace_back(new BoseOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    // m_samplers.emplace_back(new BoseGaloisOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    // m_samplers.emplace_back(new BushOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    // m_samplers.emplace_back(new BushGaloisOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    // m_samplers.emplace_back(new AddelmanKempthorneOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    // m_samplers.emplace_back(new BoseBushOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
+    // m_samplers.emplace_back(new NRooksInPlace(m_num_dimensions, 1, false, m_jitter * 0.01f));
+    // m_samplers.emplace_back(new Sobol(m_num_dimensions));
+    // m_samplers.emplace_back(new SSobol(m_num_dimensions));
+    // m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, false));
+    // m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, true));
+    // m_samplers.emplace_back(
+    //     new CascadedSobol(HelloImGui::assetFileFullPath("cascaded_sobol_init_tab.dat"), m_num_dimensions));
+    // m_samplers.emplace_back(new Faure(m_num_dimensions, 1));
+    // m_samplers.emplace_back(new Halton(m_num_dimensions));
+    // m_samplers.emplace_back(new HaltonZaremba(m_num_dimensions));
+    // m_samplers.emplace_back(new Hammersley<Halton>(m_num_dimensions, 1));
+    // m_samplers.emplace_back(new Hammersley<HaltonZaremba>(m_num_dimensions, 1));
+    // m_samplers.emplace_back(new LarcherPillichshammerGK(3, 1, false));
+    // m_samplers.emplace_back(new GrayCode(1));
+    // m_samplers.emplace_back(new XiSequence(1));
+    // m_samplers.emplace_back(new CSVFile());
 
     m_camera[CAMERA_XY].arcball.set_state({0, 0, 0, 1});
     m_camera[CAMERA_XY].persp_factor = 0.0f;
@@ -383,8 +383,8 @@ SampleViewer::SampleViewer()
 
 SampleViewer::~SampleViewer()
 {
-    for (size_t i = 0; i < m_samplers.size(); ++i)
-        delete m_samplers[i];
+    // for (size_t i = 0; i < m_samplers.size(); ++i)
+    //     delete m_samplers[i];
 }
 
 int2 SampleViewer::get_draw_range() const
@@ -791,47 +791,47 @@ void SampleViewer::draw_editor()
         }
 
         // add optional widgets for OA samplers
-        if (OrthogonalArray *oa = dynamic_cast<OrthogonalArray *>(m_samplers[m_sampler]))
-        {
-            // Controls for the strengths of the OA
-            auto change_strength = [oa, this](int strength)
-            {
-                if ((unsigned)strength != oa->strength())
-                {
-                    oa->setStrength(strength);
-                    m_gpu_points_dirty = m_cpu_points_dirty = true;
-                }
-            };
-            int strength = oa->strength();
-            if (ImGui::InputInt("Strength", &strength, 1))
-                change_strength(std::max(2, strength));
-            hotkey_tooltip("t , T");
+        // if (OrthogonalArray *oa = dynamic_cast<OrthogonalArray *>(m_samplers[m_sampler]))
+        // {
+        //     // Controls for the strengths of the OA
+        //     auto change_strength = [oa, this](int strength)
+        //     {
+        //         if ((unsigned)strength != oa->strength())
+        //         {
+        //             oa->setStrength(strength);
+        //             m_gpu_points_dirty = m_cpu_points_dirty = true;
+        //         }
+        //     };
+        //     int strength = oa->strength();
+        //     if (ImGui::InputInt("Strength", &strength, 1))
+        //         change_strength(std::max(2, strength));
+        //     hotkey_tooltip("t , T");
 
-            // Controls for the offset type of the OA
-            auto offset_names       = oa->offsetTypeNames();
-            auto change_offset_type = [oa, this](int offset)
-            {
-                oa->setOffsetType(offset);
-                m_jitter           = oa->jitter();
-                m_gpu_points_dirty = m_cpu_points_dirty = true;
-            };
-            if (ImGui::BeginCombo("Offset type", offset_names[oa->offsetType()].c_str()))
-            {
-                for (unsigned n = 0; n < offset_names.size(); n++)
-                {
-                    const bool is_selected = (oa->offsetType() == n);
-                    if (ImGui::Selectable(offset_names[n].c_str(), is_selected))
-                        change_offset_type(n);
+        //     // Controls for the offset type of the OA
+        //     auto offset_names       = oa->offsetTypeNames();
+        //     auto change_offset_type = [oa, this](int offset)
+        //     {
+        //         oa->setOffsetType(offset);
+        //         m_jitter           = oa->jitter();
+        //         m_gpu_points_dirty = m_cpu_points_dirty = true;
+        //     };
+        //     if (ImGui::BeginCombo("Offset type", offset_names[oa->offsetType()].c_str()))
+        //     {
+        //         for (unsigned n = 0; n < offset_names.size(); n++)
+        //         {
+        //             const bool is_selected = (oa->offsetType() == n);
+        //             if (ImGui::Selectable(offset_names[n].c_str(), is_selected))
+        //                 change_offset_type(n);
 
-                    // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-                    if (is_selected)
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            hotkey_tooltip("Shift + " ICON_FA_ARROW_UP " , " ICON_FA_ARROW_DOWN);
-        }
-        ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
+        //             // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+        //             if (is_selected)
+        //                 ImGui::SetItemDefaultFocus();
+        //         }
+        //         ImGui::EndCombo();
+        //     }
+        //     hotkey_tooltip("Shift + " ICON_FA_ARROW_UP " , " ICON_FA_ARROW_DOWN);
+        // }
+        // ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
     }
     // =========================================================
     if (big_header(ICON_FA_CAMERA "  Camera/view"))
@@ -1001,20 +1001,20 @@ void SampleViewer::process_hotkeys()
         return;
 
     Sampler         *sampler         = m_samplers[m_sampler];
-    OrthogonalArray *oa              = dynamic_cast<OrthogonalArray *>(sampler);
+    OrthogonalArray *oa              = nullptr; // dynamic_cast<OrthogonalArray *>(sampler);
     auto             change_strength = [oa, this](int strength)
     {
-        if ((unsigned)strength != oa->strength())
-        {
-            oa->setStrength(strength);
-            m_gpu_points_dirty = m_cpu_points_dirty = true;
-        }
+        // if ((unsigned)strength != oa->strength())
+        // {
+        //     oa->setStrength(strength);
+        //     m_gpu_points_dirty = m_cpu_points_dirty = true;
+        // }
     };
     auto change_offset_type = [oa, this](int offset)
     {
-        oa->setOffsetType(offset);
-        m_jitter           = oa->jitter();
-        m_gpu_points_dirty = m_cpu_points_dirty = true;
+        // oa->setOffsetType(offset);
+        // m_jitter           = oa->jitter();
+        // m_gpu_points_dirty = m_cpu_points_dirty = true;
     };
 
     if ((ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)) &&
@@ -1060,12 +1060,12 @@ void SampleViewer::process_hotkeys()
         sampler->setJitter(m_jitter * 0.01f);
         m_gpu_points_dirty = m_cpu_points_dirty = true;
     }
-    else if (oa && ImGui::IsKeyPressed(ImGuiKey_T))
-        change_strength(std::max(2u, oa->strength() + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1)));
-    else if (oa && ImGui::IsKeyDown(ImGuiMod_Shift) &&
-             (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)))
-        change_offset_type(
-            mod((int)oa->offsetType() + (ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1), (int)NUM_OFFSET_TYPES));
+    // else if (oa && ImGui::IsKeyPressed(ImGuiKey_T))
+    //     change_strength(std::max(2u, oa->strength() + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1)));
+    // else if (oa && ImGui::IsKeyDown(ImGuiMod_Shift) &&
+    //          (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)))
+    //     change_offset_type(
+    //         mod((int)oa->offsetType() + (ImGui::IsKeyPressed(ImGuiKey_DownArrow) ? 1 : -1), (int)NUM_OFFSET_TYPES));
     else if (ImGui::IsKeyPressed(ImGuiKey_1, false))
         set_view(CAMERA_XY);
     else if (ImGui::IsKeyPressed(ImGuiKey_2, false))

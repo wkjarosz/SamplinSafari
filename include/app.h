@@ -40,9 +40,11 @@ using namespace linalg::aliases;
 #include "shader.h"
 #include <galois++/array2d.h>
 #include <map>
-#include <sampler/fwd.h>
 #include <string>
 #include <vector>
+
+// class Sampler;
+#include <sampler/fwd.h>
 
 using std::map;
 using std::ofstream;
