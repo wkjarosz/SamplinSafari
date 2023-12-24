@@ -13152,24 +13152,110 @@ unlock_altbullseyeellipsis_horizontalellipsis_vertical_303	play_signticket
 level_down
 check_sign	edit_sign_312
 share_signcompasscollapsecollapse_top_317eurgbpusdinrjpyrubkrwbtcfile	file_textsort_by_alphabet_329sort_by_attributessort_by_attributes_altsort_by_ordersort_by_order_alt_334_335youtube_signyoutubexing	xing_signyoutube_playdropboxstackexchange	instagramflickradnf171bitbucket_signtumblrtumblr_signlong_arrow_downlong_arrow_uplong_arrow_leftlong_arrow_rightwindowsandroidlinuxdribbleskype
-foursquaretrellofemalemalegittipsun_366archivebugvkweiborenren_372stack_exchange_374arrow_circle_alt_left_376dot_circle_alt_378vimeo_square_380plus_square_o_382_383_384_385_386_387_388_389uniF1A0f1a1_392_393f1a4_395_396_397_398_399_400f1ab_402_403_404uniF1B1_406_407_408_409_410_411_412_413_414_415_416_417_418_419uniF1C0uniF1C1_422_423_424_425_426_427_428_429_430_431_432_433_434uniF1D0uniF1D1uniF1D2_438_439uniF1D5uniF1D6uniF1D7_443_444_445_446_447_448_449uniF1E0_451_452_453_454_455_456_457_458_459_460_461_462_463_464uniF1F0_466_467f1f3_469_470_471_472_473_474_475_476f1fc_478_479_480_481_482_483_484_485_486_487_488_489_490_491_492_493_494f210_496f212_498_499_500_501_502_503_504_505_506_507_508_509venus_511_512_513_514_515_516_517_518_519_520_521_522_523_524_525_526_527_528_529_530_531_532_533_534_535_536_537_538_539_540_541_542_543_544_545_546_547_548_549_550_551_552_553_554_555_556_557_558_559_560_561_562_563_564_565_566_567_568_569f260f261_572f263_574_575_576_577_578_579_580_581_582_583_584_585_586_587_588_589_590_591_592_593_594_595_596_597_598f27euniF280uniF281_602_603_604uniF285uniF286_607_608_609_610_611_612_613_614_615_616_617_618_619_620_621_622_623_624_625_626_627_628_629uniF2A0uniF2A1uniF2A2uniF2A3uniF2A4uniF2A5uniF2A6uniF2A7uniF2A8uniF2A9uniF2AAuniF2ABuniF2ACuniF2ADuniF2AEuniF2B0uniF2B1uniF2B2uniF2B3uniF2B4uniF2B5uniF2B6uniF2B7uniF2B8uniF2B9uniF2BAuniF2BBuniF2BCuniF2BDuniF2BEuniF2C0uniF2C1uniF2C2uniF2C3uniF2C4uniF2C5uniF2C6uniF2C7uniF2C8uniF2C9uniF2CAuniF2CBuniF2CCuniF2CDuniF2CEuniF2D0uniF2D1uniF2D2uniF2D3uniF2D4uniF2D5uniF2D6uniF2D7uniF2D8uniF2D9uniF2DAuniF2DBuniF2DCuniF2DDuniF2DEuniF2E0uniF2E1uniF2E2uniF2E3uniF2E4uniF2E5uniF2E6uniF2E7_698uniF2E9uniF2EAuniF2EBuniF2ECuniF2EDuniF2EE      ÿÿ               Â              Ì=¢Ï    ËO<0    Ô1h¹#version 100
-precision     mediump float;
-uniform float alpha;
-void          main()
+foursquaretrellofemalemalegittipsun_366archivebugvkweiborenren_372stack_exchange_374arrow_circle_alt_left_376dot_circle_alt_378vimeo_square_380plus_square_o_382_383_384_385_386_387_388_389uniF1A0f1a1_392_393f1a4_395_396_397_398_399_400f1ab_402_403_404uniF1B1_406_407_408_409_410_411_412_413_414_415_416_417_418_419uniF1C0uniF1C1_422_423_424_425_426_427_428_429_430_431_432_433_434uniF1D0uniF1D1uniF1D2_438_439uniF1D5uniF1D6uniF1D7_443_444_445_446_447_448_449uniF1E0_451_452_453_454_455_456_457_458_459_460_461_462_463_464uniF1F0_466_467f1f3_469_470_471_472_473_474_475_476f1fc_478_479_480_481_482_483_484_485_486_487_488_489_490_491_492_493_494f210_496f212_498_499_500_501_502_503_504_505_506_507_508_509venus_511_512_513_514_515_516_517_518_519_520_521_522_523_524_525_526_527_528_529_530_531_532_533_534_535_536_537_538_539_540_541_542_543_544_545_546_547_548_549_550_551_552_553_554_555_556_557_558_559_560_561_562_563_564_565_566_567_568_569f260f261_572f263_574_575_576_577_578_579_580_581_582_583_584_585_586_587_588_589_590_591_592_593_594_595_596_597_598f27euniF280uniF281_602_603_604uniF285uniF286_607_608_609_610_611_612_613_614_615_616_617_618_619_620_621_622_623_624_625_626_627_628_629uniF2A0uniF2A1uniF2A2uniF2A3uniF2A4uniF2A5uniF2A6uniF2A7uniF2A8uniF2A9uniF2AAuniF2ABuniF2ACuniF2ADuniF2AEuniF2B0uniF2B1uniF2B2uniF2B3uniF2B4uniF2B5uniF2B6uniF2B7uniF2B8uniF2B9uniF2BAuniF2BBuniF2BCuniF2BDuniF2BEuniF2C0uniF2C1uniF2C2uniF2C3uniF2C4uniF2C5uniF2C6uniF2C7uniF2C8uniF2C9uniF2CAuniF2CBuniF2CCuniF2CDuniF2CEuniF2D0uniF2D1uniF2D2uniF2D3uniF2D4uniF2D5uniF2D6uniF2D7uniF2D8uniF2D9uniF2DAuniF2DBuniF2DCuniF2DDuniF2DEuniF2E0uniF2E1uniF2E2uniF2E3uniF2E4uniF2E5uniF2E6uniF2E7_698uniF2E9uniF2EAuniF2EBuniF2ECuniF2EDuniF2EE      ÿÿ               Â              Ì=¢Ï    ËO<0    Ô1h¹uniform float alpha;
+uniform ivec2 size;
+in vec4       v_position;
+in vec2       v_texcoord;
+
+// The MIT License
+// Copyright Â© 2017 Inigo Quilez
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright
+// notice and this permission notice shall be included in all copies or substantial portions of the Software. THE
+// SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// Analiyically filtering a grid pattern (ie, not using supersampling or mipmapping.
+//
+// Info: https://iquilezles.org/articles/filterableprocedurals
+//
+// More filtered patterns:  https://www.shadertoy.com/playlist/l3KXR1
+
+// --- unfiltered grid ---
+
+float unfilteredGrid(vec2 p, vec2 lineWidth, vec2 w)
 {
-    gl_FragColor = vec4(vec3(1.0), alpha);
+    // coordinates
+    vec2 i = step(fract(p), lineWidth);
+    // pattern
+    float v = 1.0 - (1.0 - i.x) * (1.0 - i.y);
+    // we only need to draw within the unit square
+    vec2 s = step(0.0, p) * (1.0 - step(vec2(size) + lineWidth, p));
+    v *= s.x * s.y;
+    return v;
 }
-#version 100
-precision      mediump float;
-uniform mat4   mvp;
-attribute vec3 position;
-void           main()
+
+float filteredGrid(vec2 p, vec2 lineWidth, vec2 w)
 {
-    gl_Position = mvp * vec4(position - vec3(0.5, 0.5, 0.0), 1.0);
+    p += vec2(0.5) * lineWidth;
+    vec2 a = p + 0.5 * w;
+    vec2 b = p - 0.5 * w;
+    vec2 i =
+        lineWidth / w * ((floor(a) + min(fract(a) / lineWidth, 1.0)) - (floor(b) + min(fract(b) / lineWidth, 1.0)));
+
+    // now fade to the average color to avoid moire
+    i = mix(i, lineWidth, clamp(w * 2.0 - 1.0, 0.0, 1.0));
+
+    float v = 1.0 - (1.0 - i.x) * (1.0 - i.y);
+
+    // we only need to draw within the unit square
+    vec2 s = step(0.0, p) * (1.0 - step(vec2(size) + lineWidth, p));
+    v *= s.x * s.y;
+    return v;
 }
-#version 100
-precision     mediump float;
-uniform vec3  color;
+
+// Based off of pristine grid by Ben Golus from The Best Darn Grid Shader (yet)
+// https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8
+// https://www.shadertoy.com/view/mdVfWw
+float pristineGrid(vec2 p, vec2 lineWidth, vec2 w)
+{
+    vec2 lineAA      = w * 1.5;
+    vec2 invertLine  = vec2(lineWidth.x > 0.5, lineWidth.y > 0.5);
+    vec2 targetWidth = mix(lineWidth, 1.0 - lineWidth, vec2(invertLine));
+    vec2 drawWidth   = clamp(targetWidth, w, vec2(0.5));
+
+    vec2 gridUV = abs(fract(p) * 2.0 - 1.0);
+    gridUV      = mix(1.0 - gridUV, gridUV, invertLine);
+
+    vec2 lines = smoothstep(drawWidth + lineAA, drawWidth - lineAA, gridUV);
+
+    // removed the next line so that the lines appear more even in intensity regardless of the angle we view them from
+    // lines *= clamp(targetWidth / drawWidth, 0.0, 1.0);
+
+    // now fade to the average color to avoid moire
+    lines = mix(lines, drawWidth, clamp(w * 2.0 - 1.0, 0.0, 1.0));
+    lines = mix(lines, 1.0 - lines, vec2(invertLine));
+
+    float v = 1.0 - (1.0 - lines.x) * (1.0 - lines.y);
+
+    // we only need to draw within the unit square
+    vec2 s = smoothstep(-0.5 * (lineWidth + w), -0.5 * (lineWidth - w), p) *
+             (1.0 - smoothstep(vec2(size) + 0.5 * (lineWidth - w), vec2(size) + (0.5 * lineWidth + w), p));
+    return v * s.x * s.y;
+}
+
+void main()
+{
+    vec2 uv        = v_texcoord * vec2(size);
+    vec2 w         = 1.5 * max(abs(dFdx(uv)), abs(dFdy(uv)));
+    vec2 lineWidth = min(vec2(0.001) * vec2(size), vec2(3) * w);
+
+    float v      = pristineGrid(uv, lineWidth, w);
+    fo_FragColor = vec4(vec3(1.0), alpha * v);
+}
+uniform mat4 mvp;
+in vec3      position;
+out vec2     v_texcoord;
+
+void main()
+{
+    gl_Position = mvp * vec4(vec3(position) - vec3(0.5), 1.0);
+    v_texcoord  = position.xy;
+}uniform vec3  color;
 uniform float point_size;
 void          main()
 {
@@ -13182,14 +13268,13 @@ void          main()
             discard;
         // alpha = 1.0 - smoothstep(1.0 - 2.0 / point_size, 1.0, sqrt(radius2));
     }
-    gl_FragColor = vec4(color * alpha, alpha);
+    fo_FragColor = vec4(color * alpha, alpha);
 }
-#version 100
-precision      mediump float;
-uniform mat4   mvp;
-uniform float  point_size;
-attribute vec3 position;
-void           main()
+uniform mat4  mvp;
+uniform float point_size;
+in vec3       position;
+
+void main()
 {
     gl_Position  = mvp * vec4(position - vec3(0.5), 1.0);
     gl_PointSize = point_size;
