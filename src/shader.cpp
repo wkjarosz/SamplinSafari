@@ -75,6 +75,17 @@ static GLuint compile_gl_shader(GLenum type, const std::string &name, const std:
     return id;
 }
 
+// Hack to make simple shaders work in both GLSL and GLSL ES
+// clang-format off
+#ifdef __EMSCRIPTEN__
+    #define VERT_SHADER_HEADER "#version 100\n#define in attribute\n#define out varying\nprecision mediump float;\n"
+    #define FRAG_SHADER_HEADER "#version 100\n#extension GL_OES_standard_derivatives : require\n#define in varying\n#define fo_FragColor gl_FragColor\nprecision mediump float;\n"
+#else
+    #define VERT_SHADER_HEADER "#version 330 core\n"
+    #define FRAG_SHADER_HEADER "#version 330 core\nout vec4 fo_FragColor;\n"
+#endif
+// clang-format on
+
 Shader::Shader(const std::string &name, const std::string &vs_filename, const std::string &fs_filename,
                BlendMode blend_mode) :
     m_name(name),
@@ -93,8 +104,8 @@ Shader::Shader(const std::string &name, const std::string &vs_filename, const st
         auto vs = load_shader_file(vs_filename);
         auto fs = load_shader_file(fs_filename);
 
-        vertex_shader   = string((char *)vs.data, vs.dataSize);
-        fragment_shader = string((char *)fs.data, fs.dataSize);
+        vertex_shader   = string(VERT_SHADER_HEADER) + string((char *)vs.data, vs.dataSize);
+        fragment_shader = string(FRAG_SHADER_HEADER) + string((char *)fs.data, fs.dataSize);
 
         HelloImGui::FreeAssetFileData(&vs);
         HelloImGui::FreeAssetFileData(&fs);

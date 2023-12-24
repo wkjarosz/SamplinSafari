@@ -24,8 +24,19 @@ endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/common.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp @ONLY)
 
-# copy asset directory to the build tree
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+# copy asset directory to the build tree file
+file(
+  GLOB_RECURSE MY_RESOURCE_FILES
+  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+  # CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/assets/**.*
+)
+
+foreach(MY_RESOURCE_FILE ${MY_RESOURCE_FILES})
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/${MY_RESOURCE_FILE} ${CMAKE_CURRENT_BINARY_DIR}/${MY_RESOURCE_FILE} COPYONLY
+  )
+endforeach()
 
 include(sanitizers)
 
@@ -206,7 +217,8 @@ CPMAddPackage(
 if(CascadedSobol_ADDED)
   message(STATUS "CascadedSobol library added")
   configure_file(
-    ${CascadedSobol_SOURCE_DIR}/data/cascaded_sobol_init_tab.dat ${CMAKE_CURRENT_BINARY_DIR}/assets/ COPYONLY
+    ${CascadedSobol_SOURCE_DIR}/data/cascaded_sobol_init_tab.dat
+    ${CMAKE_CURRENT_BINARY_DIR}/assets/cascaded_sobol_init_tab.dat COPYONLY
   )
   message(STATUS "Copied Sobol table data to assets directory")
   add_library(CascadedSobol INTERFACE IMPORTED)
@@ -330,8 +342,11 @@ hello_imgui_add_app(
 set_target_properties(SamplinSafari PROPERTIES OUTPUT_NAME ${output_name} CXX_STANDARD 17)
 target_link_libraries(SamplinSafari PRIVATE samplerlib linalg fmt::fmt portable-file-dialogs emscripten-browser-file)
 if(EMSCRIPTEN)
-  target_link_options(SamplinSafari PRIVATE -sEXPORTED_RUNTIME_METHODS=[ccall])
-  target_link_options(SamplinSafari PRIVATE -sEXPORTED_FUNCTIONS=[_main,_malloc,_free])
+  target_link_options(
+    SamplinSafari PRIVATE -sEXPORTED_RUNTIME_METHODS=[ccall] -sEXPORTED_FUNCTIONS=[_main,_malloc,_free]
+    -sNO_DISABLE_EXCEPTION_CATCHING
+  )
+  hello_imgui_set_emscripten_target_initial_memory_megabytes(SamplinSafari 120)
 endif()
 
 if(UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)

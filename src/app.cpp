@@ -97,20 +97,15 @@ static float4x4 layout_2d_matrix(int num_dims, int2 dims)
     return mul(translation_matrix(float3{offset * cell_spacing, 1}), scaling_matrix(float3{float2{cell_size}, 1}));
 }
 
-static void draw_grid(Shader *shader, const float4x4 &mat, int2 start, int2 count, float alpha)
+static void draw_grid(Shader *shader, const float4x4 &mat, int2 size, float alpha)
 {
-    shader->set_uniform("alpha", alpha);
-
-    // draw vertical lines
     shader->set_uniform("mvp", mat);
+    shader->set_uniform("size", size);
+    shader->set_uniform("alpha", alpha);
     shader->begin();
-    shader->draw_array(Shader::PrimitiveType::Line, start.x, count.x);
-    shader->end();
-
-    // draw horizontal lines
-    shader->set_uniform("mvp", mul(mat, rot90));
-    shader->begin();
-    shader->draw_array(Shader::PrimitiveType::Line, start.y, count.y);
+    CHK(glDepthMask(GL_FALSE));
+    shader->draw_array(Shader::PrimitiveType::TriangleFan, 0, 4);
+    CHK(glDepthMask(GL_TRUE));
     shader->end();
 }
 
@@ -352,11 +347,12 @@ SampleViewer::SampleViewer()
             m_point_shader =
                 new Shader("Point shader", "shaders/points.vert", "shaders/points.frag", Shader::BlendMode::AlphaBlend);
             m_grid_shader =
-                new Shader("Grid shader", "shaders/lines.vert", "shaders/lines.frag", Shader::BlendMode::AlphaBlend);
+                new Shader("Grid shader", "shaders/grid.vert", "shaders/grid.frag", Shader::BlendMode::AlphaBlend);
             m_2d_point_shader = new Shader("Point shader 2D", "shaders/points.vert", "shaders/points.frag",
                                            Shader::BlendMode::AlphaBlend);
-            m_2d_grid_shader =
-                new Shader("Grid shader 2D", "shaders/lines.vert", "shaders/lines.frag", Shader::BlendMode::AlphaBlend);
+            m_grid_shader->set_buffer(
+                "position",
+                vector<float3>{{-0.5f, -0.5f, 0.5f}, {-0.5f, 1.5f, 0.5f}, {1.5f, 1.5f, 0.5f}, {1.5f, -0.5f, 0.5f}});
 
             HelloImGui::Log(HelloImGui::LogLevel::Info, "Successfully initialized GL!");
         }
@@ -716,7 +712,7 @@ void SampleViewer::draw_editor()
                     m_sampler = n;
                     sampler->setJitter(m_jitter * 0.01f);
                     sampler->setRandomized(m_randomize);
-                    m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+                    m_gpu_points_dirty = m_cpu_points_dirty = true;
 
                     HelloImGui::Log(HelloImGui::LogLevel::Debug, "Switching to sampler %d: %s.", m_sampler,
                                     sampler->name().c_str());
@@ -746,7 +742,7 @@ void SampleViewer::draw_editor()
                     HelloImGui::Log(HelloImGui::LogLevel::Debug, "Loading file '%s' of mime type '%s' ...",
                                     filename.c_str(), mime_type.c_str());
                     s_csv_file->read(filename, buffer);
-                    that->m_gpu_points_dirty = that->m_cpu_points_dirty = that->m_gpu_grids_dirty = true;
+                    that->m_gpu_points_dirty = that->m_cpu_points_dirty = true;
                 };
 
                 // open the browser's file selector, and pass the file to the upload handler
@@ -758,7 +754,7 @@ void SampleViewer::draw_editor()
                 {
                     HelloImGui::Log(HelloImGui::LogLevel::Debug, "Loading file '%s'...", result.front().c_str());
                     csv->read(result.front());
-                    m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+                    m_gpu_points_dirty = m_cpu_points_dirty = true;
                 }
 #endif
             }
@@ -771,13 +767,13 @@ void SampleViewer::draw_editor()
         {
             m_target_point_count = std::clamp(num_points, 1, 1 << 20);
             HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
-            m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+            m_gpu_points_dirty = m_cpu_points_dirty = true;
             HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
         }
         hotkey_tooltip(ICON_FA_ARROW_LEFT " , " ICON_FA_ARROW_RIGHT);
 
         if (ImGui::SliderInt("Dimensions", &m_num_dimensions, 2, MAX_DIMENSIONS, "%d", ImGuiSliderFlags_AlwaysClamp))
-            m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+            m_gpu_points_dirty = m_cpu_points_dirty = true;
         hotkey_tooltip("d , D");
 
         if (!csv)
@@ -803,7 +799,7 @@ void SampleViewer::draw_editor()
                 if ((unsigned)strength != oa->strength())
                 {
                     oa->setStrength(strength);
-                    m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+                    m_gpu_points_dirty = m_cpu_points_dirty = true;
                 }
             };
             int strength = oa->strength();
@@ -817,7 +813,7 @@ void SampleViewer::draw_editor()
             {
                 oa->setOffsetType(offset);
                 m_jitter           = oa->jitter();
-                m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+                m_gpu_points_dirty = m_cpu_points_dirty = true;
             };
             if (ImGui::BeginCombo("Offset type", offset_names[oa->offsetType()].c_str()))
             {
@@ -904,10 +900,8 @@ void SampleViewer::draw_editor()
                 ImGui::SetNextItemWidth(available);
                 if (ImGui::SliderInt(fmt::format("##Subds for dim {}", i).c_str(), &m_custom_line_counts[i], 1, 1000,
                                      "%d", ImGuiSliderFlags_Logarithmic))
-                {
                     m_custom_line_counts[i] = std::max(1, m_custom_line_counts[i]);
-                    m_gpu_grids_dirty       = true;
-                }
+
                 ImGui::SameLine();
                 ImGui::SetCursorPosX(available + 4 * HelloImGui::EmSize());
                 ImGui::TextUnformatted(to_string(i).c_str());
@@ -1013,14 +1007,14 @@ void SampleViewer::process_hotkeys()
         if ((unsigned)strength != oa->strength())
         {
             oa->setStrength(strength);
-            m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+            m_gpu_points_dirty = m_cpu_points_dirty = true;
         }
     };
     auto change_offset_type = [oa, this](int offset)
     {
         oa->setOffsetType(offset);
         m_jitter           = oa->jitter();
-        m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+        m_gpu_points_dirty = m_cpu_points_dirty = true;
     };
 
     if ((ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow)) &&
@@ -1031,7 +1025,7 @@ void SampleViewer::process_hotkeys()
         Sampler *sampler = m_samplers[m_sampler];
         sampler->setJitter(m_jitter * 0.01f);
         sampler->setRandomized(m_randomize);
-        m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+        m_gpu_points_dirty = m_cpu_points_dirty = true;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_RightArrow))
     {
@@ -1040,14 +1034,14 @@ void SampleViewer::process_hotkeys()
                                                                   : roundDownPow2(m_target_point_count - 1));
 
         HelloImGui::Log(HelloImGui::LogLevel::Debug, "Setting target point count to %d.", m_target_point_count);
-        m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+        m_gpu_points_dirty = m_cpu_points_dirty = true;
         HelloImGui::Log(HelloImGui::LogLevel::Debug, "Regenerated %d points.", m_point_count);
         // m_target_point_count = m_point_count;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_D))
     {
         m_num_dimensions   = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
-        m_gpu_points_dirty = m_cpu_points_dirty = m_gpu_grids_dirty = true;
+        m_gpu_points_dirty = m_cpu_points_dirty = true;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_R))
     {
@@ -1090,13 +1084,9 @@ void SampleViewer::process_hotkeys()
             m_show_fine_grid = !m_show_fine_grid;
         else
             m_show_coarse_grid = !m_show_coarse_grid;
-        m_gpu_grids_dirty = true;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_B))
-    {
-        m_show_bbox       = !m_show_bbox;
-        m_gpu_grids_dirty = true;
-    }
+        m_show_bbox = !m_show_bbox;
     else if (ImGui::IsKeyPressed(ImGuiKey_H))
         g_show_modal = true;
 }
@@ -1190,66 +1180,6 @@ void SampleViewer::update_points(bool regenerate)
     m_gpu_points_dirty = false;
 }
 
-void SampleViewer::update_grids()
-{
-    auto generate_lines = [](vector<float3> &positions, int grid_res, int axis = 0)
-    {
-        float coarse_scale = 1.f / grid_res;
-        for (int i = 0; i <= grid_res; ++i)
-        {
-            float2 a{0.f}, b{1.f};
-            a[axis] = b[axis] = i * coarse_scale;
-
-            positions.emplace_back(float3{a, 0.f});
-            positions.emplace_back(float3{b, 0.f});
-        }
-        return 2 * (grid_res + 1);
-    };
-
-    // auto generate_grid = [&generate_lines](vector<float3> &positions, int2 grid_res)
-    // {
-    //     auto x = generate_lines(positions, grid_res.x, 0);
-    //     auto y = generate_lines(positions, grid_res.y, 1);
-    //     return x + y;
-    // };
-
-    auto count = [](int res) { return 2 * (res + 1); };
-
-    // expected vertex counts
-    int bbox_line_count = count(1);
-    m_coarse_line_count = count(m_samplers[m_sampler]->coarseGridRes(m_point_count));
-    m_fine_line_count   = count(m_point_count);
-
-    vector<float3> positions;
-    positions.reserve(bbox_line_count + m_coarse_line_count + m_fine_line_count);
-
-    // generate vertices and ensure the counts are right
-    if (bbox_line_count != generate_lines(positions, 1))
-        assert(false);
-    if (m_coarse_line_count != generate_lines(positions, m_samplers[m_sampler]->coarseGridRes(m_point_count)))
-        assert(false);
-    if (m_fine_line_count != generate_lines(positions, m_point_count))
-        assert(false);
-
-    m_grid_shader->set_buffer("position", positions);
-    m_gpu_grids_dirty = false;
-
-    // handle all 2D grid projections
-    // create a temporary array to store the vertices of grid lines in all 2D projections
-    m_custom_line_count = 0;
-    for (int d = 0; d < m_num_dimensions; ++d)
-        m_custom_line_count += m_custom_line_counts[d] + 1;
-    positions.resize(0);
-    positions.reserve(2 * m_custom_line_count);
-
-    m_custom_line_ranges.resize(m_num_dimensions);
-
-    for (int d = 0; d < m_num_dimensions; ++d)
-        m_custom_line_ranges[d] = {int(positions.size()), generate_lines(positions, m_custom_line_counts[d])};
-
-    m_2d_grid_shader->set_buffer("position", positions);
-}
-
 void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int plot_index)
 {
     float4x4 pos = layout_2d_matrix(m_num_dimensions, dims);
@@ -1269,24 +1199,17 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
 
     auto mat = mul(mvp, mul(pos, m_camera[CAMERA_2D].arcball.matrix()));
 
-    int2 starts{0};
-    int2 counts{4};
     if (m_show_bbox)
-        draw_grid(m_grid_shader, mat, starts, counts, 1.f);
+        draw_grid(m_grid_shader, mat, int2{1}, 1.f);
 
-    starts += counts;
-    counts = int2{m_coarse_line_count};
     if (m_show_coarse_grid)
-        draw_grid(m_grid_shader, mat, starts, counts, 0.6f);
+        draw_grid(m_grid_shader, mat, int2{m_samplers[m_sampler]->coarseGridRes(m_point_count)}, 0.6f);
 
-    starts += counts;
-    counts = int2{m_fine_line_count};
     if (m_show_fine_grid)
-        draw_grid(m_grid_shader, mat, starts, counts, 0.2f);
+        draw_grid(m_grid_shader, mat, int2{m_point_count}, 0.2f);
 
     if (m_show_custom_grid)
-        draw_grid(m_2d_grid_shader, mat, int2{m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.y][0]},
-                  int2{m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.y][1]}, 1.0f);
+        draw_grid(m_grid_shader, mat, int2{m_custom_line_counts[dims.x], m_custom_line_counts[dims.y]}, 1.f);
 }
 
 void SampleViewer::draw_scene()
@@ -1300,8 +1223,6 @@ void SampleViewer::draw_scene()
         // update the points and grids if outdated
         if (m_gpu_points_dirty || m_cpu_points_dirty)
             update_points(m_cpu_points_dirty);
-        if (m_gpu_grids_dirty)
-            update_grids();
 
         //
         // clear the scene and set up viewports
@@ -1433,29 +1354,20 @@ void SampleViewer::draw_scene()
             {
                 // compute the three dimension pairs we use for the XY, XZ, and ZY axes
                 int3   dims = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
-                int2x3 starts{{m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.y][0]},
-                              {m_custom_line_ranges[dims.x][0], m_custom_line_ranges[dims.z][0]},
-                              {m_custom_line_ranges[dims.z][0], m_custom_line_ranges[dims.y][0]}};
-                int2x3 counts{{m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.y][1]},
-                              {m_custom_line_ranges[dims.x][1], m_custom_line_ranges[dims.z][1]},
-                              {m_custom_line_ranges[dims.z][1], m_custom_line_ranges[dims.y][1]}};
-                draw_trigrid(m_2d_grid_shader, mvp, 1.f, starts, counts);
+                int2x3 counts{{m_custom_line_counts[dims.x], m_custom_line_counts[dims.y]},
+                              {m_custom_line_counts[dims.x], m_custom_line_counts[dims.z]},
+                              {m_custom_line_counts[dims.z], m_custom_line_counts[dims.y]}};
+                draw_trigrid(m_grid_shader, mvp, 1.f, counts);
             }
 
-            int2x3 starts{0};
-            int2x3 counts{4};
             if (m_show_bbox)
-                draw_trigrid(m_grid_shader, mvp, 1.0f, starts, counts);
+                draw_trigrid(m_grid_shader, mvp, 1.0f, int2x3{1});
 
-            starts += counts;
-            counts = int2x3{m_coarse_line_count};
             if (m_show_coarse_grid)
-                draw_trigrid(m_grid_shader, mvp, 0.6f, starts, counts);
+                draw_trigrid(m_grid_shader, mvp, 0.6f, int2x3{m_samplers[m_sampler]->coarseGridRes(m_point_count)});
 
-            starts += counts;
-            counts = int2x3{m_fine_line_count};
             if (m_show_fine_grid)
-                draw_trigrid(m_grid_shader, mvp, 0.2f, starts, counts);
+                draw_trigrid(m_grid_shader, mvp, 0.2f, int2x3{m_point_count});
         }
     }
     catch (const std::exception &e)
@@ -1518,12 +1430,11 @@ void SampleViewer::draw_points(const float4x4 &mvp, const float3 &color)
         and a row for the horizontal and vertical lines within each plane. This can be the same value in each element if
         you want to draw the same grid lines along all axes.
 */
-void SampleViewer::draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha, const int2x3 &starts,
-                                const int2x3 &counts)
+void SampleViewer::draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha, const int2x3 &counts)
 {
     for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
         if (m_camera[CAMERA_CURRENT].camera_type == axis || m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
-            draw_grid(shader, mul(mvp, m_camera[axis].arcball.matrix()), starts[axis], counts[axis], alpha);
+            draw_grid(shader, mul(mvp, m_camera[axis].arcball.matrix()), counts[axis], alpha);
 }
 
 void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &color, ImFont *font, int align) const
@@ -1662,6 +1573,11 @@ float4x4 CameraParameters::matrix(float window_aspect) const
 
 int main(int argc, char **argv)
 {
+#if defined(HELLOIMGUI_USE_GLES3)
+    fmt::print("GLES3!\n");
+#elif defined(HELLOIMGUI_USE_GLES2)
+    fmt::print("GLES2!\n");
+#endif
     vector<string> args;
     bool           help                 = false;
     bool           error                = false;

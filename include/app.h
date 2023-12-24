@@ -106,7 +106,6 @@ private:
     string export_all_points_2d(const string &format);
 
     void update_points(bool regenerate = true);
-    void update_grids();
     void set_view(CameraType view);
     void draw_editor();
     void draw_about_dialog();
@@ -115,7 +114,7 @@ private:
     void draw_text(const int2 &pos, const std::string &text, const float4 &col, ImFont *font = nullptr,
                    int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
     void draw_points(const float4x4 &mvp, const float3 &color);
-    void draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha, const int2x3 &offset, const int2x3 &count);
+    void draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha, const int2x3 &count);
     void draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int plotIndex);
     int2 get_draw_range() const;
 
@@ -128,11 +127,10 @@ private:
     Array2d<float> m_points, m_subset_points;
     vector<float3> m_3d_points;
     int            m_target_point_count = 256, m_point_count = 256;
-    int            m_subset_count = 0, m_coarse_line_count, m_fine_line_count, m_custom_line_count;
+    int            m_subset_count = 0;
 
     static constexpr int            MAX_DIMENSIONS = 10;
     std::array<int, MAX_DIMENSIONS> m_custom_line_counts;
-    std::vector<int2>               m_custom_line_ranges;
 
     vector<Sampler *> m_samplers;
     int               m_sampler                  = 0;
@@ -143,8 +141,7 @@ private:
     bool              m_show_1d_projections = false, m_show_point_nums = false, m_show_point_coords = false,
          m_show_coarse_grid = false, m_show_fine_grid = false, m_show_custom_grid = false, m_show_bbox = false;
 
-    Shader *m_point_shader = nullptr, *m_2d_point_shader = nullptr, *m_grid_shader = nullptr,
-           *m_2d_grid_shader = nullptr;
+    Shader *m_point_shader = nullptr, *m_2d_point_shader = nullptr, *m_grid_shader = nullptr;
 
     int2  m_viewport_pos, m_viewport_pos_GL, m_viewport_size;
     float m_animate_start_time = 0.0f;
@@ -157,7 +154,7 @@ private:
     int  m_num_subset_levels = 1;
     int  m_subset_level      = 0;
 
-    bool m_gpu_points_dirty = true, m_cpu_points_dirty = true, m_gpu_grids_dirty = true;
+    bool m_gpu_points_dirty = true, m_cpu_points_dirty = true;
 
     map<int, ImFont *> m_regular, m_bold; // regular and bold fonts at various sizes
 
