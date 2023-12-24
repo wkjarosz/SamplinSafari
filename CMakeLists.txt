@@ -286,7 +286,7 @@ add_library(
 )
 
 # Link dependencies
-target_link_libraries(samplerlib PUBLIC galois++ pcg32 stochastic-generation sobol CascadedSobol bitcount)
+target_link_libraries(samplerlib PUBLIC pcg32 galois++) # stochastic-generation sobol CascadedSobol bitcount)
 
 set_target_properties(samplerlib PROPERTIES CXX_STANDARD 17)
 
@@ -321,7 +321,7 @@ if(EMSCRIPTEN)
     SamplinSafari PRIVATE -sEXPORTED_RUNTIME_METHODS=[ccall] -sEXPORTED_FUNCTIONS=[_main,_malloc,_free]
     -sNO_DISABLE_EXCEPTION_CATCHING
   )
-  hello_imgui_set_emscripten_target_initial_memory_megabytes(SamplinSafari 900)
+  hello_imgui_set_emscripten_target_initial_memory_megabytes(SamplinSafari 150)
 endif()
 
 if(UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
