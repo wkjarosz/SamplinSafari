@@ -218,11 +218,10 @@ SampleViewer::SampleViewer()
         if (!HelloImGui::AssetExists(roboto_r) || !HelloImGui::AssetExists(roboto_b))
             return;
 
-        for (auto font_size :
-             {14.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 15.f, 16.f, 17.f, 18.f, 20.f, 22.f, 24.f, 26.f, 28.f, 30.f})
+        for (auto font_size : {14, 10, 16, 18, 30})
         {
-            m_regular[(int)font_size] = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_r, font_size);
-            m_bold[(int)font_size]    = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_b, font_size);
+            m_regular[font_size] = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_r, (float)font_size);
+            m_bold[font_size]    = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_b, (float)font_size);
         }
     };
 
@@ -656,7 +655,8 @@ void SampleViewer::draw_about_dialog()
 
         // ImGui::SetKeyboardFocusHere();
         if (ImGui::Button("Dismiss", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape) ||
-            ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Space))
+            ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Space) ||
+            (!g_show_modal && ImGui::IsKeyPressed(ImGuiKey_H)))
         {
             ImGui::CloseCurrentPopup();
             g_dismissed_version = version_combined();
@@ -1088,7 +1088,7 @@ void SampleViewer::process_hotkeys()
     else if (ImGui::IsKeyPressed(ImGuiKey_B))
         m_show_bbox = !m_show_bbox;
     else if (ImGui::IsKeyPressed(ImGuiKey_H))
-        g_show_modal = true;
+        g_show_modal = !g_show_modal;
 }
 
 void SampleViewer::update_points(bool regenerate)
