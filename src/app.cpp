@@ -46,6 +46,10 @@ using std::string_view;
 #include "portable-file-dialogs.h"
 #endif
 
+#ifdef HELLOIMGUI_USE_SDL_OPENGL3
+#include <SDL.h>
+#endif
+
 using namespace linalg::ostream_overloads;
 
 using std::pair;
@@ -375,9 +379,10 @@ SampleViewer::SampleViewer()
             HelloImGui::SaveUserPref("AboutDismissedVersion", to_string(version_combined()));
     };
 
-    m_params.callbacks.ShowGui          = [this]() { draw_gui(); };
-    m_params.callbacks.CustomBackground = [this]() { draw_scene(); };
-    m_idling_backup                     = m_params.fpsIdling.enableIdling;
+    m_params.callbacks.ShowGui                 = [this]() { draw_gui(); };
+    m_params.callbacks.CustomBackground        = [this]() { draw_scene(); };
+    m_params.callbacks.AnyBackendEventCallback = [this](void *event) { return process_event(event); };
+    m_idling_backup                            = m_params.fpsIdling.enableIdling;
 }
 
 SampleViewer::~SampleViewer()
@@ -993,6 +998,43 @@ void SampleViewer::draw_editor()
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
     }
     ImGui::PopItemWidth();
+}
+
+bool SampleViewer::process_event(void *e)
+{
+#ifdef HELLOIMGUI_USE_SDL_OPENGL3
+    SDL_Event *event = static_cast<SDL_Event *>(e);
+    switch (event->type)
+    {
+    // case SDL_QUIT: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_QUIT event"); break;
+    // case SDL_WINDOWEVENT: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_WINDOWEVENT event"); break;
+    // case SDL_MOUSEWHEEL: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_MOUSEWHEEL event"); break;
+    // case SDL_MOUSEMOTION: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_MOUSEMOTION event"); break;
+    // case SDL_MOUSEBUTTONDOWN: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_MOUSEBUTTONDOWN event");
+    // break; case SDL_MOUSEBUTTONUP: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_MOUSEBUTTONUP event");
+    // break; case SDL_FINGERMOTION: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_FINGERMOTION event");
+    // break; case SDL_FINGERDOWN: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_FINGERDOWN event"); break;
+    case SDL_MULTIGESTURE:
+    {
+        const float            cPinchZoomThreshold(0.0001f);
+        const float            cPinchScale(80.0f);
+        SDL_MultiGestureEvent *m = static_cast<SDL_MultiGestureEvent *>(e);
+        HelloImGui::Log(
+            HelloImGui::LogLevel::Debug,
+            fmt::format("Got an SDL_MULTIGESTURE event; numFingers: {}; dDist: {}", m->numFingers, m->dDist).c_str());
+        if (m->numFingers == 2 && fabs(m->dDist) >= cPinchZoomThreshold)
+        {
+            // Zoom in/out by positive/negative mPinch distance
+            float zoomDelta            = m->dDist * cPinchScale;
+            m_camera[CAMERA_NEXT].zoom = std::max(0.001, m_camera[CAMERA_NEXT].zoom * pow(1.1, zoomDelta));
+            return true;
+        }
+    }
+    break;
+        // case SDL_FINGERUP: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_FINGERUP event"); break;
+    }
+#endif
+    return false;
 }
 
 void SampleViewer::process_hotkeys()

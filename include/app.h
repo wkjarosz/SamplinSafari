@@ -110,6 +110,7 @@ private:
     void draw_editor();
     void draw_about_dialog();
     void process_hotkeys();
+    bool process_event(void *event);
     void populate_point_subset();
     void draw_text(const int2 &pos, const std::string &text, const float4 &col, ImFont *font = nullptr,
                    int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
