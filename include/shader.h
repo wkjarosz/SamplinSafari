@@ -150,6 +150,12 @@ public:
     */
     void set_buffer_divisor(const std::string &name, size_t divisor);
 
+    /**
+        Set the pointer offset for call to glVertexAttribPointer. Useful in instance drawing to start drawing instances
+        from a certain index in an attribute buffer.
+    */
+    void set_buffer_pointer_offset(const std::string &name, size_t offset);
+
     // /**
     //  * \brief Associate a texture with a named shader parameter
     //  *
@@ -240,6 +246,7 @@ protected:
         size_t       shape[3]{0, 0, 0};
         size_t       size             = 0;
         size_t       instance_divisor = 0;
+        size_t       pointer_offset   = 0;
         bool         dirty            = false;
 
         std::string to_string() const;

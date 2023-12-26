@@ -384,10 +384,22 @@ void Shader::set_buffer_divisor(const std::string &name, size_t divisor)
 {
     auto it = m_buffers.find(name);
     if (it == m_buffers.end())
-        throw std::runtime_error("Shader::set_buffer(): could not find argument named \"" + name + "\"");
+        throw std::runtime_error("Shader::set_buffer_divisor(): could not find argument named \"" + name + "\"");
 
     Buffer &buf          = m_buffers[name];
     buf.instance_divisor = divisor;
+    buf.dirty            = true;
+}
+
+void Shader::set_buffer_pointer_offset(const std::string &name, size_t offset)
+{
+    auto it = m_buffers.find(name);
+    if (it == m_buffers.end())
+        throw std::runtime_error("Shader::set_buffer_pointer_offset(): could not find argument named \"" + name + "\"");
+
+    Buffer &buf        = m_buffers[name];
+    buf.pointer_offset = offset;
+    buf.dirty          = true;
 }
 
 // void Shader::set_texture(const std::string &name, Texture *texture)
@@ -461,7 +473,8 @@ void Shader::begin()
                                          "\" has an invalid shapeension (expected ndim=2, got " +
                                          std::to_string(buf.ndim) + ")");
 
-            CHK(glVertexAttribPointer(buf.index, (GLint)buf.shape[1], gl_type, GL_FALSE, 0, nullptr));
+            CHK(glVertexAttribPointer(buf.index, (GLint)buf.shape[1], gl_type, GL_FALSE, 0,
+                                      (const void *)buf.pointer_offset));
             CHK(glVertexAttribDivisor(buf.index, (GLuint)buf.instance_divisor));
             break;
 

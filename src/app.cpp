@@ -1248,7 +1248,8 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
     m_2d_point_shader->set_uniform("color", m_point_color);
     int2 range = get_draw_range();
 
-    m_2d_point_shader->set_buffer("center", m_2d_points, m_subset_count * plot_index + range.x, range.y);
+    m_2d_point_shader->set_buffer_pointer_offset("center",
+                                                 size_t(m_subset_count * plot_index + range.x) * sizeof(float3));
     m_2d_point_shader->set_buffer_divisor("center", 1); // one center per quad/instance
 
     if (range.y > 0)
