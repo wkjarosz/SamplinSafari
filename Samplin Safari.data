@@ -13260,7 +13260,7 @@ uniform float point_size;
 void          main()
 {
     float alpha = 1.0;
-    if (point_size > 3.0)
+    // if (point_size > 3.0)
     {
         vec2  circCoord = 2.0 * gl_PointCoord - 1.0;
         float radius2   = dot(circCoord, circCoord);
