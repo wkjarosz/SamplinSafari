@@ -1,6 +1,5 @@
 uniform float alpha;
 uniform ivec2 size;
-in vec4       v_position;
 in vec2       v_texcoord;
 
 // The MIT License

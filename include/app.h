@@ -63,14 +63,14 @@ enum CameraType
 
 struct CameraParameters
 {
-    Arcball    arcball;
-    float      persp_factor = 0.0f;
-    float      zoom = 1.0f, view_angle = 30.0f;
-    float      dnear = 0.05f, dfar = 1000.0f;
-    float3     eye         = float3{0.0f, 0.0f, 2.0f};
-    float3     center      = float3{0.0f, 0.0f, 0.0f};
-    float3     up          = float3{0.0f, 1.0f, 0.0f};
-    CameraType camera_type = CAMERA_CURRENT;
+    Arcball                 arcball;
+    float                   persp_factor = 0.0f;
+    float                   zoom = 1.0f, view_angle = 30.0f;
+    float                   dnear = 0.05f, dfar = 1000.0f;
+    static constexpr float3 eye         = float3{0.0f, 0.0f, 2.0f};
+    static constexpr float3 center      = float3{0.0f, 0.0f, 0.0f};
+    static constexpr float3 up          = float3{0.0f, 1.0f, 0.0f};
+    CameraType              camera_type = CAMERA_CURRENT;
 
     float4x4 matrix(float window_aspect) const;
 };
@@ -114,7 +114,7 @@ private:
     void populate_point_subset();
     void draw_text(const int2 &pos, const std::string &text, const float4 &col, ImFont *font = nullptr,
                    int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
-    void draw_points(const float4x4 &mvp, const float3 &color);
+    void draw_points(const float4x4 &mvp, const float4x4 &smash, const float3 &color);
     void draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha, const int2x3 &count);
     void draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int plotIndex);
     int2 get_draw_range() const;
@@ -126,7 +126,7 @@ private:
     int            m_num_dimensions = 3;
     int3           m_dimension{0, 1, 2};
     Array2d<float> m_points, m_subset_points;
-    vector<float3> m_3d_points;
+    vector<float3> m_3d_points, m_2d_points;
     int            m_target_point_count = 256, m_point_count = 256;
     int            m_subset_count = 0;
 
@@ -142,7 +142,7 @@ private:
     bool              m_show_1d_projections = false, m_show_point_nums = false, m_show_point_coords = false,
          m_show_coarse_grid = false, m_show_fine_grid = false, m_show_custom_grid = false, m_show_bbox = false;
 
-    Shader *m_point_shader = nullptr, *m_2d_point_shader = nullptr, *m_grid_shader = nullptr;
+    Shader *m_3d_point_shader = nullptr, *m_2d_point_shader = nullptr, *m_grid_shader = nullptr;
 
     int2  m_viewport_pos, m_viewport_pos_GL, m_viewport_size;
     float m_animate_start_time = 0.0f;

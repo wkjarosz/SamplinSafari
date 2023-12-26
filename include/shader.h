@@ -102,6 +102,13 @@ public:
         set_buffer(name, get_type<T>(), 2, shape, vecs.data());
     }
 
+    template <typename T, int M>
+    void set_buffer(const std::string &name, const std::vector<linalg::vec<T, M>> &vecs, size_t offset, size_t count)
+    {
+        size_t shape[3] = {count, M, 1};
+        set_buffer(name, get_type<T>(), 2, shape, &vecs[offset]);
+    }
+
     template <typename T>
     void set_buffer(const std::string &name, const std::vector<T> &data)
     {

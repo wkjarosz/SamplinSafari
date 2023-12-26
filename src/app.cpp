@@ -86,11 +86,6 @@ static const vector<pair<string, string>> g_help_strings = {
     {"p", "Toggle display of 1D X, Y, Z projections of the points"}};
 static const map<string, string> g_tooltip_map(g_help_strings.begin(), g_help_strings.end());
 
-static float map_slider_to_radius(float sliderValue)
-{
-    return sliderValue * sliderValue * 32.0f + 2.0f;
-}
-
 static float4x4 layout_2d_matrix(int num_dims, int2 dims)
 {
     float cell_spacing = 1.f / (num_dims - 1);
@@ -151,7 +146,7 @@ SampleViewer::SampleViewer()
     m_camera[CAMERA_XY].persp_factor = 0.0f;
     m_camera[CAMERA_XY].camera_type  = CAMERA_XY;
 
-    m_camera[CAMERA_ZY].arcball.set_state(linalg::rotation_quat({0.f, 1.f, 0.f}, float(M_PI_2)));
+    m_camera[CAMERA_ZY].arcball.set_state(linalg::rotation_quat({0.f, -1.f, 0.f}, float(M_PI_2)));
     m_camera[CAMERA_ZY].persp_factor = 0.0f;
     m_camera[CAMERA_ZY].camera_type  = CAMERA_ZY;
 
@@ -346,13 +341,20 @@ SampleViewer::SampleViewer()
             glEnable(GL_LINE_SMOOTH);
             glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 #endif
+            auto quad_verts =
+                vector<float3>{{-0.5f, -0.5f, 0.f}, {-0.5f, 0.5f, 0.0f}, {0.5f, 0.5f, 0.0f}, {0.5f, -0.5f, 0.0f}};
+            m_2d_point_shader = new Shader("2D point shader", "shaders/point_instance.vert",
+                                           "shaders/point_instance.frag", Shader::BlendMode::AlphaBlend);
+            m_2d_point_shader->set_buffer("vertices", quad_verts);
+            m_2d_point_shader->set_buffer_divisor("vertices", 0);
 
-            m_point_shader =
-                new Shader("Point shader", "shaders/points.vert", "shaders/points.frag", Shader::BlendMode::AlphaBlend);
+            m_3d_point_shader = new Shader("3D point shader", "shaders/point_instance.vert",
+                                           "shaders/point_instance.frag", Shader::BlendMode::AlphaBlend);
+            m_3d_point_shader->set_buffer("vertices", quad_verts);
+            m_3d_point_shader->set_buffer_divisor("vertices", 0);
+
             m_grid_shader =
                 new Shader("Grid shader", "shaders/grid.vert", "shaders/grid.frag", Shader::BlendMode::AlphaBlend);
-            m_2d_point_shader = new Shader("Point shader 2D", "shaders/points.vert", "shaders/points.frag",
-                                           Shader::BlendMode::AlphaBlend);
             m_grid_shader->set_buffer(
                 "position",
                 vector<float3>{{-0.5f, -0.5f, 0.5f}, {-0.5f, 1.5f, 0.5f}, {1.5f, 1.5f, 0.5f}, {1.5f, -0.5f, 0.5f}});
@@ -420,9 +422,7 @@ void SampleViewer::draw_gui()
             int2{int(central_node->Pos.x), int(io.DisplaySize.y - (central_node->Pos.y + central_node->Size.y))};
     }
 
-    float radius = map_slider_to_radius(m_radius);
-    if (m_scale_radius_with_points)
-        radius *= 64.0f / std::sqrt(m_point_count);
+    float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
 
     float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(m_viewport_size.x) / m_viewport_size.y);
 
@@ -872,7 +872,7 @@ void SampleViewer::draw_editor()
     {
         ImGui::ColorEdit3("Bg color", (float *)&m_bg_color);
         ImGui::ColorEdit3("Point color", (float *)&m_point_color);
-        ImGui::SliderFloat("Radius", &m_radius, 0.f, 1.f, "");
+        ImGui::SliderFloat("Radius", &m_radius, 0.f, 1.f, "%4.3f");
         ImGui::SameLine();
         {
             ImGui::ToggleButton(ICON_FA_COMPRESS, &m_scale_radius_with_points);
@@ -952,17 +952,20 @@ void SampleViewer::draw_editor()
             ImGui::PushItemWidth(widget_w);
             m_subset_by_coord    = false;
             static bool disjoint = true;
-            ImGui::Checkbox("Disjoint batches", &disjoint);
-            ImGui::SliderInt("First point", &m_first_draw_point, 0, m_point_count - 1, "%d",
-                             ImGuiSliderFlags_AlwaysClamp);
+            if (ImGui::Checkbox("Disjoint batches", &disjoint))
+                m_gpu_points_dirty = true;
+            if (ImGui::SliderInt("First point", &m_first_draw_point, 0, m_point_count - 1, "%d",
+                                 ImGuiSliderFlags_AlwaysClamp))
+                m_gpu_points_dirty = true;
             if (disjoint)
                 // round to nearest multiple of m_point_draw_count
                 m_first_draw_point = (m_first_draw_point / m_point_draw_count) * m_point_draw_count;
 
             tooltip("Display points starting at this index.");
 
-            ImGui::SliderInt("Num points##2", &m_point_draw_count, 1, m_point_count - m_first_draw_point, "%d",
-                             ImGuiSliderFlags_AlwaysClamp);
+            if (ImGui::SliderInt("Num points##2", &m_point_draw_count, 1, m_point_count - m_first_draw_point, "%d",
+                                 ImGuiSliderFlags_AlwaysClamp))
+                m_gpu_points_dirty = true;
             tooltip("Display this many points from the first index.");
             ImGui::PopItemWidth();
             ImGui::Unindent();
@@ -1164,17 +1167,13 @@ void SampleViewer::update_points(bool regenerate)
 
             m_time1 = timer.elapsed();
 
-            m_points.resize(m_point_count, m_num_dimensions);
+            m_points.resize(m_num_dimensions, m_point_count);
+            m_points.reset(0.5f);
             m_3d_points.resize(m_point_count);
 
             timer.reset();
             for (int i = 0; i < m_point_count; ++i)
-            {
-                vector<float> r(m_num_dimensions, 0.5f);
-                generator->sample(r.data(), i);
-                for (int j = 0; j < m_points.sizeY(); ++j)
-                    m_points(i, j) = r[j];
-            }
+                generator->sample(m_points.row(i), i);
             m_time2 = timer.elapsed();
         }
         catch (const std::exception &e)
@@ -1194,14 +1193,14 @@ void SampleViewer::update_points(bool regenerate)
     if (m_subset_by_coord)
     {
         m_subset_count = 0;
-        for (int i = 0; i < m_points.sizeX(); ++i)
+        for (int i = 0; i < m_points.sizeY(); ++i)
         {
-            float v = m_points(i, std::clamp(m_subset_axis, 0, m_num_dimensions - 1));
+            float v = m_points(std::clamp(m_subset_axis, 0, m_num_dimensions - 1), i);
             if (v >= (m_subset_level + 0.0f) / m_num_subset_levels && v < (m_subset_level + 1.0f) / m_num_subset_levels)
             {
                 // copy all dimensions (rows) of point i
-                for (int j = 0; j < m_subset_points.sizeY(); ++j)
-                    m_subset_points(m_subset_count, j) = m_points(i, j);
+                for (int dim = 0; dim < m_points.sizeX(); ++dim)
+                    m_subset_points(dim, m_subset_count) = m_points(dim, i);
                 ++m_subset_count;
             }
         }
@@ -1209,25 +1208,29 @@ void SampleViewer::update_points(bool regenerate)
 
     int3 dims = linalg::clamp(m_dimension, int3{0}, int3{m_num_dimensions - 1});
     for (size_t i = 0; i < m_3d_points.size(); ++i)
-        m_3d_points[i] = float3{m_subset_points(i, dims.x), m_subset_points(i, dims.y), m_subset_points(i, dims.z)};
+        m_3d_points[i] = float3{m_subset_points(dims.x, i), m_subset_points(dims.y, i), m_subset_points(dims.z, i)};
 
     //
     // Upload points to the GPU
     //
 
-    m_point_shader->set_buffer("position", m_3d_points);
+    auto range = get_draw_range();
+    m_3d_point_shader->set_buffer("center", m_3d_points, range.x, range.y);
+    m_3d_point_shader->set_buffer_divisor("center", 1); // one center per quad/instance
 
     //
     // create a temporary array to store all the 2D projections of the points.
     // each 2D plot actually needs 3D points, and there are num2DPlots of them
-    int            num2DPlots = m_num_dimensions * (m_num_dimensions - 1) / 2;
-    vector<float3> points2D(num2DPlots * m_subset_count);
+    int num2DPlots = m_num_dimensions * (m_num_dimensions - 1) / 2;
+    m_2d_points.resize(num2DPlots * m_subset_count);
     for (int y = 0, plot_index = 0; y < m_num_dimensions; ++y)
         for (int x = 0; x < y; ++x, ++plot_index)
             for (int i = 0; i < m_subset_count; ++i)
-                points2D[plot_index * m_subset_count + i] = float3{m_subset_points(i, x), m_subset_points(i, y), 0.5f};
+                m_2d_points[plot_index * m_subset_count + i] =
+                    float3{m_subset_points(x, i), m_subset_points(y, i), 0.5f};
 
-    m_2d_point_shader->set_buffer("position", points2D);
+    m_2d_point_shader->set_buffer("center", m_2d_points);
+    m_2d_point_shader->set_buffer_divisor("center", 1); // one center per quad/instance
 
     m_gpu_points_dirty = false;
 }
@@ -1238,16 +1241,22 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
 
     // Render the point set
     m_2d_point_shader->set_uniform("mvp", mul(mvp, pos));
-    float radius = map_slider_to_radius(m_radius / (m_num_dimensions - 1));
-    if (m_scale_radius_with_points)
-        radius *= 64.0f / std::sqrt(m_point_count);
+    m_2d_point_shader->set_uniform("rotation", float3x3(linalg::identity));
+    m_2d_point_shader->set_uniform("smash", float4x4(linalg::identity));
+    float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
     m_2d_point_shader->set_uniform("point_size", radius);
     m_2d_point_shader->set_uniform("color", m_point_color);
     int2 range = get_draw_range();
 
-    m_2d_point_shader->begin();
-    m_2d_point_shader->draw_array(Shader::PrimitiveType::Point, m_subset_count * plot_index + range.x, range.y);
-    m_2d_point_shader->end();
+    m_2d_point_shader->set_buffer("center", m_2d_points, m_subset_count * plot_index + range.x, range.y);
+    m_2d_point_shader->set_buffer_divisor("center", 1); // one center per quad/instance
+
+    if (range.y > 0)
+    {
+        m_2d_point_shader->begin();
+        m_2d_point_shader->draw_array(Shader::PrimitiveType::TriangleFan, 0, 4, false, range.y);
+        m_2d_point_shader->end();
+    }
 
     auto mat = mul(mvp, mul(pos, m_camera[CAMERA_2D].arcball.matrix()));
 
@@ -1388,19 +1397,19 @@ void SampleViewer::draw_scene()
             {
                 // smash the points against the axes and draw
                 float4x4 smashX =
-                    mul(mvp, mul(translation_matrix(float3{-0.51f, 0.f, 0.f}), scaling_matrix(float3{0.f, 1.f, 1.f})));
-                draw_points(smashX, {0.8f, 0.3f, 0.3f});
+                    mul(translation_matrix(float3{-0.51f, 0.f, 0.f}), scaling_matrix(float3{0.f, 1.f, 1.f}));
+                draw_points(mvp, smashX, {0.8f, 0.3f, 0.3f});
 
                 float4x4 smashY =
-                    mul(mvp, mul(translation_matrix(float3{0.f, -0.51f, 0.f}), scaling_matrix(float3{1.f, 0.f, 1.f})));
-                draw_points(smashY, {0.3f, 0.8f, 0.3f});
+                    mul(translation_matrix(float3{0.f, -0.51f, 0.f}), scaling_matrix(float3{1.f, 0.f, 1.f}));
+                draw_points(mvp, smashY, {0.3f, 0.8f, 0.3f});
 
                 float4x4 smashZ =
-                    mul(mvp, mul(translation_matrix(float3{0.f, 0.f, -0.51f}), scaling_matrix(float3{1.f, 1.f, 0.f})));
-                draw_points(smashZ, {0.3f, 0.3f, 0.8f});
+                    mul(translation_matrix(float3{0.f, 0.f, -0.51f}), scaling_matrix(float3{1.f, 1.f, 0.f}));
+                draw_points(mvp, smashZ, {0.3f, 0.3f, 0.8f});
             }
 
-            draw_points(mvp, m_point_color);
+            draw_points(mvp, float4x4(linalg::identity), m_point_color);
 
             if (m_show_custom_grid)
             {
@@ -1447,21 +1456,23 @@ void SampleViewer::set_view(CameraType view)
     }
 }
 
-void SampleViewer::draw_points(const float4x4 &mvp, const float3 &color)
+void SampleViewer::draw_points(const float4x4 &mvp, const float4x4 &smash, const float3 &color)
 {
+    auto range = get_draw_range();
+    if (range.y <= 0)
+        return;
+
     // Render the point set
-    m_point_shader->set_uniform("mvp", mvp);
-    float radius = map_slider_to_radius(m_radius);
-    if (m_scale_radius_with_points)
-        radius *= 64.0f / std::sqrt(m_point_count);
-    m_point_shader->set_uniform("point_size", radius);
-    m_point_shader->set_uniform("color", color);
+    m_3d_point_shader->set_uniform("mvp", mvp);
+    m_3d_point_shader->set_uniform("rotation", qmat(qconj(m_camera[CAMERA_CURRENT].arcball.quat())));
+    m_3d_point_shader->set_uniform("smash", smash);
+    float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
+    m_3d_point_shader->set_uniform("point_size", radius);
+    m_3d_point_shader->set_uniform("color", color);
 
-    int2 range = get_draw_range();
-
-    m_point_shader->begin();
-    m_point_shader->draw_array(Shader::PrimitiveType::Point, range.x, range.y);
-    m_point_shader->end();
+    m_3d_point_shader->begin();
+    m_3d_point_shader->draw_array(Shader::PrimitiveType::TriangleFan, 0, 4, false, range.y);
+    m_3d_point_shader->end();
 }
 
 /*!
@@ -1515,9 +1526,10 @@ void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &
 
 string SampleViewer::export_XYZ_points(const string &format)
 {
-    float radius = map_slider_to_radius(m_radius);
-    if (m_scale_radius_with_points)
-        radius *= 64.0f / std::sqrt(m_point_count);
+    // float radius = map_slider_to_radius(m_radius);
+    // if (m_scale_radius_with_points)
+    //     radius *= 64.0f / std::sqrt(m_point_count);
+    float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
 
     string out = (format == "eps") ? header_eps(m_point_color, 1.f, radius) : header_svg(m_point_color);
 
@@ -1545,9 +1557,10 @@ string SampleViewer::export_XYZ_points(const string &format)
 
 string SampleViewer::export_points_2d(const string &format, CameraType camera_type, int3 dim)
 {
-    float radius = map_slider_to_radius(m_radius);
-    if (m_scale_radius_with_points)
-        radius *= 64.0f / std::sqrt(m_point_count);
+    // float radius = map_slider_to_radius(m_radius);
+    // if (m_scale_radius_with_points)
+    //     radius *= 64.0f / std::sqrt(m_point_count);
+    float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
 
     string out = (format == "eps") ? header_eps(m_point_color, 1.f, radius) : header_svg(m_point_color);
 
@@ -1574,9 +1587,10 @@ string SampleViewer::export_all_points_2d(const string &format)
 {
     float scale = 1.0f / (m_num_dimensions - 1);
 
-    float radius = map_slider_to_radius(m_radius);
-    if (m_scale_radius_with_points)
-        radius *= 64.0f / std::sqrt(m_point_count);
+    // float radius = map_slider_to_radius(m_radius);
+    // if (m_scale_radius_with_points)
+    //     radius *= 64.0f / std::sqrt(m_point_count);
+    float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
 
     string out = (format == "eps") ? header_eps(m_point_color, scale, radius) : header_svg(m_point_color, scale);
 

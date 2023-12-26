@@ -113,10 +113,14 @@ struct Arcball
         return true;
     }
 
+    Quatf quat() const
+    {
+        return linalg::qmul(m_incr, m_quat);
+    }
+
     Mat44f matrix() const
     {
-        auto m = linalg::qmat(linalg::qmul(m_incr, m_quat));
-        return {{m.x, 0.f}, {m.y, 0.f}, {m.z, 0.f}, {0.f, 0.f, 0.f, 1.f}};
+        return linalg::rotation_matrix(quat());
     }
 
 private:

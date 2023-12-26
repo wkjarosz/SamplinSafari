@@ -149,7 +149,7 @@ string draw_points_eps(float4x4 mat, int3 dim, const Array2d<float> &points, int
 
     for (int i = range.x; i < range.x + range.y; ++i)
     {
-        auto v4d = mul(mat, float4{points(i, dim.x), points(i, dim.y), points(i, dim.z), 1.0f});
+        auto v4d = mul(mat, float4{points(dim.x, i), points(dim.y, i), points(dim.z, i), 1.0f});
         auto v2d = float2{v4d.x / v4d.w, v4d.y / v4d.w} * page_size;
         out += fmt::format("{} {} p\n", v2d.x, v2d.y);
     }
@@ -279,7 +279,7 @@ string draw_points_svg(float4x4 mat, int3 dim, const Array2d<float> &points, int
 
     for (int i = range.x; i < range.x + range.y; ++i)
     {
-        auto v4d = mul(mat, float4{points(i, dim.x), points(i, dim.y), points(i, dim.z), 1.0f});
+        auto v4d = mul(mat, float4{points(dim.x, i), points(dim.y, i), points(dim.z, i), 1.0f});
         auto v2d = float2{v4d.x / v4d.w, v4d.y / v4d.w} * float2{page_size, -page_size};
         out += fmt::format("    <circle cx=\"{}\" cy=\"{}\" r=\"{}\"/>\n", v2d.x, v2d.y, radius * 0.3f);
     }
@@ -301,7 +301,7 @@ string draw_points_csv(const Array2d<float> &points, int2 range)
         {
             if (d > 0)
                 out += ", ";
-            out += fmt::format("{}", points(i, d));
+            out += fmt::format("{}", points(d, i));
         }
         out += "\n";
     }

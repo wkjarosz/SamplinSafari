@@ -145,7 +145,7 @@ if(pcg32_ADDED)
   target_include_directories(pcg32 INTERFACE "${pcg32_SOURCE_DIR}")
 endif()
 
-CPMAddPackage("gh:wkjarosz/galois#2bf22e85952c8612832838a26baf68ad93beff7a")
+CPMAddPackage("gh:wkjarosz/galois#6105d219a6f26777fc02a1649c2e1d56f6e8e51e")
 if(galois_ADDED)
   message(STATUS "galois++ library added")
   target_include_directories(galois++ INTERFACE "${galois_SOURCE_DIR}/include")
