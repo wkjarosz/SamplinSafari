@@ -1016,21 +1016,22 @@ bool SampleViewer::process_event(void *e)
     case SDL_MOUSEMOTION:
         if (sPinch)
             return true;
-        HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_MOUSEMOTION event");
+        // HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_MOUSEMOTION event");
         break;
     // case SDL_MOUSEBUTTONDOWN: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_MOUSEBUTTONDOWN event");
     // break; case SDL_MOUSEBUTTONUP: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_MOUSEBUTTONUP
     // event"); break; case SDL_FINGERMOTION: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_FINGERMOTION
     // event"); break;
-    case SDL_FINGERDOWN: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_FINGERDOWN event"); break;
+    // case SDL_FINGERDOWN: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_FINGERDOWN event"); break;
     case SDL_MULTIGESTURE:
     {
         const float            cPinchZoomThreshold(0.0001f);
         const float            cPinchScale(80.0f);
         SDL_MultiGestureEvent *m = static_cast<SDL_MultiGestureEvent *>(e);
-        HelloImGui::Log(
-            HelloImGui::LogLevel::Debug,
-            fmt::format("Got an SDL_MULTIGESTURE event; numFingers: {}; dDist: {}", m->numFingers, m->dDist).c_str());
+        // HelloImGui::Log(
+        //     HelloImGui::LogLevel::Debug,
+        //     fmt::format("Got an SDL_MULTIGESTURE event; numFingers: {}; dDist: {}", m->numFingers,
+        //     m->dDist).c_str());
         if (m->numFingers == 2 && fabs(m->dDist) >= cPinchZoomThreshold)
         {
             sPinch = true;
@@ -1042,7 +1043,7 @@ bool SampleViewer::process_event(void *e)
     }
     break;
     case SDL_FINGERUP:
-        HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_FINGERUP event");
+        // HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_FINGERUP event");
         sPinch = false;
         break;
     }
