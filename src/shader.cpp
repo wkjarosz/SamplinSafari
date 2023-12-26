@@ -8,8 +8,6 @@
 
 #include <fmt/core.h>
 
-#include <iostream>
-
 using std::string;
 
 bool check_glerror(const char *cmd)
@@ -382,6 +380,16 @@ void Shader::set_buffer(const std::string &name, VariableType dtype, size_t ndim
     buf.dirty = true;
 }
 
+void Shader::set_buffer_divisor(const std::string &name, size_t divisor)
+{
+    auto it = m_buffers.find(name);
+    if (it == m_buffers.end())
+        throw std::runtime_error("Shader::set_buffer(): could not find argument named \"" + name + "\"");
+
+    Buffer &buf          = m_buffers[name];
+    buf.instance_divisor = divisor;
+}
+
 // void Shader::set_texture(const std::string &name, Texture *texture)
 // {
 //     auto it = m_buffers.find(name);
@@ -454,6 +462,7 @@ void Shader::begin()
                                          std::to_string(buf.ndim) + ")");
 
             CHK(glVertexAttribPointer(buf.index, (GLint)buf.shape[1], gl_type, GL_FALSE, 0, nullptr));
+            CHK(glVertexAttribDivisor(buf.index, (GLuint)buf.instance_divisor));
             break;
 
         case VertexTexture:
@@ -617,7 +626,7 @@ void Shader::end()
     CHK(glUseProgram(0));
 }
 
-void Shader::draw_array(PrimitiveType primitive_type, size_t offset, size_t count, bool indexed)
+void Shader::draw_array(PrimitiveType primitive_type, size_t offset, size_t count, bool indexed, size_t instances)
 {
     GLenum primitive_type_gl;
     switch (primitive_type)
@@ -633,10 +642,21 @@ void Shader::draw_array(PrimitiveType primitive_type, size_t offset, size_t coun
     }
 
     if (!indexed)
-        CHK(glDrawArrays(primitive_type_gl, (GLint)offset, (GLsizei)count));
+    {
+        if (instances == 0)
+            CHK(glDrawArrays(primitive_type_gl, (GLint)offset, (GLsizei)count));
+        else
+            CHK(glDrawArraysInstanced(primitive_type_gl, (GLint)offset, (GLsizei)count, instances));
+    }
     else
-        CHK(glDrawElements(primitive_type_gl, (GLsizei)count, GL_UNSIGNED_INT,
-                           (const void *)(offset * sizeof(uint32_t))));
+    {
+        if (instances == 0)
+            CHK(glDrawElements(primitive_type_gl, (GLsizei)count, GL_UNSIGNED_INT,
+                               (const void *)(offset * sizeof(uint32_t))));
+        else
+            CHK(glDrawElementsInstanced(primitive_type_gl, (GLsizei)count, GL_UNSIGNED_INT,
+                                        (const void *)(offset * sizeof(uint32_t)), instances));
+    }
 }
 
 std::string Shader::Buffer::to_string() const

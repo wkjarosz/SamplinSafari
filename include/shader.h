@@ -128,23 +128,20 @@ public:
     template <typename T>
     void set_uniform(const std::string &name, const T &value)
     {
-        size_t       shape[3] = {1, 1, 1};
-        size_t       ndim     = (size_t)-1;
-        const void  *data;
-        VariableType vtype = VariableType::Invalid;
-
+        size_t shape[3] = {1, 1, 1};
         if constexpr (std::is_scalar_v<T>)
-        {
-            data  = &value;
-            ndim  = 0;
-            vtype = get_type<T>();
-        }
-
-        if (ndim == (size_t)-1)
+            set_buffer(name, get_type<T>(), 0, shape, &value);
+        else
             throw std::runtime_error("Shader::set_uniform(): invalid input array dimension!");
-
-        set_buffer(name, vtype, ndim, shape, data);
     }
+
+    /**
+        Set the "rate at which generic vertex attributes advance when rendering multiple instances"
+        see:
+            https://registry.khronos.org/OpenGL-Refpages/es3/html/glVertexAttribDivisor.xhtml
+            https://registry.khronos.org/OpenGL-Refpages/gl4/html/glVertexAttribDivisor.xhtml
+    */
+    void set_buffer_divisor(const std::string &name, size_t divisor);
 
     // /**
     //  * \brief Associate a texture with a named shader parameter
@@ -185,8 +182,13 @@ public:
         \param indexed
             Render indexed geometry? In this case, an \c uint32_t valued buffer with name \c indices must have been
             uploaded using \ref set().
+
+        \param instances
+            If you want to render instances, set this to > 0. In this case, make sure to call \ref set_buffer_divisor()
+       for each registered buffer beforehand to inform the shader how the instances should access the buffers.
     */
-    void draw_array(PrimitiveType primitive_type, size_t offset, size_t count, bool indexed = false);
+    void draw_array(PrimitiveType primitive_type, size_t offset, size_t count, bool indexed = false,
+                    size_t instances = 0u);
 
 #if defined(HELLOIMGUI_HAS_OPENGL)
     uint32_t shader_handle() const
@@ -229,8 +231,9 @@ protected:
         int          index  = 0;
         size_t       ndim   = 0;
         size_t       shape[3]{0, 0, 0};
-        size_t       size  = 0;
-        bool         dirty = false;
+        size_t       size             = 0;
+        size_t       instance_divisor = 0;
+        bool         dirty            = false;
 
         std::string to_string() const;
     };
