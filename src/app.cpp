@@ -1532,7 +1532,7 @@ string SampleViewer::export_XYZ_points(const string &format)
     //     radius *= 64.0f / std::sqrt(m_point_count);
     float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
 
-    string out = (format == "eps") ? header_eps(m_point_color, 1.f, radius) : header_svg(m_point_color);
+    string out = (format == "eps") ? header_eps(m_point_color, radius) : header_svg(m_point_color);
 
     float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(1.0f);
 
@@ -1558,12 +1558,9 @@ string SampleViewer::export_XYZ_points(const string &format)
 
 string SampleViewer::export_points_2d(const string &format, CameraType camera_type, int3 dim)
 {
-    // float radius = map_slider_to_radius(m_radius);
-    // if (m_scale_radius_with_points)
-    //     radius *= 64.0f / std::sqrt(m_point_count);
     float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
 
-    string out = (format == "eps") ? header_eps(m_point_color, 1.f, radius) : header_svg(m_point_color);
+    string out = (format == "eps") ? header_eps(m_point_color, radius) : header_svg(m_point_color);
 
     float4x4 mvp = m_camera[camera_type].matrix(1.0f);
 
@@ -1588,12 +1585,9 @@ string SampleViewer::export_all_points_2d(const string &format)
 {
     float scale = 1.0f / (m_num_dimensions - 1);
 
-    // float radius = map_slider_to_radius(m_radius);
-    // if (m_scale_radius_with_points)
-    //     radius *= 64.0f / std::sqrt(m_point_count);
     float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
 
-    string out = (format == "eps") ? header_eps(m_point_color, scale, radius) : header_svg(m_point_color, scale);
+    string out = (format == "eps") ? header_eps(m_point_color, radius * scale) : header_svg(m_point_color);
 
     float4x4 mvp = m_camera[CAMERA_2D].matrix(1.0f);
 
@@ -1640,11 +1634,6 @@ float4x4 CameraParameters::matrix(float window_aspect) const
 
 int main(int argc, char **argv)
 {
-#if defined(HELLOIMGUI_USE_GLES3)
-    fmt::print("GLES3!\n");
-#elif defined(HELLOIMGUI_USE_GLES2)
-    fmt::print("GLES2!\n");
-#endif
     vector<string> args;
     bool           help                 = false;
     bool           error                = false;

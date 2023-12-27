@@ -5,21 +5,24 @@
 using std::ofstream;
 using std::string;
 
-string header_eps(const float3 &point_color, float scale, float radius)
+static const float svg_page_size = 1000.0f;
+static const float line_size     = 0.001f * svg_page_size;
+
+string header_eps(const float3 &point_color, float radius)
 {
     string out;
 
-    float page_size = 500.f;
+    float page_size = 0.5f * svg_page_size;
 
     out += fmt::format("%!PS-Adobe-3.0 EPSF-3.0\n");
     out += fmt::format("%%HiResBoundingBox: {} {} {} {}\n", -page_size, -page_size, page_size, page_size);
     out += fmt::format("%%BoundingBox: {} {} {} {}\n", -page_size, -page_size, page_size, page_size);
     out += fmt::format("%%CropBox: {} {} {} {}\n", -page_size, -page_size, page_size, page_size);
-    out += fmt::format("/radius {{ {} }} def %define variable for point radius\n", radius * 0.3f * scale);
+    out += fmt::format("/radius {{ {} }} def %define variable for point radius\n", radius * page_size);
     out += fmt::format("/p {{ radius 0 360 arc closepath fill }} def %define point command\n");
-    out += fmt::format("/blw {} def %define variable for bounding box linewidth\n", 2.f * scale);
-    out += fmt::format("/clw {} def %define variable for coarse linewidth\n", 2.f * scale);
-    out += fmt::format("/flw {} def %define variable for fine linewidth\n", 2.f * scale);
+    out += fmt::format("/blw {} def %define variable for bounding box linewidth\n", 2.f);
+    out += fmt::format("/clw {} def %define variable for coarse linewidth\n", line_size);
+    out += fmt::format("/flw {} def %define variable for fine linewidth\n", line_size);
     out += fmt::format("/pfc {{ {} {} {} }} def %define variable for point fill color\n", point_color.x, point_color.y,
                        point_color.z);
     out += fmt::format("/blc {} def %define variable for bounding box color\n", 0.0f);
@@ -141,7 +144,7 @@ string draw_points_eps(float4x4 mat, int3 dim, const Array2d<float> &points, int
 {
     string out;
 
-    float page_size = 500.f;
+    float page_size = 0.5f * svg_page_size;
 
     // Render the point set
     out += "% Draw points \n";
@@ -149,7 +152,8 @@ string draw_points_eps(float4x4 mat, int3 dim, const Array2d<float> &points, int
 
     for (int i = range.x; i < range.x + range.y; ++i)
     {
-        auto v4d = mul(mat, float4{points(dim.x, i), points(dim.y, i), points(dim.z, i), 1.0f});
+        auto v4d =
+            mul(mat, float4{points(dim.x, i), points(dim.y, i), points(dim.z, i), 1.0f} - float4{float3{0.5f}, 0.f});
         auto v2d = float2{v4d.x / v4d.w, v4d.y / v4d.w} * page_size;
         out += fmt::format("{} {} p\n", v2d.x, v2d.y);
     }
@@ -157,13 +161,9 @@ string draw_points_eps(float4x4 mat, int3 dim, const Array2d<float> &points, int
     return out;
 }
 
-string header_svg(const float3 &point_color, float scale)
+string header_svg(const float3 &point_color)
 {
     string out;
-
-    scale *= 0.5f;
-
-    float page_size = 500.f;
 
     out += fmt::format(R"_(<svg
     width="{}px"
@@ -204,8 +204,9 @@ string header_svg(const float3 &point_color, float scale)
     }}
 </style>
 )_",
-                       1000, 1000, -page_size, -page_size, 2 * page_size, 2 * page_size, int(point_color.x * 255),
-                       int(point_color.y * 255), int(point_color.z * 255), 2.f * scale, 2.f * scale, 2.f * scale);
+                       svg_page_size, svg_page_size, -svg_page_size * 0.5f, -svg_page_size * 0.5f, svg_page_size,
+                       svg_page_size, int(point_color.x * 255), int(point_color.y * 255), int(point_color.z * 255),
+                       0.001f * svg_page_size, 0.001f * svg_page_size, 0.001f * svg_page_size);
     return out;
 }
 
@@ -215,7 +216,7 @@ string draw_grid_svg(const float4x4 &mvp, int grid_res, const string &css_class)
     float2 vA, vB;
 
     float scale     = 1.f / grid_res;
-    float page_size = 500.f;
+    float page_size = 0.5f * svg_page_size;
 
     string out;
 
@@ -275,13 +276,14 @@ string draw_grids_svg(float4x4 mat, int fgrid_res, int cgrid_res, bool fine_grid
 string draw_points_svg(float4x4 mat, int3 dim, const Array2d<float> &points, int2 range, float radius)
 {
     string out;
-    float  page_size = 500.f;
+    float  page_size = 0.5f * svg_page_size;
 
     for (int i = range.x; i < range.x + range.y; ++i)
     {
-        auto v4d = mul(mat, float4{points(dim.x, i), points(dim.y, i), points(dim.z, i), 1.0f});
+        auto v4d =
+            mul(mat, float4{points(dim.x, i), points(dim.y, i), points(dim.z, i), 1.0f} - float4{float3{0.5f}, 0.f});
         auto v2d = float2{v4d.x / v4d.w, v4d.y / v4d.w} * float2{page_size, -page_size};
-        out += fmt::format("    <circle cx=\"{}\" cy=\"{}\" r=\"{}\"/>\n", v2d.x, v2d.y, radius * 0.3f);
+        out += fmt::format("    <circle cx=\"{}\" cy=\"{}\" r=\"{}\"/>\n", v2d.x, v2d.y, radius * page_size);
     }
 
     return out;
