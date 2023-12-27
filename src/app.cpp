@@ -62,7 +62,7 @@ static bool g_show_modal = false;
 static const vector<pair<string, string>> g_help_strings = {
     {"h", "Show this help window"},
     {"Left click+drag", "Rotate the camera"},
-    {"Scroll mouse", "Zoom the camera"},
+    {"Scroll mouse/pinch", "Zoom the camera"},
     {"1", "Switch to XY orthographic view"},
     {"2", "Switch to XZ orthographic view"},
     {"3", "Switch to ZY orthographic view"},
@@ -83,6 +83,23 @@ static const vector<pair<string, string>> g_help_strings = {
     {"b", "Toggle whether to draw the bounding box"},
     {"p", "Toggle display of 1D X, Y, Z projections of the points"}};
 static const map<string, string> g_tooltip_map(g_help_strings.begin(), g_help_strings.end());
+
+static auto tooltip(const char *text, float wrap_width = 400.f)
+{
+    if (ImGui::BeginItemTooltip())
+    {
+        ImGui::PushTextWrapPos(wrap_width);
+        ImGui::TextUnformatted(text);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
+static auto hotkey_tooltip(const char *name, float wrap_width = 400.f)
+{
+    if (auto t = g_tooltip_map.find(name); t != g_tooltip_map.end())
+        tooltip(fmt::format("{}.\nKey: {}", t->second, t->first).c_str(), wrap_width);
+}
 
 static float4x4 layout_2d_matrix(int num_dims, int2 dims)
 {
@@ -305,8 +322,9 @@ SampleViewer::SampleViewer()
     m_params.callbacks.ShowStatus = [this]()
     {
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() - ImGui::GetFontSize() * 0.15f);
-        ImGui::Text("Reset + randomize: %3.3f ms   |   Sampling: %3.3f ms   |   Total: %3.3f ms (%3.0f pps)", m_time1,
-                    m_time2, m_time1 + m_time2, m_point_count / (m_time1 + m_time2));
+        ImGui::Text("%3.3f / %3.3f ms (%3.0f pps)", m_time2, m_time1 + m_time2, m_point_count / (m_time1 + m_time2));
+        tooltip("Shows A/B (points per second) where A is how long it took to call Sampler::sample(), and B includes "
+                "other setup costs.");
         // ImGui::SameLine();
         ImGui::SameLine(ImGui::GetIO().DisplaySize.x - 16.f * ImGui::GetFontSize());
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() - ImGui::GetFontSize() * 0.15f);
@@ -470,17 +488,20 @@ void SampleViewer::draw_about_dialog()
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowFocus();
+    const float2 col_width = {11 * HelloImGui::EmSize(), 32 * HelloImGui::EmSize()};
+    ImGui::SetNextWindowContentSize(float2{col_width[0] + col_width[1], 0});
 
-    if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::BeginPopupModal("About", nullptr,
+                               ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoSavedSettings |
+                                   ImGuiWindowFlags_AlwaysAutoResize))
     {
-        const int col_width[2] = {11, 34};
 
         ImGui::Spacing();
 
         if (ImGui::BeginTable("about_table1", 2))
         {
-            ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[0]);
-            ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, HelloImGui::EmSize() * col_width[1]);
+            ImGui::TableSetupColumn("icon", ImGuiTableColumnFlags_WidthFixed, col_width[0]);
+            ImGui::TableSetupColumn("description", ImGuiTableColumnFlags_WidthFixed, col_width[1]);
 
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
@@ -494,7 +515,7 @@ void SampleViewer::draw_about_dialog()
             HelloImGui::ImageFromAsset("app_settings/icon.png", {128, 128}); // show the app icon
 
             ImGui::TableNextColumn();
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * col_width[1]);
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + col_width[1]);
 
             ImGui::PushFont(m_bold[30]);
             ImGui::Text("Samplin' Safari");
@@ -520,7 +541,7 @@ void SampleViewer::draw_about_dialog()
 
             ImGui::Spacing();
 
-            ImGui::Text("It is developed by Wojciech Jarosz, and is freely available under a 3-clause BSD license.");
+            ImGui::Text("It is developed by Wojciech Jarosz, and is available under a 3-clause BSD license.");
 
             ImGui::PopTextWrapPos();
             ImGui::EndTable();
@@ -529,7 +550,7 @@ void SampleViewer::draw_about_dialog()
         auto right_align = [](const string &text)
         {
             auto posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(text.c_str()).x -
-                         ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
+                         2 * ImGui::GetStyle().ItemSpacing.x);
             if (posX > ImGui::GetCursorPosX())
                 ImGui::SetCursorPosX(posX);
             ImGui::Text(text);
@@ -545,7 +566,7 @@ void SampleViewer::draw_about_dialog()
             ImGui::PopFont();
 
             ImGui::TableNextColumn();
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * (col_width[1] - 1));
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + col_width[1] - HelloImGui::EmSize());
             ImGui::PushFont(m_regular[14]);
             ImGui::Text(desc);
             ImGui::PopFont();
@@ -553,9 +574,30 @@ void SampleViewer::draw_about_dialog()
 
         if (ImGui::BeginTabBar("AboutTabBar"))
         {
+            if (ImGui::BeginTabItem("Keybindings", nullptr))
+            {
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + col_width[0] + col_width[1]);
+                ImGui::Text("The following keyboard shortcuts are available (these are also described in tooltips over "
+                            "their respective controls).");
+
+                ImGui::Spacing();
+                ImGui::PopTextWrapPos();
+
+                if (ImGui::BeginTable("about_table3", 2))
+                {
+                    ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, col_width[0]);
+                    ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthFixed, col_width[1]);
+
+                    for (auto item : g_help_strings)
+                        item_and_description(item.first, item.second);
+
+                    ImGui::EndTable();
+                }
+                ImGui::EndTabItem();
+            }
             if (ImGui::BeginTabItem("Credits"))
             {
-                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * (col_width[0] + col_width[1]));
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + col_width[0] + col_width[1]);
                 ImGui::Text("Samplin' Safari was originally created as part of the publication:");
 
                 ImGui::Spacing();
@@ -576,10 +618,8 @@ void SampleViewer::draw_about_dialog()
 
                 if (ImGui::BeginTable("about_table2", 2))
                 {
-                    ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed,
-                                            HelloImGui::EmSize() * col_width[0]);
-                    ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed,
-                                            HelloImGui::EmSize() * col_width[1]);
+                    ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, col_width[0]);
+                    ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, col_width[1]);
 
                     item_and_description("bitcount",
                                          "Mike Pedersen's MIT-licensed fast, cross-platform bit counting functions.");
@@ -618,29 +658,6 @@ void SampleViewer::draw_about_dialog()
                 }
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Keybindings", nullptr))
-            {
-                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + HelloImGui::EmSize() * (col_width[0] + col_width[1]));
-                ImGui::Text("The following keyboard shortcuts are available (these are also described in tooltips over "
-                            "their respective controls).");
-
-                ImGui::Spacing();
-                ImGui::PopTextWrapPos();
-
-                if (ImGui::BeginTable("about_table3", 2))
-                {
-                    ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed,
-                                            HelloImGui::EmSize() * col_width[0]);
-                    ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthFixed,
-                                            HelloImGui::EmSize() * col_width[1]);
-
-                    for (auto item : g_help_strings)
-                        item_and_description(item.first, item.second);
-
-                    ImGui::EndTable();
-                }
-                ImGui::EndTabItem();
-            }
             ImGui::EndTabBar();
         }
 
@@ -667,23 +684,6 @@ void SampleViewer::draw_editor()
         bool ret = ImGui::CollapsingHeader(label, flags | ImGuiTreeNodeFlags_DefaultOpen);
         ImGui::PopFont();
         return ret;
-    };
-
-    auto tooltip = [](const char *text, float wrap_width = 400.f)
-    {
-        if (ImGui::BeginItemTooltip())
-        {
-            ImGui::PushTextWrapPos(wrap_width);
-            ImGui::TextUnformatted(text);
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        }
-    };
-
-    auto hotkey_tooltip = [tooltip](const char *name, float wrap_width = 400.f)
-    {
-        if (auto t = g_tooltip_map.find(name); t != g_tooltip_map.end())
-            tooltip(fmt::format("{}.\nKey: {}", t->second, t->first).c_str(), wrap_width);
     };
 
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
@@ -1352,10 +1352,10 @@ void SampleViewer::draw_scene()
             camera.persp_factor = lerp(camera0.persp_factor, camera1.persp_factor, t);
             if (t >= 1.0f)
             {
-                camera.camera_type = camera1.camera_type;
-                // m_params.fpsIdling.fpsIdle = 9.f; // animation is done, reduce FPS
-                if (m_animate_start_time != 0.0f)
-                    m_params.fpsIdling.enableIdling = m_idling_backup;
+                camera.camera_type         = camera1.camera_type;
+                m_params.fpsIdling.fpsIdle = 9.f; // animation is done, reduce FPS
+                // if (m_animate_start_time != 0.0f)
+                //     m_params.fpsIdling.enableIdling = m_idling_backup;
                 m_animate_start_time = 0.f;
             }
 
@@ -1439,9 +1439,9 @@ void SampleViewer::set_view(CameraType view)
         m_camera[CAMERA_CURRENT].camera_type = (view == m_camera[CAMERA_CURRENT].camera_type) ? view : CAMERA_CURRENT;
         m_view                               = view;
 
-        // m_params.fpsIdling.fpsIdle = 0.f; // during animation, increase FPS
-        m_idling_backup                 = m_params.fpsIdling.enableIdling;
-        m_params.fpsIdling.enableIdling = false;
+        m_params.fpsIdling.fpsIdle = 0.f; // during animation, increase FPS
+        m_idling_backup            = m_params.fpsIdling.enableIdling;
+        // m_params.fpsIdling.enableIdling = false;
     }
 }
 
