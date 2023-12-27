@@ -123,6 +123,11 @@ struct Arcball
         return linalg::rotation_matrix(quat());
     }
 
+    Mat44f inv_matrix() const
+    {
+        return linalg::rotation_matrix(linalg::qconj(quat()));
+    }
+
 private:
     /// Whether or not this Arcball is currently active.
     bool m_active;

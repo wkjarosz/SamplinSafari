@@ -115,6 +115,7 @@ private:
     void draw_text(const int2 &pos, const std::string &text, const float4 &col, ImFont *font = nullptr,
                    int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
     void draw_points(const float4x4 &mvp, const float4x4 &smash, const float3 &color);
+    void draw_grid(const float4x4 &mat, int2 size, float alpha) const;
     void draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha, const int2x3 &count);
     void draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int plotIndex);
     int2 get_draw_range() const;

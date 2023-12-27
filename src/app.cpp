@@ -59,8 +59,6 @@ static int g_dismissed_version = 0;
 
 static bool g_show_modal = false;
 
-static const auto rot90 = linalg::rotation_matrix(linalg::rotation_quat({0.f, 0.f, 1.f}, float(M_PI_2)));
-
 static const vector<pair<string, string>> g_help_strings = {
     {"h", "Show this help window"},
     {"Left click+drag", "Rotate the camera"},
@@ -94,18 +92,6 @@ static float4x4 layout_2d_matrix(int num_dims, int2 dims)
     float2 offset = (dims - int2{0, 1} - float2{(num_dims - 2) / 2.0f}) * float2{1, -1};
 
     return mul(translation_matrix(float3{offset * cell_spacing, 1}), scaling_matrix(float3{float2{cell_size}, 1}));
-}
-
-static void draw_grid(Shader *shader, const float4x4 &mat, int2 size, float alpha)
-{
-    shader->set_uniform("mvp", mat);
-    shader->set_uniform("size", size);
-    shader->set_uniform("alpha", alpha);
-    shader->begin();
-    CHK(glDepthMask(GL_FALSE));
-    shader->draw_array(Shader::PrimitiveType::TriangleFan, 0, 4);
-    CHK(glDepthMask(GL_TRUE));
-    shader->end();
 }
 
 SampleViewer::SampleViewer()
@@ -875,7 +861,8 @@ void SampleViewer::draw_editor()
         ImGui::SliderFloat("Radius", &m_radius, 0.f, 1.f, "%4.3f");
         ImGui::SameLine();
         {
-            ImGui::ToggleButton(ICON_FA_COMPRESS, &m_scale_radius_with_points);
+            if (ImGui::ToggleButton(ICON_FA_COMPRESS, &m_scale_radius_with_points))
+                m_radius *= m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.f / std::sqrt(m_point_count);
             tooltip("Automatically scale radius with number of points");
         }
 
@@ -1260,19 +1247,19 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
         m_2d_point_shader->end();
     }
 
-    auto mat = mul(mvp, mul(pos, m_camera[CAMERA_2D].arcball.matrix()));
+    auto mat = mul(mvp, mul(translation_matrix(float3{0, 0, -1.001}), pos));
 
     if (m_show_bbox)
-        draw_grid(m_grid_shader, mat, int2{1}, 1.f);
+        draw_grid(mat, int2{1}, 1.f);
 
     if (m_show_coarse_grid)
-        draw_grid(m_grid_shader, mat, int2{m_samplers[m_sampler]->coarseGridRes(m_point_count)}, 0.6f);
+        draw_grid(mat, int2{m_samplers[m_sampler]->coarseGridRes(m_point_count)}, 0.6f);
 
     if (m_show_fine_grid)
-        draw_grid(m_grid_shader, mat, int2{m_point_count}, 0.2f);
+        draw_grid(mat, int2{m_point_count}, 0.2f);
 
     if (m_show_custom_grid)
-        draw_grid(m_grid_shader, mat, int2{m_custom_line_counts[dims.x], m_custom_line_counts[dims.y]}, 1.f);
+        draw_grid(mat, int2{m_custom_line_counts[dims.x], m_custom_line_counts[dims.y]}, 1.f);
 }
 
 void SampleViewer::draw_scene()
@@ -1477,6 +1464,18 @@ void SampleViewer::draw_points(const float4x4 &mvp, const float4x4 &smash, const
     m_3d_point_shader->end();
 }
 
+void SampleViewer::draw_grid(const float4x4 &mat, int2 size, float alpha) const
+{
+    m_grid_shader->set_uniform("mvp", mat);
+    m_grid_shader->set_uniform("size", size);
+    m_grid_shader->set_uniform("alpha", alpha);
+    m_grid_shader->begin();
+    CHK(glDepthMask(GL_FALSE));
+    m_grid_shader->draw_array(Shader::PrimitiveType::TriangleFan, 0, 4);
+    CHK(glDepthMask(GL_TRUE));
+    m_grid_shader->end();
+}
+
 /*!
     Draw grids along the XY, XZ, and ZY planes.
 
@@ -1499,7 +1498,7 @@ void SampleViewer::draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha
 {
     for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
         if (m_camera[CAMERA_CURRENT].camera_type == axis || m_camera[CAMERA_CURRENT].camera_type == CAMERA_CURRENT)
-            draw_grid(shader, mul(mvp, m_camera[axis].arcball.matrix()), counts[axis], alpha);
+            draw_grid(mul(mvp, m_camera[axis].arcball.inv_matrix()), counts[axis], alpha);
 }
 
 void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &color, ImFont *font, int align) const
@@ -1540,11 +1539,11 @@ string SampleViewer::export_XYZ_points(const string &format)
     for (int axis = CAMERA_XY; axis < CAMERA_CURRENT; ++axis)
     {
         if (format == "eps")
-            out += draw_grids_eps(mul(mvp, m_camera[axis].arcball.matrix()), m_point_count,
+            out += draw_grids_eps(mul(mvp, m_camera[axis].arcball.inv_matrix()), m_point_count,
                                   m_samplers[m_sampler]->coarseGridRes(m_point_count), m_show_fine_grid,
                                   m_show_coarse_grid, m_show_bbox);
         else
-            out += draw_grids_svg(mul(mvp, m_camera[axis].arcball.matrix()), m_point_count,
+            out += draw_grids_svg(mul(mvp, m_camera[axis].arcball.inv_matrix()), m_point_count,
                                   m_samplers[m_sampler]->coarseGridRes(m_point_count), m_show_fine_grid,
                                   m_show_coarse_grid, m_show_bbox);
     }
