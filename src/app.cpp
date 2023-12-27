@@ -433,7 +433,7 @@ void SampleViewer::draw_gui()
         for (int i = 0; i < m_num_dimensions - 1; ++i)
         {
             float4x4 pos      = layout_2d_matrix(m_num_dimensions, int2{i, m_num_dimensions - 1});
-            float4   text_pos = mul(mvp, mul(pos, float4{0.f, -0.5f, 0.0f, 1.0f}));
+            float4   text_pos = mul(mvp, mul(pos, float4{0.f, -0.5f, -1.0f, 1.0f}));
             float2   text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
             draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x),
                                             int((1.f - text_2d_pos.y) * m_viewport_size.y) + 16),
@@ -441,7 +441,7 @@ void SampleViewer::draw_gui()
                       TextAlign_CENTER | TextAlign_BOTTOM);
 
             pos         = layout_2d_matrix(m_num_dimensions, int2{0, i + 1});
-            text_pos    = mul(mvp, mul(pos, float4{-0.5f, 0.f, 0.0f, 1.0f}));
+            text_pos    = mul(mvp, mul(pos, float4{-0.5f, 0.f, -1.0f, 1.0f}));
             text_2d_pos = float2((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
             draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x) - 4,
                                             int((1.f - text_2d_pos.y) * m_viewport_size.y)),
@@ -1228,7 +1228,7 @@ void SampleViewer::update_points(bool regenerate)
         for (int x = 0; x < y; ++x, ++plot_index)
             for (int i = 0; i < m_subset_count; ++i)
                 m_2d_points[plot_index * m_subset_count + i] =
-                    float3{m_subset_points(x, i), m_subset_points(y, i), 0.5f};
+                    float3{m_subset_points(x, i), m_subset_points(y, i), -0.5f};
 
     m_2d_point_shader->set_buffer("center", m_2d_points);
     m_2d_point_shader->set_buffer_divisor("center", 1); // one center per quad/instance
