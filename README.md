@@ -20,30 +20,30 @@ and now released under the 3-clause BSD license. For details, see the [LICENSE](
 ## Screenshots
 
 <figure>
-  <figcaption>Samplin' Safari running inside a web browser on an iPad (click the image to try it out yourself):</figcaption>
+  <figcaption>Samplin' Safari running inside a web browser on an iPad (left), and in portrait orientation on an iPhone (right). Click the image to try it in a browser yourself:</figcaption>
   <a href="https://wkjarosz.github.io/SamplinSafari"><img
-  src="resources/screenshot1.png"
+  src="resources/screenshot-iDevices.png"
   alt="screenshot1" /></a>
 </figure>
 
 <figure>
   <figcaption>Viewing all 2D projections of a 6D point set:</figcaption>
   <img
-  src="resources/screenshot2.png"
+  src="resources/screenshot-2d-projections.png"
   alt="screenshot2">
 </figure>
 
 <figure>
-  <figcaption>Viewing the 3rd, 5th, and 6th dimenions of a 6D point set in 3D:</figcaption>
+  <figcaption>Viewing the 3rd, 5th, and 6th dimenions of a 6D point set in 3D with a beautifully antialiased tri-planar grid:</figcaption>
   <img
-  src="resources/screenshot3.png"
+  src="resources/screenshot-3d-grid.png"
   alt="screenshot3">
 </figure>
 
 <figure>
-  <figcaption>Visualizing the point indices, coordinates, and drawing a custom grid to validate the stratification of the point sets:</figcaption>
+  <figcaption>Visualizing the point indices, coordinates, and drawing a custom elementary interval grid to validate the stratification of the point set:</figcaption>
   <img
-  src="resources/screenshot4.png"
+  src="resources/screenshot-custom-grid.png"
   alt="screenshot4">
 </figure>
 
@@ -70,11 +70,12 @@ and now released under the 3-clause BSD license. For details, see the [LICENSE](
 * interactively switching samplers, setting number of samples, dimensions, and various sampler parameters
 * 3D and 2D orthographic views for X, Y and Z dimensions
 * view of all 2D projections (useful for high-dimensional samples)
+* show 1D projections of points alongside the 2D or 3D view
 * custom mapping of any (higher) dimensions to X, Y or Z
 * save all of these views as vector EPS or SVG files
 * save and load points to/from CSV text files
 * show point index and point coordinates
-* show stratification grids
+* show beautifully antialiased grids for various stratification levels
 * displaying only a subset of points, either by subsetting on sample index, or sample coordinates.
 
 ## Running Samplin' Safari
