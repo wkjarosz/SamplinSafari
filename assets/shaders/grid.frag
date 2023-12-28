@@ -1,3 +1,6 @@
+precision mediump float;
+
+out vec4      frag_color;
 uniform float alpha;
 uniform ivec2 size;
 in vec2       v_texcoord;
@@ -89,6 +92,6 @@ void main()
     vec2 w         = 1.5 * max(abs(dFdx(uv)), abs(dFdy(uv)));
     vec2 lineWidth = min(vec2(0.001) * vec2(size), vec2(3) * w);
 
-    float v      = pristineGrid(uv, lineWidth, w);
-    fo_FragColor = vec4(vec3(1.0), alpha * v);
+    float v    = pristineGrid(uv, lineWidth, w);
+    frag_color = vec4(vec3(1.0), alpha * v);
 }

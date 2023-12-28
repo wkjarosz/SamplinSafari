@@ -40,9 +40,16 @@ static GLuint compile_gl_shader(GLenum type, const std::string &name, const std:
     if (shader_string.empty())
         return (GLuint)0;
 
-    GLuint      id                  = glCreateShader(type);
-    const char *shader_string_const = shader_string.c_str();
-    CHK(glShaderSource(id, 1, &shader_string_const, nullptr));
+    GLuint id;
+    CHK(id = glCreateShader(type));
+    const GLchar *files[] = {
+#ifdef __EMSCRIPTEN__
+        "#version 300 es\n",
+#else
+        "#version 330 core\n",
+#endif
+        shader_string.c_str()};
+    CHK(glShaderSource(id, 2, files, nullptr));
     CHK(glCompileShader(id));
 
     GLint status;
@@ -73,17 +80,6 @@ static GLuint compile_gl_shader(GLenum type, const std::string &name, const std:
     return id;
 }
 
-// Hack to make simple shaders work in both GLSL and GLSL ES
-// clang-format off
-#ifdef __EMSCRIPTEN__
-    #define VERT_SHADER_HEADER "#version 100\n#define in attribute\n#define out varying\nprecision mediump float;\n"
-    #define FRAG_SHADER_HEADER "#version 100\n#extension GL_OES_standard_derivatives : require\n#define in varying\n#define fo_FragColor gl_FragColor\nprecision mediump float;\n"
-#else
-    #define VERT_SHADER_HEADER "#version 330 core\n"
-    #define FRAG_SHADER_HEADER "#version 330 core\nout vec4 fo_FragColor;\n"
-#endif
-// clang-format on
-
 Shader::Shader(const std::string &name, const std::string &vs_filename, const std::string &fs_filename,
                BlendMode blend_mode) :
     m_name(name),
@@ -102,8 +98,8 @@ Shader::Shader(const std::string &name, const std::string &vs_filename, const st
         auto vs = load_shader_file(vs_filename);
         auto fs = load_shader_file(fs_filename);
 
-        vertex_shader   = string(VERT_SHADER_HEADER) + string((char *)vs.data, vs.dataSize);
-        fragment_shader = string(FRAG_SHADER_HEADER) + string((char *)fs.data, fs.dataSize);
+        vertex_shader   = string((char *)vs.data, vs.dataSize);
+        fragment_shader = string((char *)fs.data, fs.dataSize);
 
         HelloImGui::FreeAssetFileData(&vs);
         HelloImGui::FreeAssetFileData(&fs);
@@ -278,7 +274,8 @@ Shader::Shader(const std::string &name, const std::string &vs_filename, const st
         GLenum type = 0;
         GLint  size = 0;
         CHK(glGetActiveAttrib(m_shader_handle, i, sizeof(attr_name), nullptr, &size, &type, attr_name));
-        GLint index = glGetAttribLocation(m_shader_handle, attr_name);
+        GLint index;
+        CHK(index = glGetAttribLocation(m_shader_handle, attr_name));
         register_buffer(VertexBuffer, attr_name, index, type);
     }
 
@@ -288,7 +285,8 @@ Shader::Shader(const std::string &name, const std::string &vs_filename, const st
         GLenum type = 0;
         GLint  size = 0;
         CHK(glGetActiveUniform(m_shader_handle, i, sizeof(uniform_name), nullptr, &size, &type, uniform_name));
-        GLint index = glGetUniformLocation(m_shader_handle, uniform_name);
+        GLint index;
+        CHK(index = glGetUniformLocation(m_shader_handle, uniform_name));
         register_buffer(UniformBuffer, uniform_name, index, type);
     }
 

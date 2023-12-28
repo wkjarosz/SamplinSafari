@@ -219,7 +219,6 @@ SampleViewer::SampleViewer()
                                         splitMainConsole};
 
         consoleWindow.dockSpaceName = "EditorSpace";
-        consoleWindow.isVisible     = true;
 
         portrait_layout.layoutName      = "Mobile device (portrait orientation)";
         portrait_layout.dockableWindows = {editorWindow, consoleWindow};

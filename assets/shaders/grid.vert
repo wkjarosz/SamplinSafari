@@ -1,3 +1,5 @@
+precision mediump float;
+
 uniform mat4 mvp;
 in vec3      position;
 out vec2     v_texcoord;

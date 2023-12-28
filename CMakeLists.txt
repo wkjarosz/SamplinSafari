@@ -344,8 +344,13 @@ target_link_libraries(SamplinSafari PRIVATE samplerlib linalg fmt::fmt)
 if(EMSCRIPTEN)
   target_link_libraries(SamplinSafari PRIVATE emscripten-browser-file)
   target_link_options(
-    SamplinSafari PRIVATE -sEXPORTED_RUNTIME_METHODS=[ccall] -sEXPORTED_FUNCTIONS=[_main,_malloc,_free]
+    SamplinSafari
+    PRIVATE
+    -sEXPORTED_RUNTIME_METHODS=[ccall]
+    -sEXPORTED_FUNCTIONS=[_main,_malloc,_free]
     -sNO_DISABLE_EXCEPTION_CATCHING
+    -sMAX_WEBGL_VERSION=2
+    -sMIN_WEBGL_VERSION=2
   )
   hello_imgui_set_emscripten_target_initial_memory_megabytes(SamplinSafari 120)
 else()

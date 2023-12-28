@@ -1,3 +1,6 @@
+precision mediump float;
+
+out vec4      frag_color;
 uniform mat4  mvp;
 uniform mat3  rotation;
 uniform vec3  color;
@@ -22,8 +25,8 @@ void main()
     float radius2 = dot(v_texcoord, v_texcoord);
     if (radius2 > 1.0)
         discard;
-    vec3 n       = rotation * vec3(v_texcoord, sqrt(1.0 - radius2));
-    vec3 sh      = Irradiance_SphericalHarmonics(n);
-    sh           = mix(mix(sh, vec3(dot(sh, vec3(1.0 / 3.0))), 0.5), vec3(1.0), 0.25);
-    fo_FragColor = vec4(sh * color * alpha, alpha);
+    vec3 n     = rotation * vec3(v_texcoord, sqrt(1.0 - radius2));
+    vec3 sh    = Irradiance_SphericalHarmonics(n);
+    sh         = mix(mix(sh, vec3(dot(sh, vec3(1.0 / 3.0))), 0.5), vec3(1.0), 0.25);
+    frag_color = vec4(sh * color * alpha, alpha);
 }

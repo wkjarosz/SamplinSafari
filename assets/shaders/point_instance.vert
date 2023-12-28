@@ -1,3 +1,5 @@
+precision mediump float;
+
 uniform mat4  mvp;
 uniform mat4  smash;
 uniform mat3  rotation;
