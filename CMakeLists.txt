@@ -165,7 +165,7 @@ if(emscripten-browser-file_ADDED)
   target_include_directories(emscripten-browser-file INTERFACE "${emscripten-browser-file_SOURCE_DIR}")
 endif()
 
-CPMAddPackage("gh:fmtlib/fmt#7.1.3")
+CPMAddPackage("gh:fmtlib/fmt#10.1.1")
 if(fmt_ADDED)
   message(STATUS "fmt library added")
 endif()
