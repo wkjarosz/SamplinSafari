@@ -340,15 +340,16 @@ hello_imgui_add_app(
 )
 
 set_target_properties(SamplinSafari PROPERTIES OUTPUT_NAME ${output_name} CXX_STANDARD 17)
+target_link_libraries(SamplinSafari PRIVATE samplerlib linalg fmt::fmt)
 if(EMSCRIPTEN)
-  target_link_libraries(SamplinSafari PRIVATE samplerlib linalg fmt::fmt emscripten-browser-file)
+  target_link_libraries(SamplinSafari PRIVATE emscripten-browser-file)
   target_link_options(
     SamplinSafari PRIVATE -sEXPORTED_RUNTIME_METHODS=[ccall] -sEXPORTED_FUNCTIONS=[_main,_malloc,_free]
     -sNO_DISABLE_EXCEPTION_CATCHING
   )
   hello_imgui_set_emscripten_target_initial_memory_megabytes(SamplinSafari 120)
 else()
-  target_link_libraries(SamplinSafari PRIVATE samplerlib linalg fmt::fmt-header-only portable-file-dialogs)
+  target_link_libraries(SamplinSafari PRIVATE portable-file-dialogs)
 endif()
 
 if(UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)

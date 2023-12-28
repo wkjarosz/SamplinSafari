@@ -57,10 +57,10 @@ using std::to_string;
 
 static int g_dismissed_version = 0;
 
-static bool g_show_modal = false;
+static bool g_open_help = false;
 
 static const vector<pair<string, string>> g_help_strings = {
-    {"h", "Show this help window"},
+    {"h", "Toggle this help window"},
     {"Left click+drag", "Rotate the camera"},
     {"Scroll mouse/pinch", "Zoom the camera"},
     {"1", "Switch to XY orthographic view"},
@@ -268,7 +268,7 @@ SampleViewer::SampleViewer()
         if (posX > ImGui::GetCursorPosX())
             ImGui::SetCursorPosX(posX);
         if (ImGui::MenuItem(text))
-            g_show_modal = true;
+            g_open_help = true;
     };
 
     m_params.callbacks.ShowAppMenuItems = [this]()
@@ -405,7 +405,7 @@ SampleViewer::SampleViewer()
         auto s              = HelloImGui::LoadUserPref("AboutDismissedVersion");
         g_dismissed_version = strtol(s.c_str(), nullptr, 10);
         if (g_dismissed_version < version_combined())
-            g_show_modal = true;
+            g_open_help = true;
     };
 
     m_params.callbacks.BeforeExit = []
@@ -514,7 +514,7 @@ void SampleViewer::draw_gui()
 
 void SampleViewer::draw_about_dialog()
 {
-    if (g_show_modal)
+    if (g_open_help)
         ImGui::OpenPopup("About");
 
     // Always center this window when appearing
@@ -524,7 +524,8 @@ void SampleViewer::draw_about_dialog()
     const float2 col_width = {11 * HelloImGui::EmSize(), 32 * HelloImGui::EmSize()};
     ImGui::SetNextWindowContentSize(float2{col_width[0] + col_width[1], 0});
 
-    if (ImGui::BeginPopupModal("About", nullptr,
+    bool about_open = true;
+    if (ImGui::BeginPopupModal("About", &about_open,
                                ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoSavedSettings |
                                    ImGuiWindowFlags_AlwaysAutoResize))
     {
@@ -697,7 +698,7 @@ void SampleViewer::draw_about_dialog()
         // ImGui::SetKeyboardFocusHere();
         if (ImGui::Button("Dismiss", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape) ||
             ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Space) ||
-            (!g_show_modal && ImGui::IsKeyPressed(ImGuiKey_H)))
+            (!g_open_help && ImGui::IsKeyPressed(ImGuiKey_H)))
         {
             ImGui::CloseCurrentPopup();
             g_dismissed_version = version_combined();
@@ -705,7 +706,7 @@ void SampleViewer::draw_about_dialog()
         ImGui::SetItemDefaultFocus();
 
         ImGui::EndPopup();
-        g_show_modal = false;
+        g_open_help = false;
     }
 }
 
@@ -1174,7 +1175,7 @@ void SampleViewer::process_hotkeys()
     else if (ImGui::IsKeyPressed(ImGuiKey_B))
         m_show_bbox = !m_show_bbox;
     else if (ImGui::IsKeyPressed(ImGuiKey_H))
-        g_show_modal = !g_show_modal;
+        g_open_help = !g_open_help;
 }
 
 void SampleViewer::update_points(bool regenerate)
