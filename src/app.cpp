@@ -1566,9 +1566,6 @@ void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &
 
 string SampleViewer::export_XYZ_points(const string &format)
 {
-    // float radius = map_slider_to_radius(m_radius);
-    // if (m_scale_radius_with_points)
-    //     radius *= 64.0f / std::sqrt(m_point_count);
     float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
 
     string out = (format == "eps") ? header_eps(m_point_color, radius) : header_svg(m_point_color);
