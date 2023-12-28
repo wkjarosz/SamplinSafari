@@ -95,10 +95,7 @@ public:
 
     void draw_scene();
     void draw_gui();
-    void run()
-    {
-        HelloImGui::Run(m_params);
-    }
+    void run();
 
 private:
     string export_XYZ_points(const string &format);
@@ -164,6 +161,4 @@ private:
     float3                   m_point_color = {0.9f, 0.55f, 0.1f};
     float3                   m_bg_color    = {0.0f, 0.0f, 0.0f};
     HelloImGui::RunnerParams m_params;
-
-    bool m_idling_backup = false;
 };

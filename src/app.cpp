@@ -111,6 +111,13 @@ static float4x4 layout_2d_matrix(int num_dims, int2 dims)
     return mul(translation_matrix(float3{offset * cell_spacing, 1}), scaling_matrix(float3{float2{cell_size}, 1}));
 }
 
+#ifdef __EMSCRIPTEN__
+EM_JS(int, screen_width, (), { return screen.width; });
+EM_JS(int, screen_height, (), { return screen.height; });
+EM_JS(int, window_width, (), { return window.innerWidth; });
+EM_JS(int, window_height, (), { return window.innerHeight; });
+#endif
+
 SampleViewer::SampleViewer()
 {
     m_custom_line_counts.fill(1);
@@ -199,18 +206,44 @@ SampleViewer::SampleViewer()
         m_params.dockingParams.layoutName      = "Settings on left";
         m_params.dockingParams.dockableWindows = {editorWindow, consoleWindow};
 
-        HelloImGui::DockingSplit splitEditorMain{"MainDockSpace", "EditorSpace", ImGuiDir_Left, 0.2f};
-
         HelloImGui::DockingSplit splitMainConsole{"MainDockSpace", "ConsoleSpace", ImGuiDir_Down, 0.25f};
 
-        m_params.dockingParams.dockingSplits = {splitEditorMain, splitMainConsole};
+        m_params.dockingParams.dockingSplits = {
+            HelloImGui::DockingSplit{"MainDockSpace", "EditorSpace", ImGuiDir_Left, 0.2f}, splitMainConsole};
 
-        HelloImGui::DockingParams alternativeLayout;
-        alternativeLayout.layoutName       = "Settings on right";
-        alternativeLayout.dockableWindows  = {editorWindow, consoleWindow};
-        splitEditorMain.direction          = ImGuiDir_Right;
-        alternativeLayout.dockingSplits    = {splitEditorMain, splitMainConsole};
-        m_params.alternativeDockingLayouts = {alternativeLayout};
+        HelloImGui::DockingParams right_layout, portrait_layout, landscape_layout;
+
+        right_layout.layoutName      = "Settings on right";
+        right_layout.dockableWindows = {editorWindow, consoleWindow};
+        right_layout.dockingSplits   = {HelloImGui::DockingSplit{"MainDockSpace", "EditorSpace", ImGuiDir_Right, 0.2f},
+                                        splitMainConsole};
+
+        consoleWindow.dockSpaceName = "EditorSpace";
+        consoleWindow.isVisible     = true;
+
+        portrait_layout.layoutName      = "Mobile device (portrait orientation)";
+        portrait_layout.dockableWindows = {editorWindow, consoleWindow};
+        portrait_layout.dockingSplits = {HelloImGui::DockingSplit{"MainDockSpace", "EditorSpace", ImGuiDir_Down, 0.5f}};
+
+        landscape_layout.layoutName      = "Mobile device (landscape orientation)";
+        landscape_layout.dockableWindows = {editorWindow, consoleWindow};
+        landscape_layout.dockingSplits   = {
+            HelloImGui::DockingSplit{"MainDockSpace", "EditorSpace", ImGuiDir_Left, 0.5f}};
+
+        m_params.alternativeDockingLayouts = {right_layout, portrait_layout, landscape_layout};
+
+#ifdef __EMSCRIPTEN__
+        HelloImGui::Log(HelloImGui::LogLevel::Info, "Screen size: %d, %d\nWindow size: %d, %d", screen_width(),
+                        screen_height(), window_width(), window_height());
+        if (std::min(screen_width(), screen_height()) < 500)
+        {
+            HelloImGui::Log(
+                HelloImGui::LogLevel::Info, "Switching to %s layout",
+                m_params.alternativeDockingLayouts[window_width() < window_height() ? 1 : 2].layoutName.c_str());
+            std::swap(m_params.dockingParams,
+                      m_params.alternativeDockingLayouts[window_width() < window_height() ? 1 : 2]);
+        }
+#endif
     }
 
     m_params.callbacks.LoadAdditionalFonts = [this]()
@@ -336,15 +369,11 @@ SampleViewer::SampleViewer()
         // set the default theme for first startup
         m_params.imGuiWindowParams.tweakedTheme.Theme = ImGuiTheme::ImGuiTheme_FromName("MaterialFlat");
     };
+
     m_params.callbacks.PostInit = [this]()
     {
         try
         {
-#ifndef __EMSCRIPTEN__
-            glEnable(GL_PROGRAM_POINT_SIZE);
-            glEnable(GL_LINE_SMOOTH);
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-#endif
             auto quad_verts =
                 vector<float3>{{-0.5f, -0.5f, 0.f}, {-0.5f, 0.5f, 0.0f}, {0.5f, 0.5f, 0.0f}, {0.5f, -0.5f, 0.0f}};
             m_2d_point_shader = new Shader("2D point shader", "shaders/point_instance.vert",
@@ -388,7 +417,11 @@ SampleViewer::SampleViewer()
     m_params.callbacks.ShowGui                 = [this]() { draw_gui(); };
     m_params.callbacks.CustomBackground        = [this]() { draw_scene(); };
     m_params.callbacks.AnyBackendEventCallback = [this](void *event) { return process_event(event); };
-    m_idling_backup                            = m_params.fpsIdling.enableIdling;
+}
+
+void SampleViewer::run()
+{
+    HelloImGui::Run(m_params);
 }
 
 SampleViewer::~SampleViewer()
@@ -1364,9 +1397,7 @@ void SampleViewer::draw_scene()
             {
                 camera.camera_type         = camera1.camera_type;
                 m_params.fpsIdling.fpsIdle = 9.f; // animation is done, reduce FPS
-                // if (m_animate_start_time != 0.0f)
-                //     m_params.fpsIdling.enableIdling = m_idling_backup;
-                m_animate_start_time = 0.f;
+                m_animate_start_time       = 0.f;
             }
 
             // if we are dragging the mouse, then just use the current arcball
@@ -1450,8 +1481,6 @@ void SampleViewer::set_view(CameraType view)
         m_view                               = view;
 
         m_params.fpsIdling.fpsIdle = 0.f; // during animation, increase FPS
-        m_idling_backup            = m_params.fpsIdling.enableIdling;
-        // m_params.fpsIdling.enableIdling = false;
     }
 }
 
