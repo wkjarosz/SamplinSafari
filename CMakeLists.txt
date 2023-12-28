@@ -16,6 +16,8 @@ project(
   LANGUAGES C CXX
 )
 
+message(STATUS "C++ compiler is: ${CMAKE_CXX_COMPILER_ID}")
+
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(VERSION_LONG "${GIT_DESCRIBE} (64 bit)")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -44,8 +46,6 @@ include(sanitizers)
 # versions.
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT SamplinSafari)
 
-include(CheckCXXCompilerFlag)
-
 # ============================================================================
 # Set a default build configuration (Release)
 # ============================================================================
@@ -69,6 +69,7 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   # Prefer libc++ in conjunction with Clang
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    include(CheckCXXCompilerFlag)
     check_cxx_compiler_flag("-stdlib=libc++" HAS_LIBCPP)
     if(HAS_LIBCPP)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -D_LIBCPP_VERSION")
