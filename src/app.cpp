@@ -993,6 +993,7 @@ void SampleViewer::draw_editor()
 bool SampleViewer::process_event(void *e)
 {
 #ifdef HELLOIMGUI_USE_SDL_OPENGL3
+    auto       &io     = ImGui::GetIO();
     static bool sPinch = false;
     SDL_Event  *event  = static_cast<SDL_Event *>(e);
     switch (event->type)
@@ -1012,19 +1013,29 @@ bool SampleViewer::process_event(void *e)
     // case SDL_FINGERDOWN: HelloImGui::Log(HelloImGui::LogLevel::Debug, "Got an SDL_FINGERDOWN event"); break;
     case SDL_MULTIGESTURE:
     {
-        const float            cPinchZoomThreshold(0.0001f);
-        const float            cPinchScale(80.0f);
-        SDL_MultiGestureEvent *m = static_cast<SDL_MultiGestureEvent *>(e);
-        // HelloImGui::Log(
-        //     HelloImGui::LogLevel::Debug,
-        //     fmt::format("Got an SDL_MULTIGESTURE event; numFingers: {}; dDist: {}", m->numFingers,
-        //     m->dDist).c_str());
-        if (m->numFingers == 2 && fabs(m->dDist) >= cPinchZoomThreshold)
+        constexpr float cPinchZoomThreshold(0.0001f);
+        constexpr float cPinchScale(80.0f);
+        if (event->mgesture.numFingers == 2 && fabs(event->mgesture.dDist) >= cPinchZoomThreshold)
         {
+            // HelloImGui::Log(HelloImGui::LogLevel::Debug,
+            //                 fmt::format("Got an SDL_MULTIGESTURE event; numFingers: {}; dDist: {}; x: {}, y: {}",
+            //                             event->mgesture.numFingers, event->mgesture.dDist, event->mgesture.x,
+            //                             event->mgesture.y)
+            //                     .c_str());
             sPinch = true;
             // Zoom in/out by positive/negative mPinch distance
-            float zoomDelta            = m->dDist * cPinchScale;
+            float zoomDelta            = event->mgesture.dDist * cPinchScale;
             m_camera[CAMERA_NEXT].zoom = std::max(0.001, m_camera[CAMERA_NEXT].zoom * pow(1.1, zoomDelta));
+
+            // add a dummy event so that idling doesn't happen
+            auto            g = ImGui::GetCurrentContext();
+            ImGuiInputEvent e;
+            e.Type                   = ImGuiInputEventType_None;
+            e.Source                 = ImGuiInputSource_Mouse;
+            e.EventId                = g->InputEventsNextEventId++;
+            e.MouseWheel.MouseSource = ImGuiMouseSource_TouchScreen;
+            g->InputEventsQueue.push_back(e);
+
             return true;
         }
     }

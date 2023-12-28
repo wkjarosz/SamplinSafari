@@ -178,7 +178,7 @@ if(portable-file-dialogs_ADDED)
 endif()
 
 set(HELLOIMGUI_WITH_GLFW ON)
-CPMAddPackage("gh:pthom/hello_imgui#b1a74a7d76a84c08c1fa3a97b8dc3e2c5b5b97b3")
+CPMAddPackage("gh:wkjarosz/hello_imgui#745ced9d52be601097e4b7d0837ad67a0b93db32")
 if(hello_imgui_ADDED)
   message(STATUS "hello_imgui library added")
 endif()
