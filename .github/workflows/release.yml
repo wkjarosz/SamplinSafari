@@ -115,7 +115,7 @@ jobs:
 
       - name: Configure CMake
         run: |
-          emcmake cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          emcmake cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --parallel 4
