@@ -375,13 +375,13 @@ SampleViewer::SampleViewer()
         {
             auto quad_verts =
                 vector<float3>{{-0.5f, -0.5f, 0.f}, {-0.5f, 0.5f, 0.0f}, {0.5f, 0.5f, 0.0f}, {0.5f, -0.5f, 0.0f}};
-            m_2d_point_shader = new Shader("2D point shader", "shaders/point_instance.vert",
-                                           "shaders/point_instance.frag", Shader::BlendMode::AlphaBlend);
+            m_2d_point_shader = new Shader("2D point shader", "shaders/point.vert", "shaders/point.frag",
+                                           Shader::BlendMode::AlphaBlend);
             m_2d_point_shader->set_buffer("vertices", quad_verts);
             m_2d_point_shader->set_buffer_divisor("vertices", 0);
 
-            m_3d_point_shader = new Shader("3D point shader", "shaders/point_instance.vert",
-                                           "shaders/point_instance.frag", Shader::BlendMode::AlphaBlend);
+            m_3d_point_shader = new Shader("3D point shader", "shaders/point.vert", "shaders/point.frag",
+                                           Shader::BlendMode::AlphaBlend);
             m_3d_point_shader->set_buffer("vertices", quad_verts);
             m_3d_point_shader->set_buffer_divisor("vertices", 0);
 
@@ -413,8 +413,8 @@ SampleViewer::SampleViewer()
             HelloImGui::SaveUserPref("AboutDismissedVersion", to_string(version_combined()));
     };
 
-    m_params.callbacks.ShowGui                 = [this]() { draw_gui(); };
-    m_params.callbacks.CustomBackground        = [this]() { draw_scene(); };
+    m_params.callbacks.ShowGui                 = [this]() { draw_about_dialog(); };
+    m_params.callbacks.CustomBackground        = [this]() { draw_background(); };
     m_params.callbacks.AnyBackendEventCallback = [this](void *event) { return process_event(event); };
 }
 
@@ -440,75 +440,6 @@ int2 SampleViewer::get_draw_range() const
         count = std::min(m_point_draw_count, m_point_count - m_first_draw_point);
     }
     return {start, count};
-}
-
-void SampleViewer::draw_gui()
-{
-    auto &io = ImGui::GetIO();
-
-    m_viewport_pos_GL = m_viewport_pos = {0, 0};
-    m_viewport_size                    = io.DisplaySize;
-    if (auto id = m_params.dockingParams.dockSpaceIdFromName("MainDockSpace"))
-    {
-        auto central_node = ImGui::DockBuilderGetCentralNode(*id);
-        m_viewport_size   = int2{int(central_node->Size.x), int(central_node->Size.y)};
-        m_viewport_pos    = int2{int(central_node->Pos.x), int(central_node->Pos.y)};
-        // flip y coordinates between ImGui and OpenGL screen coordinates
-        m_viewport_pos_GL =
-            int2{int(central_node->Pos.x), int(io.DisplaySize.y - (central_node->Pos.y + central_node->Size.y))};
-    }
-
-    float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
-
-    float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(m_viewport_size.x) / m_viewport_size.y);
-
-    // draw text labels
-    if (m_view == CAMERA_2D)
-    {
-        // draw the text labels for the grid of 2D projections
-        for (int i = 0; i < m_num_dimensions - 1; ++i)
-        {
-            float4x4 pos      = layout_2d_matrix(m_num_dimensions, int2{i, m_num_dimensions - 1});
-            float4   text_pos = mul(mvp, mul(pos, float4{0.f, -0.5f, -1.0f, 1.0f}));
-            float2   text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
-            draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x),
-                                            int((1.f - text_2d_pos.y) * m_viewport_size.y) + 16),
-                      to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
-                      TextAlign_CENTER | TextAlign_BOTTOM);
-
-            pos         = layout_2d_matrix(m_num_dimensions, int2{0, i + 1});
-            text_pos    = mul(mvp, mul(pos, float4{-0.5f, 0.f, -1.0f, 1.0f}));
-            text_2d_pos = float2((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
-            draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x) - 4,
-                                            int((1.f - text_2d_pos.y) * m_viewport_size.y)),
-                      to_string(i + 1), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
-                      TextAlign_RIGHT | TextAlign_MIDDLE);
-        }
-    }
-    else
-    {
-        int2 range = get_draw_range();
-
-        // draw the index or coordinate labels around each point
-        if (m_show_point_nums || m_show_point_coords)
-            for (int p = range.x; p < range.x + range.y; ++p)
-            {
-                float4 text_pos = mul(mvp, float4{m_3d_points[p] - 0.5f, 1.f});
-                float2 text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
-                int2   draw_pos = m_viewport_pos + int2{int((text_2d_pos.x) * m_viewport_size.x),
-                                                      int((1.f - text_2d_pos.y) * m_viewport_size.y)};
-                if (m_show_point_nums)
-                    draw_text(draw_pos - int2{0, int(radius / 4)}, fmt::format("{:d}", p),
-                              float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[12], TextAlign_CENTER | TextAlign_BOTTOM);
-                if (m_show_point_coords)
-                    draw_text(draw_pos + int2{0, int(radius / 4)},
-                              fmt::format("({:0.2f}, {:0.2f}, {:0.2f})", m_3d_points[p].x, m_3d_points[p].y,
-                                          m_3d_points[p].z),
-                              float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[11], TextAlign_CENTER | TextAlign_TOP);
-            }
-    }
-
-    draw_about_dialog();
 }
 
 void SampleViewer::draw_about_dialog()
@@ -1305,7 +1236,7 @@ void SampleViewer::draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int p
         draw_grid(mat, int2{m_custom_line_counts[dims.x], m_custom_line_counts[dims.y]}, 1.f);
 }
 
-void SampleViewer::draw_scene()
+void SampleViewer::draw_background()
 {
     auto &io = ImGui::GetIO();
 
@@ -1321,10 +1252,23 @@ void SampleViewer::draw_scene()
         // clear the scene and set up viewports
         //
 
+        // calculate the viewport sizes
+        m_viewport_pos_GL = m_viewport_pos = {0, 0};
+        m_viewport_size                    = io.DisplaySize;
+        if (auto id = m_params.dockingParams.dockSpaceIdFromName("MainDockSpace"))
+        {
+            auto central_node = ImGui::DockBuilderGetCentralNode(*id);
+            m_viewport_size   = int2{int(central_node->Size.x), int(central_node->Size.y)};
+            m_viewport_pos    = int2{int(central_node->Pos.x), int(central_node->Pos.y)};
+            // flip y coordinates between ImGui and OpenGL screen coordinates
+            m_viewport_pos_GL =
+                int2{int(central_node->Pos.x), int(io.DisplaySize.y - (central_node->Pos.y + central_node->Size.y))};
+        }
+
         // first clear the entire window with the background color
         // display_size is the size of the window in pixels while accounting for dpi factor on retina screens.
-        //     for retina displays, io.DisplaySize is the size of the window in points (logical pixels)
-        //     but we need the size in pixels. So we scale io.DisplaySize by io.DisplayFramebufferScale
+        // for retina displays, io.DisplaySize is the size of the window in points (logical pixels)
+        // but we need the size in pixels. So we scale io.DisplaySize by io.DisplayFramebufferScale
         auto display_size = int2{io.DisplaySize} * int2{io.DisplayFramebufferScale};
         CHK(glViewport(0, 0, display_size.x, display_size.y));
         CHK(glClearColor(m_bg_color[0], m_bg_color[1], m_bg_color[2], 1.f));
@@ -1420,6 +1364,26 @@ void SampleViewer::draw_scene()
             for (int y = 0; y < m_num_dimensions; ++y)
                 for (int x = 0; x < y; ++x, ++plot_index)
                     draw_2D_points_and_grid(mvp, int2{x, y}, plot_index);
+
+            // draw the text labels for the grid of 2D projections
+            for (int i = 0; i < m_num_dimensions - 1; ++i)
+            {
+                float4x4 pos      = layout_2d_matrix(m_num_dimensions, int2{i, m_num_dimensions - 1});
+                float4   text_pos = mul(mvp, mul(pos, float4{0.f, -0.5f, -1.0f, 1.0f}));
+                float2   text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
+                draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x),
+                                                int((1.f - text_2d_pos.y) * m_viewport_size.y) + 16),
+                          to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
+                          TextAlign_CENTER | TextAlign_BOTTOM);
+
+                pos         = layout_2d_matrix(m_num_dimensions, int2{0, i + 1});
+                text_pos    = mul(mvp, mul(pos, float4{-0.5f, 0.f, -1.0f, 1.0f}));
+                text_2d_pos = float2((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
+                draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x) - 4,
+                                                int((1.f - text_2d_pos.y) * m_viewport_size.y)),
+                          to_string(i + 1), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
+                          TextAlign_RIGHT | TextAlign_MIDDLE);
+            }
         }
         else
         {
@@ -1459,6 +1423,29 @@ void SampleViewer::draw_scene()
 
             if (m_show_fine_grid)
                 draw_trigrid(m_grid_shader, mvp, 0.2f, int2x3{m_point_count});
+
+            //
+            // draw the index or coordinate labels around each point
+            //
+            int2  range  = get_draw_range();
+            float radius = m_radius / (m_scale_radius_with_points ? std::sqrt(m_point_count) : 1.0f);
+
+            if (m_show_point_nums || m_show_point_coords)
+                for (int p = range.x; p < range.x + range.y; ++p)
+                {
+                    float4 text_pos = mul(mvp, float4{m_3d_points[p] - 0.5f, 1.f});
+                    float2 text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
+                    int2   draw_pos = m_viewport_pos + int2{int((text_2d_pos.x) * m_viewport_size.x),
+                                                          int((1.f - text_2d_pos.y) * m_viewport_size.y)};
+                    if (m_show_point_nums)
+                        draw_text(draw_pos - int2{0, int(radius / 4)}, fmt::format("{:d}", p),
+                                  float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[12], TextAlign_CENTER | TextAlign_BOTTOM);
+                    if (m_show_point_coords)
+                        draw_text(draw_pos + int2{0, int(radius / 4)},
+                                  fmt::format("({:0.2f}, {:0.2f}, {:0.2f})", m_3d_points[p].x, m_3d_points[p].y,
+                                              m_3d_points[p].z),
+                                  float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[11], TextAlign_CENTER | TextAlign_TOP);
+                }
         }
     }
     catch (const std::exception &e)

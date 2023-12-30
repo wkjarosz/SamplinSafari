@@ -93,8 +93,7 @@ public:
     SampleViewer();
     virtual ~SampleViewer();
 
-    void draw_scene();
-    void draw_gui();
+    void draw_background();
     void run();
 
 private:
