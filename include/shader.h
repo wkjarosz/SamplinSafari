@@ -208,7 +208,7 @@ public:
     {
         return m_shader_handle;
     }
-#elif defined(HELLOIMGUI_USE_METAL)
+#elif defined(HELLOIMGUI_HAS_METAL)
     void *pipeline_state() const
     {
         return m_pipeline_state;
@@ -267,7 +267,7 @@ protected:
     uint32_t m_vertex_array_handle = 0;
     bool     m_uses_point_size     = false;
 #endif
-#elif defined(HELLOIMGUI_USE_METAL)
+#elif defined(HELLOIMGUI_HAS_METAL)
     void *m_pipeline_state;
 #endif
 };

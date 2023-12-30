@@ -335,6 +335,7 @@ hello_imgui_add_app(
   src/app.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp
   src/shader.cpp
+  src/shader_gl.cpp
   src/export_to_file.cpp
   ASSETS_LOCATION
   ${CMAKE_CURRENT_BINARY_DIR}/assets
