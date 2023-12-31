@@ -5,6 +5,7 @@
 #include "renderpass.h"
 
 #include <fmt/core.h>
+#include <stdexcept>
 
 RenderPass::RenderPass(bool write_depth, bool clear) :
     m_clear(clear), m_clear_color(0, 0, 0, 0), m_clear_depth(1.f), m_viewport_offset(0), m_viewport_size(0),

@@ -180,7 +180,7 @@ endif()
 
 # set(HELLOIMGUI_USE_GLFW_METAL ON)
 set(HELLOIMGUI_USE_GLFW_OPENGL3 ON)
-CPMAddPackage("gh:pthom/hello_imgui#0c8e5e848738dd7160485d96da3aa9e9033c62ad")
+CPMAddPackage("gh:pthom/hello_imgui#8abe2c98dbf99e3a098eb5548b0a079c9f4c8a8f")
 if(hello_imgui_ADDED)
   message(STATUS "hello_imgui library added")
 endif()
@@ -331,6 +331,10 @@ set(HELLO_IMGUI_BUNDLE_VERSION ${VERSION})
 set(HELLO_IMGUI_BUNDLE_SHORT_VERSION ${VERSION})
 set(HELLO_IMGUI_BUNDLE_ICON_FILE icon.icns)
 
+if(APPLE AND (HELLOIMGUI_USE_GLFW_METAL OR HELLOIMGUI_USE_SDL_METAL))
+  list(APPEND EXTRA_SOURCES src/renderpass_metal.mm src/shader_metal.mm)
+endif()
+
 hello_imgui_add_app(
   SamplinSafari
   src/app.cpp
@@ -338,10 +342,9 @@ hello_imgui_add_app(
   src/opengl_check.cpp
   src/shader.cpp
   src/shader_gl.cpp
-  src/shader_metal.mm
   src/export_to_file.cpp
   src/renderpass_gl.cpp
-  src/renderpass_metal.mm
+  ${EXTRA_SOURCES}
   ASSETS_LOCATION
   ${CMAKE_CURRENT_BINARY_DIR}/assets
 )
