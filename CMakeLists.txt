@@ -13,7 +13,7 @@ project(
   SamplinSafari
   DESCRIPTION "A research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers."
   VERSION ${VERSION}
-  LANGUAGES C CXX
+  LANGUAGES C CXX OBJC
 )
 
 message(STATUS "C++ compiler is: ${CMAKE_CXX_COMPILER_ID}")
@@ -178,8 +178,9 @@ if(portable-file-dialogs_ADDED)
   target_include_directories(portable-file-dialogs INTERFACE "${portable-file-dialogs_SOURCE_DIR}")
 endif()
 
-set(HELLOIMGUI_WITH_GLFW ON)
-CPMAddPackage("gh:wkjarosz/hello_imgui#745ced9d52be601097e4b7d0837ad67a0b93db32")
+# set(HELLOIMGUI_USE_GLFW_METAL ON)
+set(HELLOIMGUI_USE_GLFW_OPENGL3 ON)
+CPMAddPackage("gh:pthom/hello_imgui#0c8e5e848738dd7160485d96da3aa9e9033c62ad")
 if(hello_imgui_ADDED)
   message(STATUS "hello_imgui library added")
 endif()
@@ -334,9 +335,13 @@ hello_imgui_add_app(
   SamplinSafari
   src/app.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/src/common.cpp
+  src/opengl_check.cpp
   src/shader.cpp
   src/shader_gl.cpp
+  src/shader_metal.mm
   src/export_to_file.cpp
+  src/renderpass_gl.cpp
+  src/renderpass_metal.mm
   ASSETS_LOCATION
   ${CMAKE_CURRENT_BINARY_DIR}/assets
 )

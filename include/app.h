@@ -37,6 +37,7 @@ using namespace linalg::aliases;
 #include "arcball.h"
 #include "hello_imgui/hello_imgui.h"
 #include "misc/cpp/imgui_stdlib.h"
+#include "renderpass.h"
 #include "shader.h"
 #include <galois++/array2d.h>
 #include <map>
@@ -111,7 +112,7 @@ private:
     void draw_text(const int2 &pos, const std::string &text, const float4 &col, ImFont *font = nullptr,
                    int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
     void draw_points(const float4x4 &mvp, const float4x4 &smash, const float3 &color);
-    void draw_grid(const float4x4 &mat, int2 size, float alpha) const;
+    void draw_grid(const float4x4 &mat, int2 size, float alpha);
     void draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha, const int2x3 &count);
     void draw_2D_points_and_grid(const float4x4 &mvp, int2 dims, int plotIndex);
     int2 get_draw_range() const;
@@ -139,9 +140,9 @@ private:
     bool              m_show_1d_projections = false, m_show_point_nums = false, m_show_point_coords = false,
          m_show_coarse_grid = false, m_show_fine_grid = false, m_show_custom_grid = false, m_show_bbox = false;
 
-    Shader *m_3d_point_shader = nullptr, *m_2d_point_shader = nullptr, *m_grid_shader = nullptr;
+    RenderPass m_render_pass;
+    Shader    *m_3d_point_shader = nullptr, *m_2d_point_shader = nullptr, *m_grid_shader = nullptr;
 
-    int2  m_viewport_pos, m_viewport_pos_GL, m_viewport_size;
     float m_animate_start_time = 0.0f;
 
     bool m_subset_by_index   = false;

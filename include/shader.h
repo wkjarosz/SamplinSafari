@@ -8,6 +8,8 @@
 #include <string>
 #include <unordered_map>
 
+class RenderPass;
+
 /// An abstraction for shaders that work with OpenGL, OpenGL ES, and (at some point down the road, hopefully) Metal.
 /*
     This is adapted from NanoGUI's Shader class. Copyright follows.
@@ -44,6 +46,9 @@ public:
     /**
         Initialize the shader using the source files (read from the assets directory).
 
+        \param render_pass
+            RenderPass object encoding targets to which color and depth information will be rendered.
+
         \param name
             A name identifying this shader
 
@@ -53,11 +58,14 @@ public:
         \param fs_filename
             Filename of the fragment shader source code.
     */
-    Shader(const std::string &name, const std::string &vs_filename, const std::string &fs_filename,
-           BlendMode blend_mode = BlendMode::None);
+    Shader(RenderPass *render_pass, const std::string &name, const std::string &vs_filename,
+           const std::string &fs_filename, BlendMode blend_mode = BlendMode::None);
 
     /// Return the render pass associated with this shader
-    // RenderPass *render_pass() { return m_render_pass; }
+    RenderPass *render_pass()
+    {
+        return m_render_pass;
+    }
 
     /// Return the name of this shader
     const std::string &name() const
@@ -256,7 +264,7 @@ protected:
     virtual ~Shader();
 
 protected:
-    // RenderPass* m_render_pass;
+    RenderPass                             *m_render_pass;
     std::string                             m_name;
     std::unordered_map<std::string, Buffer> m_buffers;
     BlendMode                               m_blend_mode;
@@ -271,14 +279,3 @@ protected:
     void *m_pipeline_state;
 #endif
 };
-
-bool check_glerror(const char *cmd);
-
-#define CHK(cmd)                                                                                                       \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        cmd;                                                                                                           \
-        while (check_glerror(#cmd))                                                                                    \
-        {                                                                                                              \
-        }                                                                                                              \
-    } while (false)

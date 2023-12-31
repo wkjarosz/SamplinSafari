@@ -2,6 +2,7 @@
 
 #include "hello_imgui/hello_imgui.h"
 #include "hello_imgui/hello_imgui_include_opengl.h" // cross-platform way to include OpenGL headers
+#include "opengl_check.h"
 #include "shader.h"
 
 #if !defined(GL_HALF_FLOAT)
@@ -11,31 +12,6 @@
 #include <fmt/core.h>
 
 using std::string;
-
-bool check_glerror(const char *cmd)
-{
-    GLenum      err = glGetError();
-    const char *msg = nullptr;
-
-    switch (err)
-    {
-    case GL_NO_ERROR: return false;
-    case GL_INVALID_ENUM: msg = "invalid enumeration"; break;
-    case GL_INVALID_VALUE: msg = "invalid value"; break;
-    case GL_INVALID_OPERATION: msg = "invalid operation"; break;
-    case GL_INVALID_FRAMEBUFFER_OPERATION: msg = "invalid framebuffer operation"; break;
-    case GL_OUT_OF_MEMORY: msg = "out of memory"; break;
-#ifndef __EMSCRIPTEN__
-    case GL_STACK_UNDERFLOW: msg = "stack underflow"; break;
-    case GL_STACK_OVERFLOW: msg = "stack overflow"; break;
-#endif
-    default: msg = "unknown error"; break;
-    }
-
-    fmt::print(stderr, "OpenGL error ({}) during operation \"{}\"!\n", msg, cmd);
-    HelloImGui::Log(HelloImGui::LogLevel::Error, "OpenGL error (%s) during operation \"%s\"!\n", msg, cmd);
-    return true;
-}
 
 static GLuint compile_gl_shader(GLenum type, const std::string &name, const std::string &shader_string)
 {
@@ -82,10 +58,10 @@ static GLuint compile_gl_shader(GLenum type, const std::string &name, const std:
     return id;
 }
 
-Shader::Shader(const std::string &name, const std::string &vs_filename, const std::string &fs_filename,
-               BlendMode blend_mode) :
-    m_name(name),
-    m_blend_mode(blend_mode), m_shader_handle(0)
+Shader::Shader(RenderPass *render_pass, const std::string &name, const std::string &vs_filename,
+               const std::string &fs_filename, BlendMode blend_mode) :
+    m_render_pass(render_pass),
+    m_name(name), m_blend_mode(blend_mode), m_shader_handle(0)
 {
     string vertex_shader, fragment_shader;
     {
@@ -650,4 +626,4 @@ void Shader::draw_array(PrimitiveType primitive_type, size_t offset, size_t coun
     }
 }
 
-#endif
+#endif // defined(HELLOIMGUI_HAS_OPENGL)

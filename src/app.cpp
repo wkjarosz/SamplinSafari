@@ -9,6 +9,8 @@
 #include "imgui_ext.h"
 #include "imgui_internal.h"
 
+#include "opengl_check.h"
+
 #include <sampler/CSVFile.h>
 #include <sampler/CascadedSobol.h>
 #include <sampler/Faure.h>
@@ -374,22 +376,22 @@ SampleViewer::SampleViewer()
         try
         {
             auto quad_verts =
-                vector<float3>{{-0.5f, -0.5f, 0.f}, {-0.5f, 0.5f, 0.0f}, {0.5f, 0.5f, 0.0f}, {0.5f, -0.5f, 0.0f}};
-            m_2d_point_shader = new Shader("2D point shader", "shaders/point.vert", "shaders/point.frag",
-                                           Shader::BlendMode::AlphaBlend);
+                vector<float3>{{-0.5f, -0.5f, 0.f}, {0.5f, -0.5f, 0.0f}, {0.5f, 0.5f, 0.0f}, {-0.5f, 0.5f, 0.0f}};
+            m_2d_point_shader = new Shader(&m_render_pass, "2D point shader", "shaders/point.vert",
+                                           "shaders/point.frag", Shader::BlendMode::AlphaBlend);
             m_2d_point_shader->set_buffer("vertices", quad_verts);
             m_2d_point_shader->set_buffer_divisor("vertices", 0);
 
-            m_3d_point_shader = new Shader("3D point shader", "shaders/point.vert", "shaders/point.frag",
-                                           Shader::BlendMode::AlphaBlend);
+            m_3d_point_shader = new Shader(&m_render_pass, "3D point shader", "shaders/point.vert",
+                                           "shaders/point.frag", Shader::BlendMode::AlphaBlend);
             m_3d_point_shader->set_buffer("vertices", quad_verts);
             m_3d_point_shader->set_buffer_divisor("vertices", 0);
 
-            m_grid_shader =
-                new Shader("Grid shader", "shaders/grid.vert", "shaders/grid.frag", Shader::BlendMode::AlphaBlend);
+            m_grid_shader = new Shader(&m_render_pass, "Grid shader", "shaders/grid.vert", "shaders/grid.frag",
+                                       Shader::BlendMode::AlphaBlend);
             m_grid_shader->set_buffer(
                 "position",
-                vector<float3>{{-0.5f, -0.5f, 0.5f}, {-0.5f, 1.5f, 0.5f}, {1.5f, 1.5f, 0.5f}, {1.5f, -0.5f, 0.5f}});
+                vector<float3>{{-0.5f, -0.5f, 0.5f}, {1.5f, -0.5f, 0.5f}, {1.5f, 1.5f, 0.5f}, {-0.5f, 1.5f, 0.5f}});
 
             HelloImGui::Log(HelloImGui::LogLevel::Info, "Successfully initialized GL!");
         }
@@ -1249,44 +1251,24 @@ void SampleViewer::draw_background()
             update_points(m_cpu_points_dirty);
 
         //
-        // clear the scene and set up viewports
-        //
-
         // calculate the viewport sizes
-        m_viewport_pos_GL = m_viewport_pos = {0, 0};
-        m_viewport_size                    = io.DisplaySize;
+        // fbsize is the size of the window in pixels while accounting for dpi factor on retina screens.
+        // for retina displays, io.DisplaySize is the size of the window in points (logical pixels)
+        // but we need the size in pixels. So we scale io.DisplaySize by io.DisplayFramebufferScale
+        int2 fbscale         = io.DisplayFramebufferScale;
+        auto fbsize          = int2{io.DisplaySize} * fbscale;
+        int2 viewport_offset = {0, 0};
+        int2 viewport_size   = io.DisplaySize;
         if (auto id = m_params.dockingParams.dockSpaceIdFromName("MainDockSpace"))
         {
             auto central_node = ImGui::DockBuilderGetCentralNode(*id);
-            m_viewport_size   = int2{int(central_node->Size.x), int(central_node->Size.y)};
-            m_viewport_pos    = int2{int(central_node->Pos.x), int(central_node->Pos.y)};
-            // flip y coordinates between ImGui and OpenGL screen coordinates
-            m_viewport_pos_GL =
-                int2{int(central_node->Pos.x), int(io.DisplaySize.y - (central_node->Pos.y + central_node->Size.y))};
+            viewport_size     = int2{int(central_node->Size.x), int(central_node->Size.y)};
+            viewport_offset   = int2{int(central_node->Pos.x), int(central_node->Pos.y)};
         }
-
-        // first clear the entire window with the background color
-        // display_size is the size of the window in pixels while accounting for dpi factor on retina screens.
-        // for retina displays, io.DisplaySize is the size of the window in points (logical pixels)
-        // but we need the size in pixels. So we scale io.DisplaySize by io.DisplayFramebufferScale
-        auto display_size = int2{io.DisplaySize} * int2{io.DisplayFramebufferScale};
-        CHK(glViewport(0, 0, display_size.x, display_size.y));
-        CHK(glClearColor(m_bg_color[0], m_bg_color[1], m_bg_color[2], 1.f));
-        CHK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
-
-        // now set up a new viewport for the rest of the drawing
-        CHK(glViewport(
-            m_viewport_pos_GL.x * io.DisplayFramebufferScale.x, m_viewport_pos_GL.y * io.DisplayFramebufferScale.y,
-            m_viewport_size.x * io.DisplayFramebufferScale.x, m_viewport_size.y * io.DisplayFramebufferScale.y));
 
         // inform the arcballs of the viewport size
         for (int i = 0; i < NUM_CAMERA_TYPES; ++i)
-            m_camera[i].arcball.set_size(m_viewport_size);
-
-        // enable depth testing
-        CHK(glEnable(GL_DEPTH_TEST));
-        CHK(glDepthFunc(GL_LESS));
-        CHK(glDepthMask(GL_TRUE));
+            m_camera[i].arcball.set_size(viewport_size);
 
         //
         // process camera movement
@@ -1299,7 +1281,7 @@ void SampleViewer::draw_background()
                 // on mouse down we start switching to a perspective camera
                 // and start recording the arcball rotation in CAMERA_NEXT
                 set_view(CAMERA_CURRENT);
-                m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
+                m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - viewport_offset, io.MouseDown[0]);
                 m_camera[CAMERA_NEXT].camera_type = CAMERA_CURRENT;
             }
 
@@ -1307,7 +1289,7 @@ void SampleViewer::draw_background()
             // background (e.g. when dismissing a popup with a mouse click)
             if (io.MouseReleased[0] && !io.MouseDownOwned[0])
             {
-                m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - m_viewport_pos, io.MouseDown[0]);
+                m_camera[CAMERA_NEXT].arcball.button(int2{io.MousePos} - viewport_offset, io.MouseDown[0]);
                 // since the time between mouse down and up could be shorter
                 // than the animation duration, we override the previous
                 // camera's arcball on mouse up to complete the animation
@@ -1316,7 +1298,7 @@ void SampleViewer::draw_background()
             }
 
             if (io.MouseDown[0])
-                m_camera[CAMERA_NEXT].arcball.motion(int2{io.MousePos} - m_viewport_pos);
+                m_camera[CAMERA_NEXT].arcball.motion(int2{io.MousePos} - viewport_offset);
         }
 
         //
@@ -1353,7 +1335,19 @@ void SampleViewer::draw_background()
                 camera.arcball.set_state(qslerp(camera0.arcball.state(), camera1.arcball.state(), t));
         }
 
-        float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(m_viewport_size.x) / m_viewport_size.y);
+        //
+        // clear the framebuffer and set up the viewport
+        //
+
+        m_render_pass.resize(fbsize);
+        m_render_pass.set_viewport(viewport_offset * fbscale, viewport_size * fbscale);
+        m_render_pass.set_clear_color(float4{m_bg_color, 1.f});
+        m_render_pass.set_cull_mode(RenderPass::CullMode::Disabled);
+        m_render_pass.set_depth_test(RenderPass::DepthTest::Less, true);
+
+        m_render_pass.begin();
+
+        float4x4 mvp = m_camera[CAMERA_CURRENT].matrix(float(viewport_size.x) / viewport_size.y);
 
         //
         // Now render the points and grids
@@ -1371,16 +1365,16 @@ void SampleViewer::draw_background()
                 float4x4 pos      = layout_2d_matrix(m_num_dimensions, int2{i, m_num_dimensions - 1});
                 float4   text_pos = mul(mvp, mul(pos, float4{0.f, -0.5f, -1.0f, 1.0f}));
                 float2   text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
-                draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x),
-                                                int((1.f - text_2d_pos.y) * m_viewport_size.y) + 16),
+                draw_text(viewport_offset + int2(int((text_2d_pos.x) * viewport_size.x),
+                                                 int((1.f - text_2d_pos.y) * viewport_size.y) + 16),
                           to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
                           TextAlign_CENTER | TextAlign_BOTTOM);
 
                 pos         = layout_2d_matrix(m_num_dimensions, int2{0, i + 1});
                 text_pos    = mul(mvp, mul(pos, float4{-0.5f, 0.f, -1.0f, 1.0f}));
                 text_2d_pos = float2((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
-                draw_text(m_viewport_pos + int2(int((text_2d_pos.x) * m_viewport_size.x) - 4,
-                                                int((1.f - text_2d_pos.y) * m_viewport_size.y)),
+                draw_text(viewport_offset + int2(int((text_2d_pos.x) * viewport_size.x) - 4,
+                                                 int((1.f - text_2d_pos.y) * viewport_size.y)),
                           to_string(i + 1), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
                           TextAlign_RIGHT | TextAlign_MIDDLE);
             }
@@ -1435,8 +1429,8 @@ void SampleViewer::draw_background()
                 {
                     float4 text_pos = mul(mvp, float4{m_3d_points[p] - 0.5f, 1.f});
                     float2 text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
-                    int2   draw_pos = m_viewport_pos + int2{int((text_2d_pos.x) * m_viewport_size.x),
-                                                          int((1.f - text_2d_pos.y) * m_viewport_size.y)};
+                    int2   draw_pos = viewport_offset + int2{int((text_2d_pos.x) * viewport_size.x),
+                                                           int((1.f - text_2d_pos.y) * viewport_size.y)};
                     if (m_show_point_nums)
                         draw_text(draw_pos - int2{0, int(radius / 4)}, fmt::format("{:d}", p),
                                   float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[12], TextAlign_CENTER | TextAlign_BOTTOM);
@@ -1447,6 +1441,8 @@ void SampleViewer::draw_background()
                                   float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[11], TextAlign_CENTER | TextAlign_TOP);
                 }
         }
+
+        m_render_pass.end();
     }
     catch (const std::exception &e)
     {
@@ -1490,16 +1486,20 @@ void SampleViewer::draw_points(const float4x4 &mvp, const float4x4 &smash, const
     m_3d_point_shader->end();
 }
 
-void SampleViewer::draw_grid(const float4x4 &mat, int2 size, float alpha) const
+void SampleViewer::draw_grid(const float4x4 &mat, int2 size, float alpha)
 {
     m_grid_shader->set_uniform("mvp", mat);
     m_grid_shader->set_uniform("size", size);
     m_grid_shader->set_uniform("alpha", alpha);
+
+    auto backup = m_render_pass.depth_test();
+    m_render_pass.set_depth_test(RenderPass::DepthTest::Always, false);
+
     m_grid_shader->begin();
-    CHK(glDepthMask(GL_FALSE));
     m_grid_shader->draw_array(Shader::PrimitiveType::TriangleFan, 0, 4);
-    CHK(glDepthMask(GL_TRUE));
     m_grid_shader->end();
+
+    m_render_pass.set_depth_test(backup.first, backup.second);
 }
 
 /*!
