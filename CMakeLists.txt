@@ -13,7 +13,7 @@ project(
   SamplinSafari
   DESCRIPTION "A research tool to visualize and interactively inspect high-dimensional (quasi) Monte Carlo samplers."
   VERSION ${VERSION}
-  LANGUAGES C CXX OBJC
+  LANGUAGES C CXX
 )
 
 message(STATUS "C++ compiler is: ${CMAKE_CXX_COMPILER_ID}")
