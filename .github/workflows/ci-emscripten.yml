@@ -60,16 +60,16 @@ jobs:
           path: |
             ${{github.workspace}}/build
 
-      # - name: Copy web app
-      #   working-directory: ${{github.workspace}}/build
-      #   run: |
-      #     mkdir deploy
-      #     cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm SamplinSafari_favicon.png FileSaver.js deploy/
-      #     mv deploy/Samplin\ Safari.html deploy/index.html
+      - name: Copy web app
+        working-directory: ${{github.workspace}}/build
+        run: |
+          mkdir deploy
+          cp Samplin\ Safari.data Samplin\ Safari.html Samplin\ Safari.js Samplin\ Safari.wasm SamplinSafari_favicon.png FileSaver.js deploy/
+          mv deploy/Samplin\ Safari.html deploy/index.html
 
-      # - name: Publish
-      #   uses: peaceiris/actions-gh-pages@v3
-      #   with:
-      #     personal_token: ${{ secrets.GITHUB_TOKEN }}
-      #     publish_branch: gh-pages
-      #     publish_dir: ${{github.workspace}}/build/deploy
+      - name: Publish
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ${{github.workspace}}/build/deploy
