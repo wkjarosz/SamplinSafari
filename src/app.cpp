@@ -646,6 +646,7 @@ void SampleViewer::draw_about_dialog()
         }
         // ImGui::SetItemDefaultFocus();
 
+        ImGui::ScrollWhenDraggingOnVoid(ImVec2(0.0f, -ImGui::GetIO().MouseDelta.y), ImGuiMouseButton_Left);
         ImGui::EndPopup();
         g_open_help = false;
     }
@@ -963,6 +964,7 @@ void SampleViewer::draw_editor()
         ImGui::Dummy({0, HelloImGui::EmSize(0.25f)});
     }
     ImGui::PopItemWidth();
+    ImGui::ScrollWhenDraggingOnVoid(ImVec2(0.0f, -ImGui::GetIO().MouseDelta.y), ImGuiMouseButton_Left);
 }
 
 bool SampleViewer::process_event(void *e)
