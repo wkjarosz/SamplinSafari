@@ -958,7 +958,10 @@ void SampleViewer::draw_editor()
 
 bool SampleViewer::process_event(void *e)
 {
-#ifdef HELLOIMGUI_USE_SDL_OPENGL3
+#ifdef HELLOIMGUI_USE_SDL
+    if (ImGui::GetIO().WantCaptureMouse)
+        return false;
+
     static bool sPinch = false;
     SDL_Event  *event  = static_cast<SDL_Event *>(e);
     switch (event->type)
