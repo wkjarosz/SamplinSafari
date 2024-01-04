@@ -453,8 +453,17 @@ void SampleViewer::draw_about_dialog()
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowFocus();
-    const float2 col_width = {11 * HelloImGui::EmSize(), 32 * HelloImGui::EmSize()};
-    ImGui::SetNextWindowContentSize(float2{col_width[0] + col_width[1], 0});
+    constexpr float icon_size    = 128.f;
+    float2          col_width    = {icon_size + HelloImGui::EmSize(), 32 * HelloImGui::EmSize()};
+    float2          display_size = ImGui::GetIO().DisplaySize;
+#ifdef __EMSCRIPTEN__
+    display_size = float2{window_width(), window_height()};
+#endif
+    col_width[1] = clamp(col_width[1], 5 * HelloImGui::EmSize(),
+                         display_size.x - ImGui::GetStyle().WindowPadding.x - 2 * ImGui::GetStyle().ItemSpacing.x -
+                             ImGui::GetStyle().ScrollbarSize - col_width[0]);
+
+    ImGui::SetNextWindowContentSize(float2{col_width[0] + col_width[1] + ImGui::GetStyle().ItemSpacing.x, 0});
 
     bool about_open = true;
     if (ImGui::BeginPopupModal("About", &about_open,
@@ -473,12 +482,12 @@ void SampleViewer::draw_about_dialog()
             ImGui::TableNextColumn();
             // right align the image
             {
-                auto posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - 128.f - ImGui::GetScrollX() -
+                auto posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - icon_size -
                              2 * ImGui::GetStyle().ItemSpacing.x);
                 if (posX > ImGui::GetCursorPosX())
                     ImGui::SetCursorPosX(posX);
             }
-            HelloImGui::ImageFromAsset("app_settings/icon.png", {128, 128}); // show the app icon
+            HelloImGui::ImageFromAsset("app_settings/icon.png", {icon_size, icon_size}); // show the app icon
 
             ImGui::TableNextColumn();
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + col_width[1]);
@@ -635,7 +644,7 @@ void SampleViewer::draw_about_dialog()
             ImGui::CloseCurrentPopup();
             g_dismissed_version = version_combined();
         }
-        ImGui::SetItemDefaultFocus();
+        // ImGui::SetItemDefaultFocus();
 
         ImGui::EndPopup();
         g_open_help = false;
