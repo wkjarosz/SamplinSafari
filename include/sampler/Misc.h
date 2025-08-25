@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <galois++/fwd.h>
 #include <vector>
 
