@@ -21,22 +21,17 @@ public:
 
     void sample(float[], unsigned i) override;
 
-    std::string name() const override
-    {
-        return "Gray code nets";
-    }
+    std::string name() const override { return "Gray code nets"; }
 
-    int numSamples() const override
-    {
-        return N;
-    }
+    int numSamples() const override { return N; }
     int setNumSamples(unsigned num) override;
 
-    bool randomized() const override
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override
     {
-        return m_randomize;
+        m_seed = seed;
+        regenerate();
     }
-    void setRandomized(bool r = true) override;
 
 private:
     void regenerate();
@@ -50,6 +45,6 @@ private:
 
     unsigned N;
     unsigned n, log2n;
-    bool     m_randomize = true;
+    uint32_t m_seed = 0;
     pcg32    m_rand;
 };

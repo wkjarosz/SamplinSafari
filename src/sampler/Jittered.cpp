@@ -5,10 +5,7 @@
 #include <sampler/Jittered.h>
 #include <sampler/Misc.h> // for permute
 
-Jittered::Jittered(unsigned x, unsigned y, float jitter) : m_maxJit(jitter)
-{
-    setNumSamples(x, y);
-}
+Jittered::Jittered(unsigned x, unsigned y, float jitter) : m_maxJit(jitter) { setNumSamples(x, y); }
 
 void Jittered::sample(float r[], unsigned i)
 {
@@ -26,8 +23,8 @@ void Jittered::sample(float r[], unsigned i)
         int y = s / m_resX;
 
         // jitter in the d and d+1 dimensions
-        float jx = 0.5f + m_randomize * m_maxJit * (m_rand.nextFloat() - 0.5f);
-        float jy = 0.5f + m_randomize * m_maxJit * (m_rand.nextFloat() - 0.5f);
+        float jx = 0.5f + (m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+        float jy = 0.5f + (m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
 
         r[d] = (x + jx) * m_xScale;
         if (d + 1 < dimensions())

@@ -11,10 +11,10 @@ AlignConsecutiveAssignments: 'true'
 AlignConsecutiveDeclarations: 'true'
 AlignTrailingComments: 'true'
 
-#AllowShortFunctionsOnASingleLine: All
+AllowShortFunctionsOnASingleLine: All
 AllowShortLambdasOnASingleLine: All
-#AllowShortBlocksOnASingleLine: Always
-#AllowShortLoopsOnASingleLine: 'true'
+AllowShortBlocksOnASingleLine: Always
+AllowShortLoopsOnASingleLine: 'true'
 AllowShortCaseLabelsOnASingleLine: 'true'
 
 AccessModifierOffset: -4

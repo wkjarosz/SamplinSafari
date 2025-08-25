@@ -20,32 +20,24 @@
 class MultiJittered : public TSamplerDim<2>
 {
 public:
-    MultiJittered(unsigned x, unsigned y, bool randomize = true, float jitter = 0.0f);
+    MultiJittered(unsigned x, unsigned y, uint32_t seed = 13, float jitter = 0.0f);
     ~MultiJittered() override;
     void clear();
 
     void reset() override;
     void sample(float[], unsigned i) override;
 
-    bool randomized() const override
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override
     {
-        return m_randomize;
-    }
-    void setRandomized(bool r) override
-    {
-        m_randomize = r;
+        m_seed = seed;
+        m_rand.seed(m_seed);
         reset();
     }
 
-    std::string name() const override
-    {
-        return "Multi-Jittered";
-    }
+    std::string name() const override { return "Multi-Jittered"; }
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int numSamples() const override { return m_numSamples; }
     int setNumSamples(unsigned n) override
     {
         if (n == m_numSamples)
@@ -64,7 +56,6 @@ public:
 
 protected:
     unsigned m_resX, m_resY, m_numSamples;
-    bool     m_randomize;
     float    m_maxJit;
 
     float m_scale;
@@ -72,7 +63,7 @@ protected:
     float **m_samples = nullptr;
 
     pcg32    m_rand;
-    unsigned m_seed = 13;
+    uint32_t m_seed = 13;
 };
 
 /// An in-place version of multi-jittered point set with both jittered and n-rooks stratification.
@@ -83,26 +74,20 @@ protected:
 class MultiJitteredInPlace : public TSamplerDim<2>
 {
 public:
-    MultiJitteredInPlace(unsigned, unsigned, bool randomize = false, float jitter = 0.0f);
+    MultiJitteredInPlace(unsigned, unsigned, uint32_t seed = 0, float jitter = 0.0f);
 
     void reset() override;
     void sample(float[], unsigned i) override;
 
-    bool randomized() const override
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed) override
     {
-        return m_randomize;
-    }
-    void setRandomized(bool r) override
-    {
-        m_randomize = r;
-        m_rand.seed(m_permutation);
-        m_permutation = r ? m_rand.nextUInt() : 0;
+        m_seed = seed;
+        m_rand.seed(m_seed);
+        m_permutation = m_seed ? m_rand.nextUInt() : 0;
     }
 
-    float jitter() const override
-    {
-        return m_maxJit;
-    }
+    float jitter() const override { return m_maxJit; }
     float setJitter(float j = 1.0f) override
     {
         m_maxJit = j;
@@ -112,10 +97,7 @@ public:
 
     std::string name() const override;
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int numSamples() const override { return m_numSamples; }
     int setNumSamples(unsigned n) override
     {
         if (n == m_numSamples)
@@ -134,7 +116,6 @@ public:
 
 protected:
     unsigned m_resX, m_resY, m_numSamples;
-    bool     m_randomize;
     float    m_maxJit;
     pcg32    m_rand;
     unsigned m_seed = 13;
@@ -152,15 +133,12 @@ protected:
 class CorrelatedMultiJittered : public MultiJittered
 {
 public:
-    CorrelatedMultiJittered(unsigned, unsigned, bool randomize = true, float jitter = 0.0f);
+    CorrelatedMultiJittered(unsigned, unsigned, uint32_t seed = 0, float jitter = 0.0f);
     ~CorrelatedMultiJittered() override;
 
     void reset() override;
 
-    std::string name() const override
-    {
-        return "Correlated Multi-Jittered";
-    }
+    std::string name() const override { return "Correlated Multi-Jittered"; }
 };
 
 /// An in-place version of (correlated) multi-jittered point sets.
@@ -175,24 +153,15 @@ public:
 class CorrelatedMultiJitteredInPlace : public TSamplerMinMaxDim<1, 1024>
 {
 public:
-    CorrelatedMultiJitteredInPlace(unsigned x, unsigned y, unsigned dimensions = 2, bool randomize = true,
+    CorrelatedMultiJitteredInPlace(unsigned x, unsigned y, unsigned dimensions = 2, uint32_t seed = 0,
                                    float jitter = 0.0f, bool correlated = true);
 
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned n) override
-    {
-        m_numDimensions = n;
-    }
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned n) override { m_numDimensions = n; }
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int numSamples() const override { return m_numSamples; }
     int setNumSamples(unsigned n) override
     {
         if (n == m_numSamples)
@@ -208,25 +177,16 @@ public:
         m_numSamples = m_resX * m_resY;
     }
 
-    bool randomized() const override
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override
     {
-        return m_randomize;
-    }
-    void setRandomized(bool r) override
-    {
-        m_randomize = r;
-        m_rand.seed(m_permutation);
-        m_permutation = r ? m_rand.nextUInt() : 0;
+        m_seed = seed;
+        m_rand.seed(m_seed);
+        m_permutation = m_seed ? m_rand.nextUInt() : 0;
     }
 
-    float jitter() const override
-    {
-        return m_maxJit;
-    }
-    float setJitter(float j = 1.0f) override
-    {
-        return m_maxJit = j;
-    }
+    float jitter() const override { return m_maxJit; }
+    float setJitter(float j = 1.0f) override { return m_maxJit = j; }
 
     std::string name() const override
     {
@@ -236,9 +196,8 @@ public:
 protected:
     unsigned m_resX, m_resY, m_numSamples, m_numDimensions;
     float    m_maxJit;
-    bool     m_randomize = true;
     pcg32    m_rand;
-    unsigned m_seed        = 13;
-    unsigned m_permutation = 13;
-    unsigned m_decorrelate;
+    uint32_t m_seed        = 13;
+    uint32_t m_permutation = 13;
+    uint32_t m_decorrelate;
 };

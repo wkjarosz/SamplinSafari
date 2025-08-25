@@ -12,20 +12,14 @@
 class SudokuInPlace : public CorrelatedMultiJitteredInPlace
 {
 public:
-    SudokuInPlace(unsigned x, unsigned y, unsigned dimensions = 2, bool randomize = false, float jitter = 0.0f,
+    SudokuInPlace(unsigned x, unsigned y, unsigned dimensions = 2, uint32_t seed = 0, float jitter = 0.0f,
                   bool correlated = false);
 
-    int coarseGridRes(int samples) const override
-    {
-        return std::pow(samples, 0.25f);
-    }
+    int coarseGridRes(int samples) const override { return std::pow(samples, 0.25f); }
 
     void sample(float[], unsigned i) override;
-    int  numSamples() const override
-    {
-        return m_numSamples;
-    }
-    int setNumSamples(unsigned n) override
+    int  numSamples() const override { return m_numSamples; }
+    int  setNumSamples(unsigned n) override
     {
         if (n == m_numSamples)
             return m_numSamples;
@@ -43,10 +37,7 @@ public:
         reset();
     }
 
-    std::string name() const override
-    {
-        return m_decorrelate ? "Sudoku In-Place" : "Correlated Sudoku In-Place";
-    }
+    std::string name() const override { return m_decorrelate ? "Sudoku In-Place" : "Correlated Sudoku In-Place"; }
 
 protected:
     unsigned m_numDigits = 1;

@@ -5,10 +5,7 @@
 #include <sampler/XiSequence.h>
 #include <sampler/xi.h>
 
-XiSequence::XiSequence(unsigned n) : m_numSamples(n)
-{
-    m_xi = std::make_unique<Xi>();
-}
+XiSequence::XiSequence(unsigned n) : m_numSamples(n) { m_xi = std::make_unique<Xi>(); }
 
 void XiSequence::sample(float r[], unsigned i)
 {
@@ -18,9 +15,10 @@ void XiSequence::sample(float r[], unsigned i)
     r[1] = (*m_xi)[i].y * inv;
 }
 
-void XiSequence::setRandomized(bool r)
+void XiSequence::setSeed(uint32_t seed)
 {
-    if ((m_randomize = r))
+    m_rand.seed(seed);
+    if (m_seed)
         m_xi = std::make_unique<Xi>(Vector{m_rand.nextUInt() | 0x80000000, m_rand.nextUInt() | 0x80000000},
                                     Point{m_rand.nextUInt(), m_rand.nextUInt()});
     else

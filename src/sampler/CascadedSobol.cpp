@@ -25,18 +25,17 @@ CascadedSobol::CascadedSobol(const string &data_file, unsigned dimensions, unsig
     load_init_table(tableFile, d, s, a, m, MAX_DIMENSION);
 
     sobols = std::make_unique<SobolGenerator1D[]>(m.size());
-    for (size_t i = 0; i < m.size(); ++i)
-        sobols[i].init1D(d[i], s[i], a[i], m[i]);
+    for (size_t i = 0; i < m.size(); ++i) sobols[i].init1D(d[i], s[i], a[i], m[i]);
 }
 
-void CascadedSobol::setRandomized(bool b)
+void CascadedSobol::setSeed(uint32_t seed)
 {
-    owen_permut_flag = b;
+    owen_permut_flag = seed;
+    m_rand.seed(seed);
 
     // init owen scrambling seeds
     realSeeds.resize(MAX_DIMENSION);
-    for (auto &s : realSeeds)
-        s = m_rand.nextUInt();
+    for (auto &s : realSeeds) s = m_rand.nextUInt();
 }
 
 void CascadedSobol::setDimensions(unsigned n)

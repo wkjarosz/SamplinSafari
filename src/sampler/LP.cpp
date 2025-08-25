@@ -5,15 +5,13 @@
 #include <sampler/LP.h>
 #include <sampler/Misc.h>
 
-LarcherPillichshammerGK::LarcherPillichshammerGK(unsigned dimension, unsigned numSamples, bool randomize) :
+LarcherPillichshammerGK::LarcherPillichshammerGK(unsigned dimension, unsigned numSamples, uint32_t seed) :
     m_numSamples(numSamples), m_numDimensions(dimension), m_inv(1.0f / m_numSamples)
 {
-    setRandomized(randomize);
+    setSeed(seed);
 }
 
-LarcherPillichshammerGK::~LarcherPillichshammerGK()
-{
-}
+LarcherPillichshammerGK::~LarcherPillichshammerGK() {}
 
 void LarcherPillichshammerGK::sample(float r[], unsigned i)
 {

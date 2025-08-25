@@ -41,8 +41,7 @@ static bool  interuptFlag = false;
 inline void shuffle(List &list)
 { // Populate a randomly ordered list.
     uint32_t N = list.size();
-    for (uint32_t i = 0; i < N; i++)
-        list[i] = i;
+    for (uint32_t i = 0; i < N; i++) list[i] = i;
     for (uint32_t i = N - 1; i > 0; i--)
     { // Iterate down the list, and swap each place with another place down, inclusive of same place.
         uint32_t r = rand() % (i + 1); // (i + 1) means that the same place is included.
@@ -103,8 +102,7 @@ Net::Net(int pointCount, String path)
     N          = 1 << m;
     p.resize(N);
     List xlist = netSort(); // Populate the y's with a (0, m, 1)-net
-    for (uint32_t i = 0; i < N; i++)
-        p[i] = {xlist[i], i};
+    for (uint32_t i = 0; i < N; i++) p[i] = {xlist[i], i};
     init();
 }
 
@@ -120,12 +118,10 @@ void Net::init()
     conflictRadiusFactor = 1 / (sqrt(N) * dhex);
     fprintf(stderr, "N = %d, m = %d, main is %d, width = %d, height = %d, y2x = %d\n", N, m, main, width, height, y2x);
     q.resize(m + 1);
-    for (int k = 0; k <= m; k++)
-        q[k].resize(N);
+    for (int k = 0; k <= m; k++) q[k].resize(N);
 
     for (int k = 0; k <= m; k++)
-        for (int i = 0; i < N; i++)
-            q[k][p2q(i, k)] = i; // Point strata to points
+        for (int i = 0; i < N; i++) q[k][p2q(i, k)] = i; // Point strata to points
 
     // filterRange = half + 1;
     filterRange = std::max(1025, half + 1);
@@ -142,8 +138,7 @@ void Net::swap(uint32_t k_ref, uint32_t stratum)
     std::swap(p[i].y, p[j].y); // We always keep the x unchanged
 
     // Affected stratifications
-    for (int k = k_ref + 1; k <= m; k++)
-        std::swap(q[k][p2q(i, k)], q[k][p2q(j, k)]);
+    for (int k = k_ref + 1; k <= m; k++) std::swap(q[k][p2q(i, k)], q[k][p2q(j, k)]);
 }
 
 inline uint32_t Net::p2q(uint32_t i, uint32_t k)
@@ -155,9 +150,8 @@ inline uint32_t Net::p2q(uint32_t i, uint32_t k)
 
 List Net::netSort()
 {
-    List list(N), tmpList(N); // We maintain two buffers and swap them
-    for (int i = 0; i < N; i++)
-        list[i] = i; // Initialize to a natural order
+    List list(N), tmpList(N);                // We maintain two buffers and swap them
+    for (int i = 0; i < N; i++) list[i] = i; // Initialize to a natural order
     for (uint32_t span = N; span > 1; span >>= 1)
     { // Size of sorted sub sets, starting at the whole set
         for (uint32_t slotNo = 0; slotNo < N; slotNo += 2)
@@ -193,10 +187,7 @@ void Net::setSigma(double v)
     double sigmaSqx2 = 2 * (v * v * N);
     sigmaSq2Inv      = 1.0 / sigmaSqx2;
     fprintf(stderr, "Sigma = %f\n", v);
-    for (int x = 0; x < filterRange; x++)
-    {
-        kernel[x] = exp(-(x * x) / sigmaSqx2);
-    }
+    for (int x = 0; x < filterRange; x++) { kernel[x] = exp(-(x * x) / sigmaSqx2); }
 }
 
 void Net::setRf(double v)
@@ -240,8 +231,7 @@ uint32_t Net::getConflictRadiusSq(uint32_t i)
 double Net::conflictRadius()
 {
     uint32_t min(N);
-    for (int i = 0; i < N; i++)
-        min = std::min(min, getConflictRadiusSq(i));
+    for (int i = 0; i < N; i++) min = std::min(min, getConflictRadiusSq(i));
 
     return conflictRadiusFactor * sqrt(min);
 }
@@ -281,14 +271,8 @@ int Net::minConflict(uint32_t i, int k)
 inline double Net::g(int dx)
 {
     double sum(0.0);
-    for (int x = dx; x < filterRange; x += N)
-    {
-        sum += kernel[x];
-    }
-    for (int x = N - dx; x < filterRange; x += N)
-    {
-        sum += kernel[x];
-    }
+    for (int x = dx; x < filterRange; x += N) { sum += kernel[x]; }
+    for (int x = N - dx; x < filterRange; x += N) { sum += kernel[x]; }
     return sum;
 }
 
@@ -368,10 +352,7 @@ void Net::optimize(std::string seq, int iterations)
             }
             shuffle(order);
             int swapCount(0);
-            for (int i = 0; i < N && !interuptFlag; i++)
-            {
-                swapCount += optimize(order[i]);
-            }
+            for (int i = 0; i < N && !interuptFlag; i++) { swapCount += optimize(order[i]); }
             fprintf(stderr, "  Performed %4d '%c' swaps. Current conflict radius is %0.5f\n", swapCount, seq[k],
                     conflictRadius());
             totalSwapCount += swapCount;
@@ -435,10 +416,4 @@ void BlueNets::sample(float r[], unsigned i)
     assert(i < pointCount);
     r[0] = xs[i];
     r[1] = ys[i];
-}
-
-void BlueNets::setRandomized(bool r)
-{
-    m_randomize = r;
-    regenerate();
 }

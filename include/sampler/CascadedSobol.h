@@ -23,34 +23,22 @@ public:
 
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned n) override;
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned n) override;
 
-    bool randomized() const override
-    {
-        return owen_permut_flag;
-    }
-    void setRandomized(bool b = true) override;
+    uint32_t seed() const override { return owen_permut_flag; }
+    void     setSeed(uint32_t seed = 0) override;
 
-    std::string name() const override
-    {
-        return "Cascaded Sobol";
-    }
+    std::string name() const override { return "Cascaded Sobol"; }
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int numSamples() const override { return m_numSamples; }
     int setNumSamples(unsigned n) override;
 
 protected:
     unsigned m_numSamples;
     unsigned m_numDimensions;
 
-    bool                  owen_permut_flag = false;
+    uint32_t              owen_permut_flag = 0;
     pcg32                 m_rand;
     std::vector<uint32_t> realSeeds;
     uint32_t              nbits;

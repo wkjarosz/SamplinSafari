@@ -9,9 +9,9 @@
 
 using namespace std;
 
-SudokuInPlace::SudokuInPlace(unsigned x, unsigned y, unsigned dimensions, bool randomize, float jitter,
+SudokuInPlace::SudokuInPlace(unsigned x, unsigned y, unsigned dimensions, uint32_t seed, float jitter,
                              bool correlated) :
-    CorrelatedMultiJitteredInPlace(x, y, dimensions, randomize, jitter, correlated)
+    CorrelatedMultiJitteredInPlace(x, y, dimensions, seed, jitter, correlated)
 {
     setNumSamples(x, y);
 }

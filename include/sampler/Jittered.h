@@ -14,19 +14,10 @@ public:
 
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned n) override
-    {
-        m_numDimensions = n;
-    }
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned n) override { m_numDimensions = n; }
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int numSamples() const override { return m_numSamples; }
     int setNumSamples(unsigned n) override
     {
         if (n == m_numSamples)
@@ -44,39 +35,26 @@ public:
         m_yScale     = 1.0f / m_resY;
     }
 
-    bool randomized() const override
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override
     {
-        return m_randomize;
-    }
-    void setRandomized(bool r = true) override
-    {
-        m_randomize = r;
-        m_rand.seed(m_permutation);
-        m_permutation = r ? m_rand.nextUInt() : 0;
+        m_seed = seed;
+        m_rand.seed(m_seed);
+        m_permutation = seed ? m_rand.nextUInt() : 0;
     }
 
     /// Gets/sets how much the points are jittered
-    float jitter() const override
-    {
-        return m_maxJit;
-    }
-    float setJitter(float j = 1.0f) override
-    {
-        return m_maxJit = j;
-    }
+    float jitter() const override { return m_maxJit; }
+    float setJitter(float j = 1.0f) override { return m_maxJit = j; }
 
-    std::string name() const override
-    {
-        return "Jittered";
-    }
+    std::string name() const override { return "Jittered"; }
 
 private:
     unsigned m_resX, m_resY, m_numSamples, m_numDimensions;
     float    m_maxJit;
-    bool     m_randomize = true;
     pcg32    m_rand;
-    unsigned m_seed        = 13;
-    unsigned m_permutation = 13;
+    uint32_t m_seed        = 13;
+    uint32_t m_permutation = 13;
 
     float m_xScale, m_yScale;
 };

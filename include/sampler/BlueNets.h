@@ -22,29 +22,24 @@ public:
 
     void sample(float[], unsigned i) override;
 
-    std::string name() const override
-    {
-        return "Blue nets";
-    }
+    std::string name() const override { return "Blue nets"; }
 
-    int numSamples() const override
-    {
-        return pointCount;
-    }
+    int numSamples() const override { return pointCount; }
     int setNumSamples(unsigned num) override;
 
-    bool randomized() const override
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override
     {
-        return m_randomize;
+        m_seed = seed;
+        regenerate();
     }
-    void setRandomized(bool r = true) override;
 
 private:
     void regenerate();
 
     std::vector<float> xs, ys;
 
-    bool        m_randomize          = true;
+    uint32_t    m_seed               = 0;
     int         iterations           = 1;
     double      sigma                = 0.5;
     std::string optimizationSequence = "v";

@@ -10,29 +10,14 @@ using namespace linalg::aliases;
 
 // define extra conversion here before including imgui, don't do it in the imconfig.h
 #define IM_VEC2_CLASS_EXTRA                                                                                            \
-    constexpr ImVec2(const float2 &f) : x(f.x), y(f.y)                                                                 \
-    {                                                                                                                  \
-    }                                                                                                                  \
-    operator float2() const                                                                                            \
-    {                                                                                                                  \
-        return float2(x, y);                                                                                           \
-    }                                                                                                                  \
-    constexpr ImVec2(const int2 &i) : x(i.x), y(i.y)                                                                   \
-    {                                                                                                                  \
-    }                                                                                                                  \
-    operator int2() const                                                                                              \
-    {                                                                                                                  \
-        return int2((int)x, (int)y);                                                                                   \
-    }
+    constexpr ImVec2(const float2 &f) : x(f.x), y(f.y) {}                                                              \
+    operator float2() const { return float2(x, y); }                                                                   \
+    constexpr ImVec2(const int2 &i) : x(i.x), y(i.y) {}                                                                \
+    operator int2() const { return int2((int)x, (int)y); }
 
 #define IM_VEC4_CLASS_EXTRA                                                                                            \
-    constexpr ImVec4(const float4 &f) : x(f.x), y(f.y), z(f.z), w(f.w)                                                 \
-    {                                                                                                                  \
-    }                                                                                                                  \
-    operator float4() const                                                                                            \
-    {                                                                                                                  \
-        return float4(x, y, z, w);                                                                                     \
-    }
+    constexpr ImVec4(const float4 &f) : x(f.x), y(f.y), z(f.z), w(f.w) {}                                              \
+    operator float4() const { return float4(x, y, z, w); }
 
 #include "arcball.h"
 #include "hello_imgui/hello_imgui.h"
@@ -109,7 +94,7 @@ private:
     void process_hotkeys();
     bool process_event(void *event);
     void populate_point_subset();
-    void draw_text(const int2 &pos, const std::string &text, const float4 &col, ImFont *font = nullptr,
+    void draw_text(const int2 &pos, const std::string &text, const float4 &col, ImFont *font, float font_size,
                    int align = TextAlign_RIGHT | TextAlign_BOTTOM) const;
     void draw_points(const float4x4 &mvp, const float4x4 &smash, const float3 &color);
     void draw_grid(const float4x4 &mat, int2 size, float alpha);
@@ -133,7 +118,7 @@ private:
 
     vector<Sampler *> m_samplers;
     int               m_sampler                  = 0;
-    bool              m_randomize                = false;
+    uint32_t          m_seed                     = 0;
     float             m_jitter                   = 80.f;
     float             m_radius                   = 0.5f;
     bool              m_scale_radius_with_points = true;
@@ -155,7 +140,7 @@ private:
 
     bool m_gpu_points_dirty = true, m_cpu_points_dirty = true;
 
-    map<int, ImFont *> m_regular, m_bold; // regular and bold fonts at various sizes
+    ImFont *m_regular, *m_bold; // regular and bold fonts at various sizes
 
     float                    m_time1 = 0.f, m_time2 = 0.f;
     float3                   m_point_color = {0.9f, 0.55f, 0.1f};

@@ -30,17 +30,13 @@ float bushLHOffset(int i, int N, int s, int numSS, int p, unsigned type)
 
 } // namespace
 
-BushOAInPlace::BushOAInPlace(unsigned x, unsigned strength, OffsetType ot, bool randomize, float jitter,
-                             unsigned dimensions) :
-    BoseOAInPlace(x, ot, randomize, jitter, dimensions)
+BushOAInPlace::BushOAInPlace(unsigned x, unsigned strength, OffsetType ot, uint32_t seed, float jitter,
+                             unsigned dimensions) : BoseOAInPlace(x, ot, seed, jitter, dimensions)
 {
     m_t = strength;
 }
 
-string BushOAInPlace::name() const
-{
-    return "Bush OA In-Place";
-}
+string BushOAInPlace::name() const { return "Bush OA In-Place"; }
 
 int BushOAInPlace::setNumSamples(unsigned n)
 {
@@ -75,28 +71,23 @@ void BushOAInPlace::sample(float r[], unsigned i)
 
         float subStratum = bushLHOffset(i, m_numSamples, m_s, numSubStrata, m_seed * (d + 1) * 0x02e5be93, m_ot);
 
-        float jitter = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+        float jitter = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
         r[d]         = (stratum + (subStratum + jitter) / numSubStrata) / s;
     }
 
-    for (unsigned d = maxDim; d < dimensions(); ++d)
-        r[d] = 0.5f;
+    for (unsigned d = maxDim; d < dimensions(); ++d) r[d] = 0.5f;
 }
 
 ////
 
-BushGaloisOAInPlace::BushGaloisOAInPlace(unsigned x, unsigned strength, OffsetType ot, bool randomize, float jitter,
-                                         unsigned dimensions) :
-    BushOAInPlace(x, strength, ot, randomize, jitter, dimensions)
+BushGaloisOAInPlace::BushGaloisOAInPlace(unsigned x, unsigned strength, OffsetType ot, uint32_t seed, float jitter,
+                                         unsigned dimensions) : BushOAInPlace(x, strength, ot, seed, jitter, dimensions)
 {
     setNumSamples(x);
     reset();
 }
 
-string BushGaloisOAInPlace::name() const
-{
-    return "Bush-Galois OA In-Place";
-}
+string BushGaloisOAInPlace::name() const { return "Bush-Galois OA In-Place"; }
 
 int BushGaloisOAInPlace::setNumSamples(unsigned n)
 {
@@ -132,10 +123,9 @@ void BushGaloisOAInPlace::sample(float r[], unsigned i)
 
         float subStratum = bushLHOffset(i, m_numSamples, m_s, numSubStrata, m_seed * (d + 1) * 0x02e5be93, m_ot);
 
-        float jitter = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+        float jitter = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
         r[d]         = (stratum + (subStratum + jitter) / numSubStrata) / s;
     }
 
-    for (unsigned d = maxDim; d < dimensions(); ++d)
-        r[d] = 0.5f;
+    for (unsigned d = maxDim; d < dimensions(); ++d) r[d] = 0.5f;
 }

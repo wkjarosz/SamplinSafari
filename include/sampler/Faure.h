@@ -23,28 +23,19 @@ public:
         return (int)pow(s(), floor(log(std::pow(samples, 1.f / s())) / log(s())));
     }
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned n) override;
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned n) override;
 
-    bool randomized() const override
+    uint32_t seed() const override { return m_owen; }
+    void     setSeed(uint32_t seed = 0) override
     {
-        return m_owen;
-    }
-    void setRandomized(bool b = true) override
-    {
-        m_owen = b;
+        m_owen = seed;
         regenerate();
     }
 
     std::string name() const override;
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int numSamples() const override { return m_numSamples; }
     int setNumSamples(unsigned n) override;
 
 protected:
@@ -53,6 +44,6 @@ protected:
 
     unsigned            m_numSamples;
     unsigned            m_numDimensions;
-    bool                m_owen;
+    uint32_t            m_owen;
     std::vector<double> m_samples;
 };

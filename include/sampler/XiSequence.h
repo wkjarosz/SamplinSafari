@@ -22,30 +22,22 @@ public:
 
     void sample(float[], unsigned i) override;
 
-    std::string name() const override
-    {
-        return "Xi (0,m,2)-sequence";
-    }
+    std::string name() const override { return "Xi (0,m,2)-sequence"; }
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int numSamples() const override { return m_numSamples; }
     int setNumSamples(unsigned n) override
     {
         m_numSamples = roundUpPow2(n);
         return m_numSamples;
     }
 
-    bool randomized() const override
-    {
-        return m_randomize;
-    }
-    void setRandomized(bool r = true) override;
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override;
 
 private:
     unsigned m_numSamples;
-    bool     m_randomize = true;
+
+    uint32_t m_seed = 13;
     pcg32    m_rand;
 
     std::unique_ptr<class Xi> m_xi;

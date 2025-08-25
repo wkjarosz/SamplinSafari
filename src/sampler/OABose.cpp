@@ -29,21 +29,15 @@ float boseLHOffset(int sx, int sy, int s, int p, unsigned type)
 
 } // namespace
 
-BoseOA::BoseOA(unsigned x, OffsetType ot, bool randomize, float jitter, unsigned dimensions) :
-    OrthogonalArray(2, ot, randomize, jitter), m_s(x), m_numSamples(m_s * m_s), m_numDimensions(dimensions)
+BoseOA::BoseOA(unsigned x, OffsetType ot, uint32_t seed, float jitter, unsigned dimensions) :
+    OrthogonalArray(2, ot, seed, jitter), m_s(x), m_numSamples(m_s * m_s), m_numDimensions(dimensions)
 {
     reset();
 }
 
-BoseOA::~BoseOA()
-{
-    clear();
-}
+BoseOA::~BoseOA() { clear(); }
 
-string BoseOA::name() const
-{
-    return "Bose OA";
-}
+string BoseOA::name() const { return "Bose OA"; }
 
 int BoseOA::setNumSamples(unsigned n)
 {
@@ -86,18 +80,15 @@ void BoseOA::reset()
     clear();
 
     m_samples = new unsigned *[dimensions()];
-    for (unsigned d = 0; d < dimensions(); d++)
-        m_samples[d] = new unsigned[m_numSamples];
+    for (unsigned d = 0; d < dimensions(); d++) m_samples[d] = new unsigned[m_numSamples];
 
     // initialize permutation arrays
     vector<RandomPermutation> perm(dimensions());
     perm[0] = RandomPermutation(m_s);
-    for (unsigned d = 1; d < dimensions(); d++)
-        perm[d] = RandomPermutation(m_s);
+    for (unsigned d = 1; d < dimensions(); d++) perm[d] = RandomPermutation(m_s);
 
-    if (m_randomize)
-        for (unsigned d = 0; d < dimensions(); d++)
-            perm[d].shuffle(m_rand);
+    if (m_seed)
+        for (unsigned d = 0; d < dimensions(); d++) perm[d].shuffle(m_rand);
 
     for (unsigned i = 0; i < m_numSamples; ++i)
     {
@@ -153,7 +144,7 @@ void BoseOA::reset()
 
     // if we do (not-correlated) multi-jittered style offsets, then do true
     // shuffles
-    if (m_randomize && m_ot == MJ_STYLE)
+    if (m_seed && m_ot == MJ_STYLE)
     {
         // X and Y are easy since we can directly enumerate the points within
         // the x or y strata,
@@ -208,7 +199,7 @@ void BoseOA::sample(float r[], unsigned i)
     if (i == 0)
         m_rand.seed(m_seed);
 
-    float jitter = m_randomize * m_maxJit;
+    float jitter = (m_seed != 0) * m_maxJit;
     for (unsigned d = 0; d < dimensions(); d++)
     {
         switch (m_ot)
@@ -223,16 +214,13 @@ void BoseOA::sample(float r[], unsigned i)
     }
 }
 
-BoseOAInPlace::BoseOAInPlace(unsigned x, OffsetType ot, bool randomize, float jitter, unsigned dimensions) :
-    OrthogonalArray(2, ot, randomize, jitter), m_s(x), m_numSamples(m_s * m_s), m_numDimensions(dimensions)
+BoseOAInPlace::BoseOAInPlace(unsigned x, OffsetType ot, uint32_t seed, float jitter, unsigned dimensions) :
+    OrthogonalArray(2, ot, seed, jitter), m_s(x), m_numSamples(m_s * m_s), m_numDimensions(dimensions)
 {
     reset();
 }
 
-string BoseOAInPlace::name() const
-{
-    return "Bose OA In-Place";
-}
+string BoseOAInPlace::name() const { return "Bose OA In-Place"; }
 
 int BoseOAInPlace::setNumSamples(unsigned n)
 {
@@ -248,10 +236,7 @@ void BoseOAInPlace::setNumSamples(unsigned x, unsigned)
     reset();
 }
 
-void BoseOAInPlace::reset()
-{
-    m_rand.seed(m_seed);
-}
+void BoseOAInPlace::reset() { m_rand.seed(m_seed); }
 
 void BoseOAInPlace::sample(float r[], unsigned i)
 {
@@ -266,8 +251,8 @@ void BoseOAInPlace::sample(float r[], unsigned i)
     int   Ai1      = permute(stratumY, m_s, m_seed * 2);
     float sstratX  = boseLHOffset(Ai0, Ai1, m_s, m_seed * 1 * 0x68bc21eb, m_ot);
     float sstratY  = boseLHOffset(Ai1, Ai0, m_s, m_seed * 2 * 0x68bc21eb, m_ot);
-    float jitterX  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
-    float jitterY  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+    float jitterX  = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+    float jitterY  = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
     r[0]           = (stratumX + (sstratX + jitterX) / m_s) / m_s;
     r[1]           = (stratumY + (sstratY + jitterY) / m_s) / m_s;
 
@@ -278,24 +263,20 @@ void BoseOAInPlace::sample(float r[], unsigned i)
         int   Aik      = (Ai0 + (k - 1) * Ai1) % m_s;
         int   stratumJ = permute(Aij, m_s, m_seed * (j + 1));
         float sstratJ  = boseLHOffset(Aij, Aik, m_s, m_seed * (j + 1) * 0x68bc21eb, m_ot);
-        float jitterJ  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+        float jitterJ  = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
         r[j]           = (stratumJ + (sstratJ + jitterJ) / m_s) / m_s;
     }
 
-    for (unsigned j = maxDim; j < dimensions(); ++j)
-        r[j] = 0.5f;
+    for (unsigned j = maxDim; j < dimensions(); ++j) r[j] = 0.5f;
 }
 
-BoseSudokuInPlace::BoseSudokuInPlace(unsigned x, OffsetType ot, bool randomize, float jitter, unsigned dimensions) :
-    BoseOAInPlace(x, ot, randomize, jitter, dimensions)
+BoseSudokuInPlace::BoseSudokuInPlace(unsigned x, OffsetType ot, uint32_t seed, float jitter, unsigned dimensions) :
+    BoseOAInPlace(x, ot, seed, jitter, dimensions)
 {
     setNumSamples(x, x);
 }
 
-string BoseSudokuInPlace::name() const
-{
-    return "Bose Sudoku In-Place";
-}
+string BoseSudokuInPlace::name() const { return "Bose Sudoku In-Place"; }
 
 int BoseSudokuInPlace::setNumSamples(unsigned n)
 {
@@ -340,8 +321,8 @@ void BoseSudokuInPlace::sample(float r[], unsigned i)
     int   Ai1      = stratumY; // permute(stratumY, m_s, m_seed * 2);
     float sstratX  = boseLHOffset(Ai0, (Ai1 + py) % m_s, m_s, m_seed * 1 * 0x68bc21eb, m_ot);
     float sstratY  = boseLHOffset(Ai1, (Ai0 + px) % m_s, m_s, m_seed * 2 * 0x68bc21eb, m_ot);
-    float jitterX  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
-    float jitterY  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+    float jitterX  = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+    float jitterY  = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
     r[0]           = (stratumX + (sstratX + jitterX) / m_s) / m_s;
     r[1]           = (stratumY + (sstratY + jitterY) / m_s) / m_s;
 
@@ -353,28 +334,24 @@ void BoseSudokuInPlace::sample(float r[], unsigned i)
         int   Aik      = (Ai0 + (k - 1) * Ai1) % m_s;
         int   stratumJ = permute(Aij, m_s, m_seed * (j + 1));
         float sstratJ  = boseLHOffset(Aij, (Aik + pk) % m_s, m_s, m_seed * (j + 1) * 0x68bc21eb, m_ot);
-        float jitterJ  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+        float jitterJ  = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
         r[j]           = (stratumJ + (sstratJ + jitterJ) / m_s) / m_s;
     }
 
-    for (unsigned j = maxDim; j < dimensions(); ++j)
-        r[j] = 0.5f;
+    for (unsigned j = maxDim; j < dimensions(); ++j) r[j] = 0.5f;
 }
 
 //
 //
 
-BoseGaloisOAInPlace::BoseGaloisOAInPlace(unsigned x, OffsetType ot, bool randomize, float jitter, unsigned dimensions) :
-    BoseOAInPlace(x, ot, randomize, jitter, dimensions)
+BoseGaloisOAInPlace::BoseGaloisOAInPlace(unsigned x, OffsetType ot, uint32_t seed, float jitter, unsigned dimensions) :
+    BoseOAInPlace(x, ot, seed, jitter, dimensions)
 {
     setNumSamples(x * x);
     reset();
 }
 
-string BoseGaloisOAInPlace::name() const
-{
-    return "Bose-Galois OA In-Place";
-}
+string BoseGaloisOAInPlace::name() const { return "Bose-Galois OA In-Place"; }
 
 int BoseGaloisOAInPlace::setNumSamples(unsigned n)
 {
@@ -398,8 +375,8 @@ void BoseGaloisOAInPlace::sample(float r[], unsigned i)
     Galois::Element Ai1(&m_gf, permute(stratumY, m_s, m_seed * 2));
     float           sstratX = boseLHOffset(Ai0.value(), Ai1.value(), m_s, m_seed * 1 * 0x68bc21eb, m_ot);
     float           sstratY = boseLHOffset(Ai1.value(), Ai0.value(), m_s, m_seed * 2 * 0x68bc21eb, m_ot);
-    float           jitterX = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
-    float           jitterY = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+    float           jitterX = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+    float           jitterY = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
     r[0]                    = (stratumX + (sstratX + jitterX) / m_s) / m_s;
     r[1]                    = (stratumY + (sstratY + jitterY) / m_s) / m_s;
 
@@ -411,10 +388,9 @@ void BoseGaloisOAInPlace::sample(float r[], unsigned i)
         int   Aik      = (Ai0 + km1 * Ai1).value();
         int   stratumJ = permute(Aij, m_s, m_seed * (j + 1));
         float sstratJ  = boseLHOffset(Aij, Aik, m_s, m_seed * (j + 1) * 0x68bc21eb, m_ot);
-        float jitterJ  = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+        float jitterJ  = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
         r[j]           = (stratumJ + (sstratJ + jitterJ) / m_s) / m_s;
     }
 
-    for (unsigned j = maxDim; j < dimensions(); ++j)
-        r[j] = 0.5f;
+    for (unsigned j = maxDim; j < dimensions(); ++j) r[j] = 0.5f;
 }

@@ -16,42 +16,28 @@ class Halton : public TSamplerMinMaxDim<1, 256>
 {
 public:
     Halton(unsigned dimensions = 2);
-    ~Halton() override
-    {
-    }
+    ~Halton() override {}
 
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned) override;
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned) override;
 
     // Init the permutation arrays using Faure-permutations.
-    void initFaure()
-    {
-        m_halton.init_faure();
-    }
+    void initFaure() { m_halton.init_faure(); }
 
     // Init the permutation arrays using randomized permutations.
     void initRandom();
 
     /// Gets/sets whether the point set is randomized
-    bool randomized() const override
-    {
-        return m_randomized;
-    }
-    void setRandomized(bool r = true) override;
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override;
 
-    std::string name() const override
-    {
-        return "Halton";
-    }
+    std::string name() const override { return "Halton"; }
 
 protected:
     unsigned       m_numDimensions;
-    bool           m_randomized;
+    uint32_t       m_seed;
     pcg32          m_rand;
     Halton_sampler m_halton;
 };
@@ -61,22 +47,14 @@ class HaltonZaremba : public TSamplerMinMaxDim<1, (unsigned)(-1) - 1>
 {
 public:
     HaltonZaremba(unsigned dimensions = 2);
-    ~HaltonZaremba() override
-    {
-    }
+    ~HaltonZaremba() override {}
 
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned) override;
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned) override;
 
-    std::string name() const override
-    {
-        return "Halton-Zaremba";
-    }
+    std::string name() const override { return "Halton-Zaremba"; }
 
 protected:
     unsigned m_numDimensions;

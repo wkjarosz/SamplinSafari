@@ -19,24 +19,18 @@
 class BoseOA : public OrthogonalArray
 {
 public:
-    BoseOA(unsigned, OffsetType ot = CENTERED, bool randomize = false, float jitter = 0.0f, unsigned dimensions = 2);
+    BoseOA(unsigned, OffsetType ot = CENTERED, uint32_t seed = 0, float jitter = 0.0f, unsigned dimensions = 2);
     ~BoseOA() override;
     void clear();
 
     unsigned setOffsetType(unsigned ot) override;
-    unsigned setStrength(unsigned) override
-    {
-        return 2;
-    }
+    unsigned setStrength(unsigned) override { return 2; }
 
     void reset() override;
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned d) override
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned d) override
     {
         m_numDimensions = d;
         reset();
@@ -44,10 +38,7 @@ public:
 
     std::string name() const override;
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int  numSamples() const override { return m_numSamples; }
     int  setNumSamples(unsigned n) override;
     void setNumSamples(unsigned x, unsigned);
 
@@ -74,25 +65,17 @@ protected:
 class BoseOAInPlace : public OrthogonalArray
 {
 public:
-    BoseOAInPlace(unsigned n, OffsetType ot = CENTERED, bool randomize = false, float jitter = 0.0f,
+    BoseOAInPlace(unsigned n, OffsetType ot = CENTERED, uint32_t seed = 0, float jitter = 0.0f,
                   unsigned dimensions = 2);
-    virtual ~BoseOAInPlace()
-    {
-    }
+    virtual ~BoseOAInPlace() {}
 
-    virtual unsigned setStrength(unsigned)
-    {
-        return 2;
-    }
+    virtual unsigned setStrength(unsigned) { return 2; }
 
     virtual void reset();
     virtual void sample(float[], unsigned i);
 
-    virtual unsigned dimensions() const
-    {
-        return m_numDimensions;
-    }
-    virtual void setDimensions(unsigned d)
+    virtual unsigned dimensions() const { return m_numDimensions; }
+    virtual void     setDimensions(unsigned d)
     {
         m_numDimensions = d;
         reset();
@@ -100,10 +83,7 @@ public:
 
     virtual std::string name() const;
 
-    virtual int numSamples() const
-    {
-        return m_numSamples;
-    }
+    virtual int  numSamples() const { return m_numSamples; }
     virtual int  setNumSamples(unsigned n);
     virtual void setNumSamples(unsigned x, unsigned y);
 
@@ -116,7 +96,7 @@ protected:
 class BoseSudokuInPlace : public BoseOAInPlace
 {
 public:
-    BoseSudokuInPlace(unsigned n, OffsetType ot = CENTERED, bool randomize = false, float jitter = 0.0f,
+    BoseSudokuInPlace(unsigned n, OffsetType ot = CENTERED, uint32_t seed = 0, float jitter = 0.0f,
                       unsigned dimensions = 2);
 
     void        sample(float[], unsigned i) override;
@@ -142,16 +122,11 @@ protected:
 class BoseGaloisOAInPlace : public BoseOAInPlace
 {
 public:
-    BoseGaloisOAInPlace(unsigned n, OffsetType ot = CENTERED, bool randomize = false, float jitter = 0.0f,
+    BoseGaloisOAInPlace(unsigned n, OffsetType ot = CENTERED, uint32_t seed = 0, float jitter = 0.0f,
                         unsigned dimensions = 2);
-    ~BoseGaloisOAInPlace() override
-    {
-    }
+    ~BoseGaloisOAInPlace() override {}
 
-    unsigned setStrength(unsigned) override
-    {
-        return 2;
-    }
+    unsigned setStrength(unsigned) override { return 2; }
 
     void sample(float[], unsigned i) override;
 

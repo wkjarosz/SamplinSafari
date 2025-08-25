@@ -2,13 +2,12 @@
    \file OAAddelmanKempthorne.h
    \author Wojciech Jarosz
    \date 2019-08-12
-   
+
    @copyright Copyright (c) 2019
  */
 #pragma once
 
 #include <sampler/OABose.h>
-
 
 /// Produces OA samples based on the construction by Addelman and Kempthorne (1961)
 /**
@@ -24,18 +23,14 @@
 class AddelmanKempthorneOAInPlace : public BoseGaloisOAInPlace
 {
 public:
-    AddelmanKempthorneOAInPlace(unsigned n, OffsetType ot = CENTERED,
-                       bool randomize = false, float jitter = 0.0f,
-                       unsigned dimensions = 2);
+    AddelmanKempthorneOAInPlace(unsigned n, OffsetType ot = CENTERED, uint32_t seed = 0, float jitter = 0.0f,
+                                unsigned dimensions = 2);
     ~AddelmanKempthorneOAInPlace() override {}
 
-    int coarseGridRes(int samples) const override
-    {
-        return int(std::sqrt(0.5f * samples));
-    }
+    int coarseGridRes(int samples) const override { return int(std::sqrt(0.5f * samples)); }
 
     void sample(float[], unsigned i) override;
 
     std::string name() const override;
-    int setNumSamples(unsigned n) override;
+    int         setNumSamples(unsigned n) override;
 };

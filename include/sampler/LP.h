@@ -27,30 +27,18 @@
 class LarcherPillichshammerGK : public TSamplerMinMaxDim<1, 1024>
 {
 public:
-    LarcherPillichshammerGK(unsigned dimensions = 2, unsigned numSamples = 64, bool randomize = false);
+    LarcherPillichshammerGK(unsigned dimensions = 2, unsigned numSamples = 64, uint32_t seed = 0);
     ~LarcherPillichshammerGK() override;
 
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
+    unsigned dimensions() const override { return m_numDimensions; }
 
-    void setDimensions(unsigned d) override
-    {
-        m_numDimensions = d;
-    }
+    void setDimensions(unsigned d) override { m_numDimensions = d; }
 
-    std::string name() const override
-    {
-        return "LP-GK";
-    }
+    std::string name() const override { return "LP-GK"; }
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int numSamples() const override { return m_numSamples; }
     int setNumSamples(unsigned n) override
     {
         m_numSamples = (n == 0) ? 1 : n;
@@ -58,13 +46,12 @@ public:
         return m_numSamples;
     }
 
-    bool randomized() const override
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override
     {
-        return m_scramble1 + m_scramble2 + m_scramble3 != 0;
-    }
-    void setRandomized(bool b = true) override
-    {
-        if (!b)
+        m_seed = seed;
+        m_rand.seed(seed);
+        if (seed == 0)
             m_scramble1 = m_scramble2 = m_scramble3 = 0;
         else
         {
@@ -75,8 +62,9 @@ public:
     }
 
 protected:
-    unsigned m_numSamples, m_numDimensions;
+    uint32_t m_numSamples, m_numDimensions;
     float    m_inv;
+    uint32_t m_seed = 0;
     pcg32    m_rand;
-    unsigned m_scramble1, m_scramble2, m_scramble3;
+    uint32_t m_scramble1, m_scramble2, m_scramble3;
 };

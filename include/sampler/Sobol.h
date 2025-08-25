@@ -18,29 +18,21 @@ public:
 
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned n) override
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned n) override
     {
         m_numDimensions = n;
-        setRandomized(randomized());
+        setSeed(m_seed);
     }
 
-    bool randomized() const override
-    {
-        return m_scrambles.size();
-    }
-    void setRandomized(bool b = true) override;
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override;
 
-    std::string name() const override
-    {
-        return "Sobol";
-    }
+    std::string name() const override { return "Sobol"; }
 
 protected:
     unsigned              m_numDimensions;
+    uint32_t              m_seed = 13;
     pcg32                 m_rand;
     std::vector<unsigned> m_scrambles;
 };
@@ -54,40 +46,29 @@ public:
     void reset() override;
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned d) override
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned d) override
     {
         m_numDimensions = d;
         reset();
     }
 
-    bool randomized() const override
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override
     {
-        return m_randomize;
-    }
-    void setRandomized(bool r) override
-    {
-        m_randomize = r;
+        m_seed = seed;
         reset();
     }
 
-    int numSamples() const override
-    {
-        return m_numSamples;
-    }
+    int numSamples() const override { return m_numSamples; }
     int setNumSamples(unsigned n) override;
 
-    std::string name() const override
-    {
-        return m_shuffle ? "Shuffled+XORed (0,2)" : "XORed (0,2)";
-    }
+    std::string name() const override { return m_shuffle ? "Shuffled+XORed (0,2)" : "XORed (0,2)"; }
 
 protected:
     unsigned              m_numSamples, m_numDimensions;
-    bool                  m_randomize, m_shuffle;
+    bool                  m_shuffle;
+    uint32_t              m_seed = 13;
     pcg32                 m_rand;
     std::vector<unsigned> m_scrambles;
     std::vector<unsigned> m_permutes;
@@ -104,29 +85,59 @@ public:
 
     void sample(float[], unsigned i) override;
 
-    unsigned dimensions() const override
-    {
-        return m_numDimensions;
-    }
-    void setDimensions(unsigned n) override
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned n) override
     {
         m_numDimensions = n;
-        setRandomized(randomized());
+        setSeed(m_seed);
     }
 
-    bool randomized() const override
-    {
-        return m_scramble_seed != 0;
-    }
-    void setRandomized(bool b = true) override;
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override { m_seed = seed; }
 
-    std::string name() const override
-    {
-        return "Stochastic Sobol";
-    }
+    std::string name() const override { return "Stochastic Sobol"; }
 
 protected:
     unsigned m_numDimensions;
+    uint32_t m_seed = 13;
     pcg32    m_rand;
-    uint32_t m_scramble_seed;
+};
+
+/**
+    Blue-noise Sobol sampler.
+
+    This sampler uses padded 1D and 2D Sobol’ samples, but with a randomized Morton (Z) sample order across the image,
+    which leads to a blue noise distribution. This tends to push error to higher frequencies, which in turn makes it
+    appear more visually pleasing.
+
+    This is based on PBRT's implementation of Ahmed and Wonka's blue noise Sobol' sampler.
+    http://abdallagafar.com/publications/zsampler/
+*/
+class ZSobol : public SSobol
+{
+public:
+    ZSobol(unsigned dimensions = 2);
+
+    void sample(float[], unsigned i) override;
+
+    int numSamples() const override { return m_numSamples; }
+    int setNumSamples(unsigned n) override
+    {
+        if (n == m_numSamples)
+            return m_numSamples;
+        m_numSamples = n;
+        reset();
+        return m_numSamples;
+    }
+
+    void reset() override;
+
+    std::string name() const override { return "Blue-noise Sobol"; }
+
+protected:
+    uint64_t shuffled_morton_index(uint32_t morton_index, uint32_t num_base_4_digits, uint32_t dimension);
+
+    uint32_t m_numSamples;
+
+    int m_num_base_4_digits, m_log2_res;
 };

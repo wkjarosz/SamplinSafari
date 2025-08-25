@@ -8,16 +8,13 @@
 
 using namespace std;
 
-MultiJittered::MultiJittered(unsigned x, unsigned y, bool randomize, float jitter) :
-    m_resX(x), m_resY(y), m_numSamples(m_resX * m_resY), m_randomize(randomize), m_maxJit(jitter)
+MultiJittered::MultiJittered(unsigned x, unsigned y, uint32_t seed, float jitter) :
+    m_resX(x), m_resY(y), m_numSamples(m_resX * m_resY), m_maxJit(jitter), m_seed(seed)
 {
     reset();
 }
 
-MultiJittered::~MultiJittered()
-{
-    clear();
-}
+MultiJittered::~MultiJittered() { clear(); }
 
 void MultiJittered::clear()
 {
@@ -41,10 +38,9 @@ void MultiJittered::reset()
     clear();
 
     m_samples = new float *[dimensions()];
-    for (unsigned d = 0; d < dimensions(); d++)
-        m_samples[d] = new float[m_numSamples];
+    for (unsigned d = 0; d < dimensions(); d++) m_samples[d] = new float[m_numSamples];
 
-    float jitter = m_randomize ? m_maxJit : 0.0f;
+    float jitter = m_seed ? m_maxJit : 0.0f;
     m_rand.seed(m_seed);
     for (unsigned i = 0; i < m_resX; i++)
         for (unsigned j = 0; j < m_resY; j++)
@@ -55,7 +51,7 @@ void MultiJittered::reset()
             m_samples[1][j * m_resX + i] = j * m_resX + i + jittery;
         }
 
-    if (m_randomize)
+    if (m_seed)
     {
         // shuffle x coordinates within each column of cells
         for (unsigned i = 0; i < m_resX; i++)
@@ -80,20 +76,16 @@ void MultiJittered::sample(float r[], unsigned i)
     if (i >= m_numSamples)
         i = 0;
 
-    for (unsigned d = 0; d < dimensions(); d++)
-        r[d] = (m_samples[d][i]) * m_scale;
+    for (unsigned d = 0; d < dimensions(); d++) r[d] = (m_samples[d][i]) * m_scale;
 }
 
-MultiJitteredInPlace::MultiJitteredInPlace(unsigned x, unsigned y, bool randomize, float jitter) :
-    m_resX(x), m_resY(y), m_numSamples(m_resX * m_resY), m_randomize(randomize), m_maxJit(jitter)
+MultiJitteredInPlace::MultiJitteredInPlace(unsigned x, unsigned y, uint32_t seed, float jitter) :
+    m_resX(x), m_resY(y), m_numSamples(m_resX * m_resY), m_maxJit(jitter), m_seed(seed)
 {
     reset();
 }
 
-std::string MultiJitteredInPlace::name() const
-{
-    return "MultiJittered In-Place";
-}
+std::string MultiJitteredInPlace::name() const { return "MultiJittered In-Place"; }
 
 void MultiJitteredInPlace::reset()
 {
@@ -131,16 +123,13 @@ void MultiJitteredInPlace::sample(float r[], unsigned i)
     r[1] = (y + (sy + jy) / m_resX) / m_resY;
 }
 
-CorrelatedMultiJittered::CorrelatedMultiJittered(unsigned x, unsigned y, bool randomize, float jitter) :
-    MultiJittered(x, y, randomize, jitter)
+CorrelatedMultiJittered::CorrelatedMultiJittered(unsigned x, unsigned y, uint32_t seed, float jitter) :
+    MultiJittered(x, y, seed, jitter)
 {
     // empty
 }
 
-CorrelatedMultiJittered::~CorrelatedMultiJittered()
-{
-    clear();
-}
+CorrelatedMultiJittered::~CorrelatedMultiJittered() { clear(); }
 
 void CorrelatedMultiJittered::reset()
 {
@@ -154,10 +143,9 @@ void CorrelatedMultiJittered::reset()
     clear();
 
     m_samples = new float *[dimensions()];
-    for (unsigned d = 0; d < dimensions(); d++)
-        m_samples[d] = new float[m_numSamples];
+    for (unsigned d = 0; d < dimensions(); d++) m_samples[d] = new float[m_numSamples];
 
-    float jitter = m_randomize ? m_maxJit : 0.0f;
+    float jitter = m_seed ? m_maxJit : 0.0f;
 
     for (unsigned i = 0; i < m_resX; i++)
         for (unsigned j = 0; j < m_resY; j++)
@@ -168,33 +156,30 @@ void CorrelatedMultiJittered::reset()
             m_samples[1][j * m_resX + i] = j * m_resX + i + jittery;
         }
 
-    if (m_randomize)
+    if (m_seed)
     {
         // shuffle x coordinates within each column of cells
         for (unsigned j = m_resY - 1; j >= 1; j--)
         {
             unsigned k = m_rand.nextUInt(j);
-            for (unsigned i = 0; i < m_resX; i++)
-                std::swap(m_samples[0][j * m_resX + i], m_samples[0][k * m_resX + i]);
+            for (unsigned i = 0; i < m_resX; i++) std::swap(m_samples[0][j * m_resX + i], m_samples[0][k * m_resX + i]);
         }
 
         // shuffle y coordinates within each row of cells
         for (unsigned i = m_resX - 1; i >= 1; i--)
         {
             unsigned k = m_rand.nextUInt(i);
-            for (unsigned j = 0; j < m_resY; j++)
-                std::swap(m_samples[1][j * m_resX + i], m_samples[1][j * m_resX + k]);
+            for (unsigned j = 0; j < m_resY; j++) std::swap(m_samples[1][j * m_resX + i], m_samples[1][j * m_resX + k]);
         }
     }
 }
 
-CorrelatedMultiJitteredInPlace::CorrelatedMultiJitteredInPlace(unsigned x, unsigned y, unsigned dims, bool r, float j,
-                                                               bool correlated) :
-    m_resX(x),
-    m_resY(y), m_numSamples(m_resX * m_resY), m_numDimensions(dims), m_maxJit(j), m_randomize(r),
+CorrelatedMultiJitteredInPlace::CorrelatedMultiJitteredInPlace(unsigned x, unsigned y, unsigned dims, uint32_t seed,
+                                                               float j, bool correlated) :
+    m_resX(x), m_resY(y), m_numSamples(m_resX * m_resY), m_numDimensions(dims), m_maxJit(j), m_seed(seed),
     m_decorrelate(correlated ? 0 : 1)
 {
-    setRandomized(r);
+    setSeed(seed);
 }
 
 void CorrelatedMultiJitteredInPlace::sample(float r[], unsigned i)

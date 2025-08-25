@@ -6,10 +6,10 @@
 #include <sampler/Halton.h>
 #include <sampler/Misc.h> // for foldedRadicalInverse
 
-Halton::Halton(unsigned dimensions) : m_numDimensions(0), m_randomized(true)
+Halton::Halton(unsigned dimensions) : m_numDimensions(0), m_seed(13)
 {
     setDimensions(dimensions);
-    setRandomized(true);
+    setSeed(m_seed);
 }
 
 void Halton::setDimensions(unsigned n)
@@ -20,15 +20,13 @@ void Halton::setDimensions(unsigned n)
     m_numDimensions = n;
 }
 
-void Halton::initRandom()
-{
-    m_halton.init_random(m_rand);
-}
+void Halton::initRandom() { m_halton.init_random(m_rand); }
 
-void Halton::setRandomized(bool r)
+void Halton::setSeed(uint32_t seed)
 {
-    m_randomized = r;
-    if (m_randomized)
+    m_seed = seed;
+    m_rand.seed(m_seed);
+    if (m_seed)
         initRandom();
     else
         initFaure();
@@ -36,14 +34,10 @@ void Halton::setRandomized(bool r)
 
 void Halton::sample(float r[], unsigned i)
 {
-    for (unsigned d = 0; d < m_numDimensions; d++)
-        r[d] = m_halton.sample(d, i);
+    for (unsigned d = 0; d < m_numDimensions; d++) r[d] = m_halton.sample(d, i);
 }
 
-HaltonZaremba::HaltonZaremba(unsigned dimensions) : m_numDimensions(0)
-{
-    setDimensions(dimensions);
-}
+HaltonZaremba::HaltonZaremba(unsigned dimensions) : m_numDimensions(0) { setDimensions(dimensions); }
 
 void HaltonZaremba::setDimensions(unsigned n)
 {
@@ -55,6 +49,5 @@ void HaltonZaremba::setDimensions(unsigned n)
 
 void HaltonZaremba::sample(float r[], unsigned i)
 {
-    for (unsigned d = 0; d < m_numDimensions; d++)
-        r[d] = foldedRadicalInverse(i, nthPrime(d + 1));
+    for (unsigned d = 0; d < m_numDimensions; d++) r[d] = foldedRadicalInverse(i, nthPrime(d + 1));
 }

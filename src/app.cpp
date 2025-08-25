@@ -9,6 +9,9 @@
 #include "imgui_ext.h"
 #include "imgui_internal.h"
 
+// #include "hello_imgui/icons_font_awesome_4.h"
+#include "hello_imgui/icons_font_awesome_6.h"
+
 #include "opengl_check.h"
 
 #include <sampler/CSVFile.h>
@@ -78,8 +81,8 @@ static const vector<pair<string, string>> g_help_strings = {
      "Switch to the previous (" ICON_FA_ARROW_UP ") or next (" ICON_FA_ARROW_DOWN ") sampler to generate the points"},
     {"Shift + " ICON_FA_ARROW_UP " , " ICON_FA_ARROW_DOWN, "Cycle through offset types (for OA samplers)"},
     {"d , D", "Decrease (d) or increase (D) the number of dimensions to generate for each point"},
+    {"s , S", "Decrease (s) or increase (S) the random seed. Randomization is turned off for seed=0."},
     {"t , T", "Decrease (t) or increase (T) the strength (for OA samplers)"},
-    {"r , R", "Toggle whether to randomization the points (r) or re-seed (R) the randomization"},
     {"j , J", "Decrease (j) or increase (J) the amount the points should be jittered within their strata"},
     {"g , G", "Toggle whether to draw the coarse (g) and fine (G) grid"},
     {"b", "Toggle whether to draw the bounding box"},
@@ -126,20 +129,21 @@ SampleViewer::SampleViewer()
 
     m_samplers.emplace_back(new Random(m_num_dimensions));
     m_samplers.emplace_back(new Jittered(1, 1, m_jitter * 0.01f));
-    m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, false));
-    m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, false, m_jitter * 0.01f, true));
-    m_samplers.emplace_back(new CMJNDInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f));
-    m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, false));
-    m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, false, 0.0f, true));
-    m_samplers.emplace_back(new BoseOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new BoseGaloisOAInPlace(1, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new BushOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new BushGaloisOAInPlace(1, 3, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new AddelmanKempthorneOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new BoseBushOAInPlace(2, MJ_STYLE, false, m_jitter * 0.01f, m_num_dimensions));
-    m_samplers.emplace_back(new NRooksInPlace(m_num_dimensions, 1, false, m_jitter * 0.01f));
+    m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, 0, m_jitter * 0.01f, false));
+    m_samplers.emplace_back(new CorrelatedMultiJitteredInPlace(1, 1, m_num_dimensions, 0, m_jitter * 0.01f, true));
+    m_samplers.emplace_back(new CMJNDInPlace(1, 3, MJ_STYLE, 0, m_jitter * 0.01f));
+    m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, 0, 0.0f, false));
+    m_samplers.emplace_back(new SudokuInPlace(1, 1, m_num_dimensions, 0, 0.0f, true));
+    m_samplers.emplace_back(new BoseOAInPlace(1, MJ_STYLE, 0, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new BoseGaloisOAInPlace(1, MJ_STYLE, 0, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new BushOAInPlace(1, 3, MJ_STYLE, 0, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new BushGaloisOAInPlace(1, 3, MJ_STYLE, 0, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new AddelmanKempthorneOAInPlace(2, MJ_STYLE, 0, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new BoseBushOAInPlace(2, MJ_STYLE, 0, m_jitter * 0.01f, m_num_dimensions));
+    m_samplers.emplace_back(new NRooksInPlace(m_num_dimensions, 1, 0, m_jitter * 0.01f));
     m_samplers.emplace_back(new Sobol(m_num_dimensions));
     m_samplers.emplace_back(new SSobol(m_num_dimensions));
+    m_samplers.emplace_back(new ZSobol(m_num_dimensions));
     m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, false));
     m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, true));
     m_samplers.emplace_back(
@@ -247,23 +251,29 @@ SampleViewer::SampleViewer()
 #endif
     }
 
+    m_params.callbacks.defaultIconFont = HelloImGui::DefaultIconFont::FontAwesome6;
+
     m_params.callbacks.LoadAdditionalFonts = [this]()
     {
-        std::string roboto_r = "fonts/Roboto/Roboto-Regular.ttf";
-        std::string roboto_b = "fonts/Roboto/Roboto-Bold.ttf";
-        if (!HelloImGui::AssetExists(roboto_r) || !HelloImGui::AssetExists(roboto_b))
-            return;
-
-        for (auto font_size : {14, 10, 16, 18, 30})
+        Timer timer;
+        HelloImGui::Log(HelloImGui::LogLevel::Info, "Loading fonts...");
+        auto load_font = [](const string &font_path, float size = 14.f)
         {
-            m_regular[font_size] = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_r, (float)font_size);
-            m_bold[font_size]    = HelloImGui::LoadFontTTF_WithFontAwesomeIcons(roboto_b, (float)font_size);
-        }
+            if (!HelloImGui::AssetExists(font_path))
+                HelloImGui::Log(HelloImGui::LogLevel::Error, "Cannot find the font asset '%s'!", font_path.c_str());
+
+            return HelloImGui::LoadFontTTF_WithFontAwesomeIcons(font_path, size);
+        };
+        printf("Loading fonts...\n");
+
+        m_regular = load_font("fonts/Roboto/Roboto-Regular.ttf");
+        m_bold    = load_font("fonts/Roboto/Roboto-Bold.ttf");
+        HelloImGui::Log(HelloImGui::LogLevel::Info, "done loading fonts.");
     };
 
     m_params.callbacks.ShowMenus = []()
     {
-        string text = ICON_FA_INFO_CIRCLE;
+        string text = ICON_FA_CIRCLE_INFO;
         auto   posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(text.c_str()).x -
                      ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
         if (posX > ImGui::GetCursorPosX())
@@ -310,7 +320,7 @@ SampleViewer::SampleViewer()
         for (string ext : {"eps", "svg", "csv"})
         {
 #ifndef __EMSCRIPTEN__
-            if (ImGui::MenuItem(fmt::format("{}  Export as {}...", ICON_FA_SAVE, to_upper(ext))))
+            if (ImGui::MenuItem(fmt::format("{}  Export as {}...", ICON_FA_FLOPPY_DISK, to_upper(ext))))
             {
                 try
                 {
@@ -326,7 +336,7 @@ SampleViewer::SampleViewer()
                 }
             }
 #else
-            if (ImGui::BeginMenu(fmt::format("{}  Download as {}...", ICON_FA_SAVE, to_upper(ext)).c_str()))
+            if (ImGui::BeginMenu(fmt::format("{}  Download as {}...", ICON_FA_FLOPPY_DISK, to_upper(ext)).c_str()))
             {
                 string basename;
 
@@ -335,9 +345,16 @@ SampleViewer::SampleViewer()
                     try
                     {
                         ImGui::CloseCurrentPopup();
-                        vector<string> saved_files = save_files(basename, ext);
-                        for (auto &saved_file : saved_files)
-                            emscripten_run_script(fmt::format("saveFileFromMemoryFSToDisk('{}');", saved_file).c_str());
+                        string buffer = draw_points_csv(m_subset_points, get_draw_range());
+                        emscripten_browser_file::download(
+                            "test_file.csv", // the default filename for the browser to save.
+                            "text/csv", // the MIME type of the data, treated as if it were a webserver serving a file
+                            string_view(buffer.c_str(), buffer.length()) // a buffer describing the data to download
+                        );
+                        // vector<string> saved_files = save_files(basename, ext);
+                        // for (auto &saved_file : saved_files)
+                        //     emscripten_run_script(fmt::format("saveFileFromMemoryFSToDisk('{}');",
+                        //     saved_file).c_str());
                     }
                     catch (const std::exception &e)
                     {
@@ -420,15 +437,11 @@ SampleViewer::SampleViewer()
     m_params.callbacks.AnyBackendEventCallback = [this](void *event) { return process_event(event); };
 }
 
-void SampleViewer::run()
-{
-    HelloImGui::Run(m_params);
-}
+void SampleViewer::run() { HelloImGui::Run(m_params); }
 
 SampleViewer::~SampleViewer()
 {
-    for (size_t i = 0; i < m_samplers.size(); ++i)
-        delete m_samplers[i];
+    for (size_t i = 0; i < m_samplers.size(); ++i) delete m_samplers[i];
 }
 
 int2 SampleViewer::get_draw_range() const
@@ -492,14 +505,14 @@ void SampleViewer::draw_about_dialog()
             ImGui::TableNextColumn();
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + col_width[1]);
 
-            ImGui::PushFont(m_bold[30]);
+            ImGui::PushFont(m_bold, 30);
             ImGui::Text("Samplin' Safari");
             ImGui::PopFont();
 
-            ImGui::PushFont(m_bold[18]);
+            ImGui::PushFont(m_bold, 18);
             ImGui::Text(version());
             ImGui::PopFont();
-            ImGui::PushFont(m_regular[10]);
+            ImGui::PushFont(m_regular, 10);
 #if defined(__EMSCRIPTEN__)
             ImGui::Text(fmt::format("Built with emscripten using the {} backend on {}.", backend(), build_timestamp()));
 #else
@@ -509,7 +522,7 @@ void SampleViewer::draw_about_dialog()
 
             ImGui::Spacing();
 
-            ImGui::PushFont(m_bold[16]);
+            ImGui::PushFont(m_bold, 16);
             ImGui::Text("Samplin' Safari is a research tool to visualize and interactively inspect high-dimensional "
                         "(quasi) Monte Carlo samplers.");
             ImGui::PopFont();
@@ -536,13 +549,13 @@ void SampleViewer::draw_about_dialog()
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
 
-            ImGui::PushFont(m_bold[14]);
+            ImGui::PushFont(m_bold, 14);
             right_align(name);
             ImGui::PopFont();
 
             ImGui::TableNextColumn();
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + col_width[1] - HelloImGui::EmSize());
-            ImGui::PushFont(m_regular[14]);
+            ImGui::PushFont(m_regular, 14);
             ImGui::Text(desc);
             ImGui::PopFont();
         };
@@ -563,8 +576,7 @@ void SampleViewer::draw_about_dialog()
                     ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, col_width[0]);
                     ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthFixed, col_width[1]);
 
-                    for (auto item : g_help_strings)
-                        item_and_description(item.first, item.second);
+                    for (auto item : g_help_strings) item_and_description(item.first, item.second);
 
                     ImGui::EndTable();
                 }
@@ -578,7 +590,7 @@ void SampleViewer::draw_about_dialog()
                 ImGui::Spacing();
 
                 ImGui::Indent(HelloImGui::EmSize() * 1);
-                ImGui::PushFont(m_bold[14]);
+                ImGui::PushFont(m_bold, 14);
                 ImGui::Text("Orthogonal Array Sampling for Monte Carlo Rendering");
                 ImGui::PopFont();
                 ImGui::Text("Wojciech Jarosz, Afnan Enayet, Andrew Kensler, Charlie Kilpatrick, Per Christensen.\n"
@@ -656,7 +668,7 @@ void SampleViewer::draw_editor()
 {
     auto big_header = [this](const char *label, ImGuiTreeNodeFlags flags = 0)
     {
-        ImGui::PushFont(m_bold[16]);
+        ImGui::PushFont(m_bold, 16);
         bool ret = ImGui::CollapsingHeader(label, flags | ImGuiTreeNodeFlags_DefaultOpen);
         ImGui::PopFont();
         return ret;
@@ -665,7 +677,7 @@ void SampleViewer::draw_editor()
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
 
     // =========================================================
-    if (big_header(ICON_FA_SLIDERS_H "  Sampler settings"))
+    if (big_header(ICON_FA_SLIDERS "  Sampler settings"))
     // =========================================================
     {
         if (ImGui::BeginCombo("##Sampler combo", m_samplers[m_sampler]->name().c_str(), ImGuiComboFlags_HeightLargest))
@@ -678,7 +690,7 @@ void SampleViewer::draw_editor()
                 {
                     m_sampler = n;
                     sampler->setJitter(m_jitter * 0.01f);
-                    sampler->setRandomized(m_randomize);
+                    sampler->setSeed(m_seed);
                     m_gpu_points_dirty = m_cpu_points_dirty = true;
 
                     HelloImGui::Log(HelloImGui::LogLevel::Debug, "Switching to sampler %d: %s.", m_sampler,
@@ -745,9 +757,11 @@ void SampleViewer::draw_editor()
 
         if (!csv)
         {
-            if (ImGui::Checkbox("Randomize", &m_randomize))
+            int s = m_seed;
+            if (ImGui::SliderInt("Seed", &s, 0, 10000))
                 m_gpu_points_dirty = m_cpu_points_dirty = true;
-            hotkey_tooltip("r , R");
+            m_seed = s;
+            hotkey_tooltip("s , S");
 
             if (ImGui::SliderFloat("Jitter", &m_jitter, 0.f, 100.f, "%3.1f%%"))
             {
@@ -884,7 +898,7 @@ void SampleViewer::draw_editor()
     }
 
     // =========================================================
-    if (big_header(ICON_FA_RANDOM "  Dimension mapping"))
+    if (big_header(ICON_FA_SHUFFLE "  Dimension mapping"))
     // =========================================================
     {
         int3 dims = m_dimension;
@@ -1057,7 +1071,7 @@ void SampleViewer::process_hotkeys()
         m_sampler        = mod(m_sampler + delta, (int)m_samplers.size());
         Sampler *sampler = m_samplers[m_sampler];
         sampler->setJitter(m_jitter * 0.01f);
-        sampler->setRandomized(m_randomize);
+        sampler->setSeed(m_seed);
         m_gpu_points_dirty = m_cpu_points_dirty = true;
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_RightArrow))
@@ -1076,17 +1090,17 @@ void SampleViewer::process_hotkeys()
         m_num_dimensions   = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
         m_gpu_points_dirty = m_cpu_points_dirty = true;
     }
-    else if (ImGui::IsKeyPressed(ImGuiKey_R))
-    {
-        if (ImGui::IsKeyDown(ImGuiMod_Shift))
-        {
-            m_randomize = true;
-            sampler->setRandomized(true);
-        }
-        else
-            m_randomize = !m_randomize;
-        m_gpu_points_dirty = m_cpu_points_dirty = true;
-    }
+    // else if (ImGui::IsKeyPressed(ImGuiKey_R))
+    // {
+    //     if (ImGui::IsKeyDown(ImGuiMod_Shift))
+    //     {
+    //         m_randomize = true;
+    //         sampler->setSeed(true);
+    //     }
+    //     else
+    //         m_randomize = !m_randomize;
+    //     m_gpu_points_dirty = m_cpu_points_dirty = true;
+    // }
     else if (ImGui::IsKeyPressed(ImGuiKey_J))
     {
         m_jitter = std::clamp(m_jitter + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 10.f : -10.f), 0.f, 100.f);
@@ -1135,8 +1149,8 @@ void SampleViewer::update_points(bool regenerate)
         {
             Timer    timer;
             Sampler *generator = m_samplers[m_sampler];
-            if (generator->randomized() != m_randomize)
-                generator->setRandomized(m_randomize);
+            if (generator->seed() != m_seed)
+                generator->setSeed(m_seed);
 
             generator->setDimensions(m_num_dimensions);
 
@@ -1150,8 +1164,7 @@ void SampleViewer::update_points(bool regenerate)
             m_3d_points.resize(m_point_count);
 
             timer.reset();
-            for (int i = 0; i < m_point_count; ++i)
-                generator->sample(m_points.row(i), i);
+            for (int i = 0; i < m_point_count; ++i) generator->sample(m_points.row(i), i);
             m_time2 = timer.elapsed();
         }
         catch (const std::exception &e)
@@ -1266,23 +1279,25 @@ void SampleViewer::draw_background()
 
         //
         // calculate the viewport sizes
-        // fbsize is the size of the window in pixels while accounting for dpi factor on retina screens.
-        // for retina displays, io.DisplaySize is the size of the window in points (logical pixels)
-        // but we need the size in pixels. So we scale io.DisplaySize by io.DisplayFramebufferScale
-        int2 fbscale         = io.DisplayFramebufferScale;
-        auto fbsize          = int2{io.DisplaySize} * fbscale;
+        // fbsize is the size of the window in physical pixels while accounting for dpi factor on retina
+        // screens. For retina displays, io.DisplaySize is the size of the window in logical pixels so we it by
+        // io.DisplayFramebufferScale to get the physical pixel size for the framebuffer.
+        int2 fbscale = io.DisplayFramebufferScale;
+        auto fbsize  = int2{io.DisplaySize} * fbscale;
+        // spdlog::trace("DisplayFramebufferScale: {}, DpiWindowSizeFactor: {}, DpiFontLoadingFactor: {}",
+        //               float2{io.DisplayFramebufferScale}, HelloImGui::DpiWindowSizeFactor(),
+        //               HelloImGui::DpiFontLoadingFactor());
         int2 viewport_offset = {0, 0};
         int2 viewport_size   = io.DisplaySize;
         if (auto id = m_params.dockingParams.dockSpaceIdFromName("MainDockSpace"))
-        {
-            auto central_node = ImGui::DockBuilderGetCentralNode(*id);
-            viewport_size     = int2{int(central_node->Size.x), int(central_node->Size.y)};
-            viewport_offset   = int2{int(central_node->Pos.x), int(central_node->Pos.y)};
-        }
+            if (auto central_node = ImGui::DockBuilderGetCentralNode(*id))
+            {
+                viewport_size   = int2{int(central_node->Size.x), int(central_node->Size.y)};
+                viewport_offset = int2{int(central_node->Pos.x), int(central_node->Pos.y)};
+            }
 
         // inform the arcballs of the viewport size
-        for (int i = 0; i < NUM_CAMERA_TYPES; ++i)
-            m_camera[i].arcball.set_size(viewport_size);
+        for (int i = 0; i < NUM_CAMERA_TYPES; ++i) m_camera[i].arcball.set_size(viewport_size);
 
         //
         // process camera movement
@@ -1370,8 +1385,7 @@ void SampleViewer::draw_background()
         {
             int plot_index = 0;
             for (int y = 0; y < m_num_dimensions; ++y)
-                for (int x = 0; x < y; ++x, ++plot_index)
-                    draw_2D_points_and_grid(mvp, int2{x, y}, plot_index);
+                for (int x = 0; x < y; ++x, ++plot_index) draw_2D_points_and_grid(mvp, int2{x, y}, plot_index);
 
             // draw the text labels for the grid of 2D projections
             for (int i = 0; i < m_num_dimensions - 1; ++i)
@@ -1381,7 +1395,7 @@ void SampleViewer::draw_background()
                 float2   text_2d_pos((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
                 draw_text(viewport_offset + int2(int((text_2d_pos.x) * viewport_size.x),
                                                  int((1.f - text_2d_pos.y) * viewport_size.y) + 16),
-                          to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
+                          to_string(i), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular, 16,
                           TextAlign_CENTER | TextAlign_BOTTOM);
 
                 pos         = layout_2d_matrix(m_num_dimensions, int2{0, i + 1});
@@ -1389,7 +1403,7 @@ void SampleViewer::draw_background()
                 text_2d_pos = float2((text_pos.x / text_pos.w + 1) / 2, (text_pos.y / text_pos.w + 1) / 2);
                 draw_text(viewport_offset + int2(int((text_2d_pos.x) * viewport_size.x) - 4,
                                                  int((1.f - text_2d_pos.y) * viewport_size.y)),
-                          to_string(i + 1), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[16],
+                          to_string(i + 1), float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular, 16,
                           TextAlign_RIGHT | TextAlign_MIDDLE);
             }
         }
@@ -1447,12 +1461,12 @@ void SampleViewer::draw_background()
                                                            int((1.f - text_2d_pos.y) * viewport_size.y)};
                     if (m_show_point_nums)
                         draw_text(draw_pos - int2{0, int(radius / 4)}, fmt::format("{:d}", p),
-                                  float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[12], TextAlign_CENTER | TextAlign_BOTTOM);
+                                  float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular, 12, TextAlign_CENTER | TextAlign_BOTTOM);
                     if (m_show_point_coords)
                         draw_text(draw_pos + int2{0, int(radius / 4)},
                                   fmt::format("({:0.2f}, {:0.2f}, {:0.2f})", m_3d_points[p].x, m_3d_points[p].y,
                                               m_3d_points[p].z),
-                                  float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular[11], TextAlign_CENTER | TextAlign_TOP);
+                                  float4(1.0f, 1.0f, 1.0f, 0.75f), m_regular, 11, TextAlign_CENTER | TextAlign_TOP);
                 }
         }
 
@@ -1541,9 +1555,10 @@ void SampleViewer::draw_trigrid(Shader *shader, const float4x4 &mvp, float alpha
             draw_grid(mul(mvp, m_camera[axis].arcball.inv_matrix()), counts[axis], alpha);
 }
 
-void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &color, ImFont *font, int align) const
+void SampleViewer::draw_text(const int2 &pos, const string &text, const float4 &color, ImFont *font, float font_size,
+                             int align) const
 {
-    ImGui::PushFont(font);
+    ImGui::PushFont(font, font_size);
     float2 apos{pos};
     float2 size = ImGui::CalcTextSize(text.c_str());
 

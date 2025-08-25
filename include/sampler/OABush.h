@@ -3,9 +3,8 @@
 */
 #pragma once
 
-#include <sampler/OABose.h>
 #include <galois++/field.h>
-
+#include <sampler/OABose.h>
 
 /// Produces OA samples based on the construction by Bush (1952).
 /**
@@ -28,29 +27,21 @@
 class BushOAInPlace : public BoseOAInPlace
 {
 public:
-    BushOAInPlace(unsigned n, unsigned strength, OffsetType ot = CENTERED,
-                  bool randomize = false, float jitter = 0.0f,
+    BushOAInPlace(unsigned n, unsigned strength, OffsetType ot = CENTERED, uint32_t seed = 0, float jitter = 0.0f,
                   unsigned dimensions = 2);
     ~BushOAInPlace() override {}
 
-    unsigned setStrength(unsigned t) override
-    {
-        return OrthogonalArray::setStrength(t);
-    }
+    unsigned setStrength(unsigned t) override { return OrthogonalArray::setStrength(t); }
 
-    int coarseGridRes(int samples) const override
-    {
-        return int(std::pow(samples, 1.f / m_t));
-    }
+    int coarseGridRes(int samples) const override { return int(std::pow(samples, 1.f / m_t)); }
 
     void sample(float[], unsigned i) override;
 
     std::string name() const override;
 
-    int setNumSamples(unsigned n) override;
+    int  setNumSamples(unsigned n) override;
     void setNumSamples(unsigned x, unsigned y) override;
 };
-
 
 /// Produces OA samples based on the construction by Bush (1952).
 /**
@@ -73,16 +64,15 @@ public:
 class BushGaloisOAInPlace : public BushOAInPlace
 {
 public:
-    BushGaloisOAInPlace(unsigned n, unsigned strength, OffsetType ot = CENTERED,
-                  bool randomize = false, float jitter = 0.0f,
-                  unsigned dimensions = 2);
+    BushGaloisOAInPlace(unsigned n, unsigned strength, OffsetType ot = CENTERED, uint32_t seed = 0, float jitter = 0.0f,
+                        unsigned dimensions = 2);
     ~BushGaloisOAInPlace() override {}
 
     void sample(float[], unsigned i) override;
 
     std::string name() const override;
 
-    int setNumSamples(unsigned n) override;
+    int  setNumSamples(unsigned n) override;
     void setNumSamples(unsigned x, unsigned y) override;
 
 protected:

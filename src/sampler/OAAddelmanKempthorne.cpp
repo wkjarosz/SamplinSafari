@@ -68,8 +68,7 @@ int akeven(Galois::Element *kay, vector<int> &b, vector<int> &c, vector<int> &k)
         k[3]        = 3;
     }
 
-    for (int i = 1; i < q; ++i)
-        k[i] = i;
+    for (int i = 1; i < q; ++i) k[i] = i;
 
     if (q > 4)
         throw domain_error("Addelman Kempthorne designs not yet available "
@@ -80,18 +79,15 @@ int akeven(Galois::Element *kay, vector<int> &b, vector<int> &c, vector<int> &k)
 
 } // namespace
 
-AddelmanKempthorneOAInPlace::AddelmanKempthorneOAInPlace(unsigned x, OffsetType ot, bool randomize, float jitter,
+AddelmanKempthorneOAInPlace::AddelmanKempthorneOAInPlace(unsigned x, OffsetType ot, uint32_t seed, float jitter,
                                                          unsigned dimensions) :
-    BoseGaloisOAInPlace(x, ot, randomize, jitter, dimensions)
+    BoseGaloisOAInPlace(x, ot, seed, jitter, dimensions)
 {
     setNumSamples(2 * x * x);
     reset();
 }
 
-string AddelmanKempthorneOAInPlace::name() const
-{
-    return "Addel-Kemp OA In-Place";
-}
+string AddelmanKempthorneOAInPlace::name() const { return "Addel-Kemp OA In-Place"; }
 
 int AddelmanKempthorneOAInPlace::setNumSamples(unsigned n)
 {
@@ -168,15 +164,14 @@ void AddelmanKempthorneOAInPlace::sample(float r[], unsigned row)
             // // randomize whether cmj points get pushed to upper or lower half
             // of slice if (permute(Aik % 2, 2, m_seed * (dim+1)))
             //     sstratJ = 2*m_s - 1 - sstratJ;
-            float jitterJ = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+            float jitterJ = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
             r[dim]        = (stratumJ + (sstratJ + jitterJ) / float(2 * m_s)) / float(m_s);
         }
     }
     else
     {
         // Second q*q rows
-        for (size_t dim = 0; dim < dimensions(); ++dim)
-            r[dim] = 0.0f;
+        for (size_t dim = 0; dim < dimensions(); ++dim) r[dim] = 0.0f;
 
         vector<int>     b(m_s);
         vector<int>     c(m_s);
@@ -239,7 +234,7 @@ void AddelmanKempthorneOAInPlace::sample(float r[], unsigned row)
             // // randomize whether cmj points get pushed to upper or lower half
             // of slice if (!permute(Aik % 2, 2, m_seed * (dim+1)))
             //     sstratJ = 2*m_s - 1 - sstratJ;
-            float jitterJ = 0.5f + int(m_randomize) * m_maxJit * (m_rand.nextFloat() - 0.5f);
+            float jitterJ = 0.5f + int(m_seed != 0) * m_maxJit * (m_rand.nextFloat() - 0.5f);
             r[dim]        = (stratumJ + (sstratJ + jitterJ) / (2 * m_s)) / m_s;
         }
     }
