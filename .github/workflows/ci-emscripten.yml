@@ -30,13 +30,13 @@ jobs:
           brew install ninja 
           curl -O https://raw.githubusercontent.com/Homebrew/homebrew-core/9990c9ddd731e97581a3312ca0358b45b14d1cc6/Formula/e/emscripten.rb && brew install ./emscripten.rb
 
-      - name: Check file_packager
-        run: |
-          if [ ! -f /opt/homebrew/Cellar/emscripten/4.0.9/libexec/tools/file_packager ]; then
-            echo "file_packager missing, reinstalling emscripten"
-            brew uninstall emscripten
-            ls /opt/homebrew/Cellar/emscripten/4.0.9/libexec/tools/
-          fi
+      # - name: Check file_packager
+      #   run: |
+      #     if [ ! -f /opt/homebrew/Cellar/emscripten/4.0.9/libexec/tools/file_packager ]; then
+      #       echo "file_packager missing, reinstalling emscripten"
+      #       brew uninstall emscripten
+      #       ls /opt/homebrew/Cellar/emscripten/4.0.9/libexec/tools/
+      #     fi
 
       - uses: actions/checkout@v4
         with:
