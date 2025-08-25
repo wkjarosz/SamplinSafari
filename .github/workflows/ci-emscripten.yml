@@ -33,8 +33,9 @@ jobs:
         run: |
           if [ ! -f /opt/homebrew/Cellar/emscripten/4.0.13/libexec/tools/file_packager ]; then
             echo "file_packager missing, reinstalling emscripten"
-            brew reinstall emscripten
-            ls /opt/homebrew/Cellar/emscripten/4.0.13/libexec/tools/
+            brew uninstall emscripten
+            brew install emscripten@4.0.9
+            ls /opt/homebrew/Cellar/emscripten/4.0.9/libexec/tools/
           fi
 
       - uses: actions/checkout@v4
