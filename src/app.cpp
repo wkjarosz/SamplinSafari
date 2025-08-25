@@ -51,7 +51,7 @@ using std::string_view;
 #include "portable-file-dialogs.h"
 #endif
 
-#ifdef HELLOIMGUI_USE_SDL_OPENGL3
+#ifdef HELLOIMGUI_USE_SDL2
 #include <SDL.h>
 #endif
 
@@ -983,7 +983,7 @@ void SampleViewer::draw_editor()
 
 bool SampleViewer::process_event(void *e)
 {
-#ifdef HELLOIMGUI_USE_SDL
+#ifdef HELLOIMGUI_USE_SDL2
     if (ImGui::GetIO().WantCaptureMouse)
         return false;
 
