@@ -27,14 +27,13 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          brew install ninja emscripten
+          brew install ninja emscripten@4.0.9
 
       - name: Check file_packager
         run: |
-          if [ ! -f /opt/homebrew/Cellar/emscripten/4.0.13/libexec/tools/file_packager ]; then
+          if [ ! -f /opt/homebrew/Cellar/emscripten/4.0.9/libexec/tools/file_packager ]; then
             echo "file_packager missing, reinstalling emscripten"
             brew uninstall emscripten
-            brew install emscripten@4.0.9
             ls /opt/homebrew/Cellar/emscripten/4.0.9/libexec/tools/
           fi
 
