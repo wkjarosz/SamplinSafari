@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstdint>
 #include <string>
 
 /// Abstract class providing a common API to multi-dimensional (quasi-)random
