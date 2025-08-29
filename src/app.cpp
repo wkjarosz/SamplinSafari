@@ -1091,17 +1091,16 @@ void SampleViewer::process_hotkeys()
         m_num_dimensions   = std::clamp(m_num_dimensions + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 1 : -1), 2, 10);
         m_gpu_points_dirty = m_cpu_points_dirty = true;
     }
-    // else if (ImGui::IsKeyPressed(ImGuiKey_R))
-    // {
-    //     if (ImGui::IsKeyDown(ImGuiMod_Shift))
-    //     {
-    //         m_randomize = true;
-    //         sampler->setSeed(true);
-    //     }
-    //     else
-    //         m_randomize = !m_randomize;
-    //     m_gpu_points_dirty = m_cpu_points_dirty = true;
-    // }
+    else if (ImGui::IsKeyPressed(ImGuiKey_S))
+    {
+        if (ImGui::IsKeyDown(ImGuiMod_Shift))
+            m_seed++;
+        else
+            m_seed = std::max(0, int(m_seed - 1));
+
+        sampler->setSeed(m_seed);
+        m_gpu_points_dirty = m_cpu_points_dirty = true;
+    }
     else if (ImGui::IsKeyPressed(ImGuiKey_J))
     {
         m_jitter = std::clamp(m_jitter + (ImGui::IsKeyDown(ImGuiMod_Shift) ? 10.f : -10.f), 0.f, 100.f);
