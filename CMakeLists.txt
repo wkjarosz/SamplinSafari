@@ -321,6 +321,7 @@ add_library(
   src/sampler/OABoseBush.cpp
   src/sampler/OABush.cpp
   src/sampler/OACMJND.cpp
+  src/sampler/onetwo_matrices.cpp
   src/sampler/Random.cpp
   src/sampler/Sobol.cpp
   src/sampler/Sudoku.cpp

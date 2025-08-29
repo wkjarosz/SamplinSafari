@@ -141,3 +141,53 @@ protected:
 
     int m_num_base_4_digits, m_log2_res;
 };
+
+/**
+    Low-discrepancy sampler based on padding 2D Sobol sequences with guaranteed 2D projections.
+
+    Based on the paper:
+        Nicolas Bonneel, David Coeurjolly, Jean-Claude Iehl, and Victor Ostromoukhov.
+        "Sobol’ Sequences with Guaranteed-Quality 2D Projections."
+        ACM Trans. Graph. 44, 4, Article 97 (August 2025), 16 pages.
+        https://doi.org/10.1145/3730821
+
+    and the supplemental code at: https://github.com/liris-origami/OneTwoSobolSequences
+
+    \ingroup Samplers
+*/
+class OneTwo : public TSamplerMinMaxDim<1, 1024>
+{
+public:
+    OneTwo(unsigned n = 64, unsigned dimensions = 2, uint32_t seed = 0);
+
+    void reset() override;
+    void sample(float[], unsigned i) override;
+
+    unsigned dimensions() const override { return m_numDimensions; }
+    void     setDimensions(unsigned d) override
+    {
+        m_numDimensions = d;
+        reset();
+    }
+
+    uint32_t seed() const override { return m_seed; }
+    void     setSeed(uint32_t seed = 0) override
+    {
+        m_seed = seed;
+        reset();
+    }
+
+    int numSamples() const override { return m_numSamples; }
+    int setNumSamples(unsigned n) override;
+
+    std::string name() const override { return "(1,2) Sobol"; }
+
+protected:
+    float sample12(const uint64_t index, const int dim) const;
+
+    unsigned m_numSamples, m_numDimensions;
+    uint32_t m_seed = 13;
+    pcg32    m_rand;
+    // std::vector<unsigned> m_scrambles;
+    std::vector<unsigned> m_permutes;
+};

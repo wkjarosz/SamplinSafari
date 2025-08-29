@@ -148,6 +148,7 @@ SampleViewer::SampleViewer()
     m_samplers.emplace_back(new ZeroTwo(1, m_num_dimensions, true));
     m_samplers.emplace_back(
         new CascadedSobol(HelloImGui::assetFileFullPath("cascaded_sobol_init_tab.dat"), m_num_dimensions));
+    m_samplers.emplace_back(new OneTwo(1, m_num_dimensions, 0));
     m_samplers.emplace_back(new Faure(m_num_dimensions, 1));
     m_samplers.emplace_back(new Halton(m_num_dimensions));
     m_samplers.emplace_back(new HaltonZaremba(m_num_dimensions));
