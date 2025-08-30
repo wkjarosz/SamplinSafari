@@ -15,7 +15,7 @@ env:
 jobs:
   build_macos:
     name: Build on macOS
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
       - name: Install dependencies
